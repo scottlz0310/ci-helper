@@ -1,14 +1,15 @@
 {
     "kiroAgent.configureMCP": "Disabled",
     "python.defaultInterpreterPath": "./venv/bin/python",
-    "python.linting.enabled": true,
-    "python.linting.pylintEnabled": false,
-    "python.linting.flake8Enabled": true,
-    "python.formatting.provider": "black",
-    "python.sortImports.args": [
-        "--profile",
-        "black"
-    ],
+    "python.linting.enabled": false,
+    "python.formatting.provider": "none",
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit",
+            "source.fixAll": "explicit"
+        }
+    },
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
         "source.organizeImports": "explicit"
@@ -20,13 +21,10 @@
         "**/.coverage": true,
         "**/htmlcov": true
     },
-    "[python]": {
-        "editor.tabSize": 4,
-        "editor.insertSpaces": true,
-        "editor.rulers": [
-            88
-        ]
-    },
+    "python.analysis.typeCheckingMode": "strict",
+    "editor.rulers": [120],
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
     "kiroAgent.autoSuggest": true,
     "kiroAgent.enableCodeCompletion": true,
     "kiroAgent.enableInlineChat": true,

@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 class FailureType(Enum):
     """失敗の種類"""
+
     ERROR = "error"
     ASSERTION = "assertion"
     TIMEOUT = "timeout"
@@ -28,6 +29,7 @@ class FailureType(Enum):
 @dataclass
 class Failure:
     """失敗情報を表すデータクラス"""
+
     type: FailureType
     message: str
     file_path: str | None = None
@@ -40,6 +42,7 @@ class Failure:
 @dataclass
 class StepResult:
     """ワークフローステップの実行結果"""
+
     name: str
     success: bool
     duration: float
@@ -49,6 +52,7 @@ class StepResult:
 @dataclass
 class JobResult:
     """ワークフロージョブの実行結果"""
+
     name: str
     success: bool
     failures: Sequence[Failure] = field(default_factory=list)
@@ -59,6 +63,7 @@ class JobResult:
 @dataclass
 class WorkflowResult:
     """ワークフローの実行結果"""
+
     name: str
     success: bool
     jobs: Sequence[JobResult] = field(default_factory=list)
@@ -68,6 +73,7 @@ class WorkflowResult:
 @dataclass
 class ExecutionResult:
     """CI実行の全体結果"""
+
     success: bool
     workflows: Sequence[WorkflowResult]
     total_duration: float
@@ -77,11 +83,7 @@ class ExecutionResult:
     @property
     def total_failures(self) -> int:
         """全失敗数を取得"""
-        return sum(
-            len(job.failures)
-            for workflow in self.workflows
-            for job in workflow.jobs
-        )
+        return sum(len(job.failures) for workflow in self.workflows for job in workflow.jobs)
 
     @property
     def failed_workflows(self) -> Sequence[WorkflowResult]:

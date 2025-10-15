@@ -20,7 +20,7 @@ from ..core.exceptions import ConfigurationError
 
 class Config:
     """設定管理クラス
-    
+
     優先順位:
     1. コマンドライン引数（呼び出し側で処理）
     2. 環境変数
@@ -44,7 +44,7 @@ class Config:
 
     def __init__(self, project_root: Path | None = None):
         """設定を初期化
-        
+
         Args:
             project_root: プロジェクトルートディレクトリ（Noneの場合は現在のディレクトリ）
         """
@@ -67,7 +67,7 @@ class Config:
             except Exception as e:
                 raise ConfigurationError(
                     f"設定ファイルの読み込みに失敗しました: {self.config_file}",
-                    f"設定ファイルの構文を確認してください: {e}"
+                    f"設定ファイルの構文を確認してください: {e}",
                 ) from e
 
         # 環境変数から読み込み
@@ -94,8 +94,7 @@ class Config:
                         env_config[key] = int(env_value)
                     except ValueError as e:
                         raise ConfigurationError(
-                            f"環境変数 {env_key} の値が無効です: {env_value}",
-                            "整数値を指定してください"
+                            f"環境変数 {env_key} の値が無効です: {env_value}", "整数値を指定してください"
                         ) from e
                 else:
                     env_config[key] = env_value
@@ -104,11 +103,11 @@ class Config:
 
     def get(self, key: str, default: Any = None) -> Any:
         """設定値を取得
-        
+
         Args:
             key: 設定キー
             default: デフォルト値
-            
+
         Returns:
             設定値
         """
@@ -116,10 +115,10 @@ class Config:
 
     def get_path(self, key: str) -> Path:
         """パス設定を絶対パスで取得
-        
+
         Args:
             key: パス設定のキー
-            
+
         Returns:
             絶対パス
         """
@@ -147,23 +146,17 @@ class Config:
             if self.get(key) is None:
                 raise ConfigurationError(
                     f"必須設定 '{key}' が設定されていません",
-                    f"ci-helper.tomlまたは環境変数 CI_HELPER_{key.upper()} を設定してください"
+                    f"ci-helper.tomlまたは環境変数 CI_HELPER_{key.upper()} を設定してください",
                 )
 
         # 数値設定の範囲チェック
         timeout = self.get("timeout_seconds")
         if timeout <= 0:
-            raise ConfigurationError(
-                f"タイムアウト設定が無効です: {timeout}",
-                "正の整数を指定してください"
-            )
+            raise ConfigurationError(f"タイムアウト設定が無効です: {timeout}", "正の整数を指定してください")
 
         max_log_size = self.get("max_log_size_mb")
         if max_log_size <= 0:
-            raise ConfigurationError(
-                f"最大ログサイズ設定が無効です: {max_log_size}",
-                "正の整数を指定してください"
-            )
+            raise ConfigurationError(f"最大ログサイズ設定が無効です: {max_log_size}", "正の整数を指定してください")
 
     def __getitem__(self, key: str) -> Any:
         """辞書風アクセスをサポート"""

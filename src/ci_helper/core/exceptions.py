@@ -21,29 +21,35 @@ class CIHelperError(Exception):
 
 class DependencyError(CIHelperError):
     """依存関係エラー (act, Docker未インストール等)"""
+
     pass
 
 
 class ConfigurationError(CIHelperError):
     """設定エラー"""
+
     pass
 
 
 class ExecutionError(CIHelperError):
     """実行時エラー"""
+
     pass
 
 
 class ValidationError(CIHelperError):
     """入力検証エラー"""
+
     pass
 
 
 class WorkflowNotFoundError(CIHelperError):
     """ワークフローファイルが見つからない"""
+
     pass
 
 
 class LogParsingError(CIHelperError):
     """ログ解析エラー"""
+
     pass
