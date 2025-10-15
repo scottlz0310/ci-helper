@@ -116,6 +116,7 @@ bower_components
 build/Release
 coverage.xml
 coverage/
+.coverage
 cython_debug/
 develop-eggs/
 dist
