@@ -1,0 +1,19 @@
+[Simple Test/test] 🚀  Start image=catthehacker/ubuntu:act-latest
+[Simple Test/test]   🐳  docker pull image=catthehacker/ubuntu:act-latest platform= username= forcePull=false
+[Simple Test/test]   🐳  docker create image=catthehacker/ubuntu:act-latest platform= entrypoint=["tail" "-f" "/dev/null"] cmd=[]
+[Simple Test/test]   🐳  docker run image=catthehacker/ubuntu:act-latest platform= entrypoint=["tail" "-f" "/dev/null"] cmd=[]
+[Simple Test/test] ⭐ Run Main actions/checkout@v4
+[Simple Test/test]   🐳  docker cp src=/home/user/project/. dst=/github/workspace
+[Simple Test/test]   ✅  Success - Main actions/checkout@v4
+[Simple Test/test] ⭐ Run Main Run simple test
+[Simple Test/test]   🐳  docker exec cmd=[bash --noprofile --norc -e -o pipefail /var/run/act/workflow/1] user= workdir=
+| Test passed
+[Simple Test/test]   ✅  Success - Main Run simple test
+[Simple Test/test] ⭐ Run Main List files
+[Simple Test/test]   🐳  docker exec cmd=[bash --noprofile --norc -e -o pipefail /var/run/act/workflow/2] user= workdir=
+| total 12
+| drwxr-xr-x 3 root root 4096 Dec 15 10:30 .
+| drwxr-xr-x 3 root root 4096 Dec 15 10:30 ..
+| drwxr-xr-x 8 root root 4096 Dec 15 10:30 .git
+[Simple Test/test]   ✅  Success - Main List files
+[Simple Test/test] 🏁  Job succeeded

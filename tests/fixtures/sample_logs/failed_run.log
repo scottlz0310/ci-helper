@@ -1,0 +1,13 @@
+[Failing Test/test] 🚀  Start image=catthehacker/ubuntu:act-latest
+[Failing Test/test]   🐳  docker pull image=catthehacker/ubuntu:act-latest platform= username= forcePull=false
+[Failing Test/test]   🐳  docker create image=catthehacker/ubuntu:act-latest platform= entrypoint=["tail" "-f" "/dev/null"] cmd=[]
+[Failing Test/test]   🐳  docker run image=catthehacker/ubuntu:act-latest platform= entrypoint=["tail" "-f" "/dev/null"] cmd=[]
+[Failing Test/test] ⭐ Run Main actions/checkout@v4
+[Failing Test/test]   🐳  docker cp src=/home/user/project/. dst=/github/workspace
+[Failing Test/test]   ✅  Success - Main actions/checkout@v4
+[Failing Test/test] ⭐ Run Main Run failing test
+[Failing Test/test]   🐳  docker exec cmd=[bash --noprofile --norc -e -o pipefail /var/run/act/workflow/1] user= workdir=
+| Starting test
+[Failing Test/test]   ❌  Failure - Main Run failing test
+[Failing Test/test] exitcode '1': failure
+[Failing Test/test] 💥  Job failed

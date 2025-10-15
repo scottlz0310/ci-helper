@@ -96,6 +96,12 @@ def doctor(ctx: click.Context, verbose: bool, guide: str | None) -> None:
     if not disk_result["passed"]:
         all_passed = False
 
+    # 7. セキュリティ設定のチェック
+    security_result = _check_security_configuration(config, show_verbose)
+    checks.append(security_result)
+    if not security_result["passed"]:
+        all_passed = False
+
     # 結果の表示
     _display_results(checks, show_verbose)
 
@@ -430,3 +436,68 @@ def _display_results(checks: list[dict], verbose: bool) -> None:
         for i, check in enumerate(failed_checks, 1):
             if check["suggestion"]:
                 console.print(f"{i}. [bold]{check['name']}[/bold]: {check['suggestion']}")
+
+
+def _check_security_configuration(config, verbose: bool) -> dict[str, any]:
+    """セキュリティ設定をチェック"""
+    check_name = "セキュリティ設定"
+
+    try:
+        # 設定ファイルのセキュリティ検証
+        validation_result = config.validate_all_config_files()
+
+        if not validation_result["overall_valid"]:
+            critical_issues = validation_result.get("critical_issues", 0)
+            warning_issues = validation_result.get("warning_issues", 0)
+
+            if critical_issues > 0:
+                return {
+                    "name": check_name,
+                    "passed": False,
+                    "message": f"重大なセキュリティ問題: {critical_issues}件",
+                    "suggestion": "設定ファイルからシークレットを削除し、環境変数を使用してください",
+                    "details": f"警告: {warning_issues}件" if verbose and warning_issues > 0 else None,
+                }
+            elif warning_issues > 0:
+                return {
+                    "name": check_name,
+                    "passed": True,
+                    "message": f"軽微な問題: {warning_issues}件",
+                    "suggestion": "シークレット管理のベストプラクティスを確認してください",
+                    "details": "環境変数の使用を推奨します" if verbose else None,
+                }
+
+        # 環境変数の設定状況をチェック
+        from ..core.security import EnvironmentSecretManager
+
+        secret_manager = EnvironmentSecretManager()
+        secret_summary = secret_manager.get_secret_summary()
+
+        configured_count = secret_summary["total_configured"]
+        missing_count = secret_summary["total_missing"]
+
+        if missing_count > 0:
+            return {
+                "name": check_name,
+                "passed": True,  # 警告レベル
+                "message": f"推奨環境変数: {configured_count}件設定済み, {missing_count}件未設定",
+                "suggestion": "AI機能を使用する場合は、必要な環境変数を設定してください",
+                "details": f"未設定: {list(secret_summary['required_secrets'].keys())}" if verbose else None,
+            }
+
+        return {
+            "name": check_name,
+            "passed": True,
+            "message": "セキュリティ設定は適切です",
+            "suggestion": None,
+            "details": f"設定済み環境変数: {configured_count}件" if verbose else None,
+        }
+
+    except Exception as e:
+        return {
+            "name": check_name,
+            "passed": False,
+            "message": f"セキュリティチェックに失敗: {e}",
+            "suggestion": "設定ファイルの形式を確認してください",
+            "details": None,
+        }

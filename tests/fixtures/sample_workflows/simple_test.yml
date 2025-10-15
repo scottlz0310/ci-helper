@@ -1,0 +1,11 @@
+name: Simple Test
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run simple test
+        run: echo "Test passed"
+      - name: List files
+        run: ls -la

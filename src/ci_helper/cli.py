@@ -13,10 +13,15 @@ import click
 from rich.console import Console
 
 from . import __version__
-from .commands.doctor import doctor
 
 # サブコマンドのインポート
+from .commands.clean import clean
+from .commands.doctor import doctor
 from .commands.init import init, setup
+from .commands.logs import logs
+from .commands.secrets import secrets
+from .commands.test import test
+from .core.error_handler import ErrorHandler
 from .core.exceptions import CIHelperError
 from .utils.config import Config
 
@@ -49,6 +54,7 @@ def cli(ctx: click.Context, verbose: bool, config_file: Path | None) -> None:
       doctor   環境依存関係をチェック
       test     CI/CDワークフローをローカルで実行
       logs     実行ログを管理・表示
+      secrets  シークレット管理と検証
       clean    キャッシュとログをクリーンアップ
 
     \b
@@ -93,6 +99,10 @@ def cli(ctx: click.Context, verbose: bool, config_file: Path | None) -> None:
 cli.add_command(init)
 cli.add_command(setup)
 cli.add_command(doctor)
+cli.add_command(test)
+cli.add_command(logs)
+cli.add_command(secrets)
+cli.add_command(clean)
 
 
 def main() -> None:

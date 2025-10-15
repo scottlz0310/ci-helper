@@ -1,0 +1,4 @@
+-P ubuntu-latest=ghcr.io/catthehacker/ubuntu:full-24.04
+-P ubuntu-22.04=ghcr.io/catthehacker/ubuntu:full-22.04
+-P ubuntu-20.04=ghcr.io/catthehacker/ubuntu:full-20.04
+--container-daemon-socket -

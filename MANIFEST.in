@@ -1,0 +1,27 @@
+# Include documentation files
+include README.md
+include LICENSE
+include CHANGELOG.md
+
+# Include configuration files
+include pyproject.toml
+
+# Include documentation directory
+recursive-include docs *.md
+
+# Include test fixtures
+recursive-include tests/fixtures *
+
+# Exclude development and cache files
+exclude .gitignore
+exclude .pre-commit-config.yaml
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude * *.so
+recursive-exclude * .DS_Store
+recursive-exclude .git *
+recursive-exclude .pytest_cache *
+recursive-exclude .ruff_cache *
+recursive-exclude .mypy_cache *
+recursive-exclude htmlcov *
+recursive-exclude .coverage *

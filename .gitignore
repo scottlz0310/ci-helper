@@ -8,3 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+
+# ci-helper
+.ci-helper/
+ci-helper.toml
+.env

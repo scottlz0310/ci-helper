@@ -89,3 +89,90 @@ class ExecutionResult:
     def failed_workflows(self) -> Sequence[WorkflowResult]:
         """失敗したワークフローのリストを取得"""
         return [w for w in self.workflows if not w.success]
+
+    @property
+    def failed_jobs(self) -> Sequence[JobResult]:
+        """失敗したジョブのリストを取得"""
+        failed_jobs = []
+        for workflow in self.workflows:
+            failed_jobs.extend([job for job in workflow.jobs if not job.success])
+        return failed_jobs
+
+    @property
+    def all_failures(self) -> Sequence[Failure]:
+        """全ての失敗のリストを取得"""
+        all_failures = []
+        for workflow in self.workflows:
+            for job in workflow.jobs:
+                all_failures.extend(job.failures)
+        return all_failures
+
+
+@dataclass
+class LogComparisonResult:
+    """ログ比較結果"""
+
+    current_execution: ExecutionResult
+    previous_execution: ExecutionResult | None
+    new_errors: Sequence[Failure] = field(default_factory=list)
+    resolved_errors: Sequence[Failure] = field(default_factory=list)
+    persistent_errors: Sequence[Failure] = field(default_factory=list)
+
+    @property
+    def has_changes(self) -> bool:
+        """変更があるかどうか"""
+        return len(self.new_errors) > 0 or len(self.resolved_errors) > 0
+
+    @property
+    def improvement_score(self) -> float:
+        """改善スコア（0-1、1が最良）"""
+        if not self.previous_execution:
+            return 1.0 if self.current_execution.success else 0.0
+
+        prev_failures = len(self.previous_execution.all_failures)
+        curr_failures = len(self.current_execution.all_failures)
+
+        if prev_failures == 0:
+            return 1.0 if curr_failures == 0 else 0.0
+
+        return max(0.0, 1.0 - (curr_failures / prev_failures))
+
+
+@dataclass
+class AnalysisMetrics:
+    """解析メトリクス"""
+
+    total_workflows: int
+    total_jobs: int
+    total_steps: int
+    total_failures: int
+    success_rate: float
+    average_duration: float
+    failure_types: dict[FailureType, int] = field(default_factory=dict)
+
+    @classmethod
+    def from_execution_result(cls, execution_result: ExecutionResult) -> AnalysisMetrics:
+        """ExecutionResultからメトリクスを生成"""
+        total_workflows = len(execution_result.workflows)
+        total_jobs = sum(len(w.jobs) for w in execution_result.workflows)
+        total_steps = sum(len(job.steps) for w in execution_result.workflows for job in w.jobs)
+        total_failures = execution_result.total_failures
+
+        # 成功率を計算
+        successful_jobs = sum(1 for w in execution_result.workflows for job in w.jobs if job.success)
+        success_rate = (successful_jobs / total_jobs * 100) if total_jobs > 0 else 100.0
+
+        # 失敗タイプを集計
+        failure_types: dict[FailureType, int] = {}
+        for failure in execution_result.all_failures:
+            failure_types[failure.type] = failure_types.get(failure.type, 0) + 1
+
+        return cls(
+            total_workflows=total_workflows,
+            total_jobs=total_jobs,
+            total_steps=total_steps,
+            total_failures=total_failures,
+            success_rate=success_rate,
+            average_duration=execution_result.total_duration / total_workflows if total_workflows > 0 else 0.0,
+            failure_types=failure_types,
+        )

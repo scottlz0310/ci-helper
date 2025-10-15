@@ -1,0 +1,15 @@
+[Python Test/test] 🚀  Start image=catthehacker/ubuntu:act-latest
+[Python Test/test]   🐳  docker pull image=catthehacker/ubuntu:act-latest platform= username= forcePull=false
+[Python Test/test]   🐳  docker create image=catthehacker/ubuntu:act-latest platform= entrypoint=["tail" "-f" "/dev/null"] cmd=[]
+[Python Test/test]   🐳  docker run image=catthehacker/ubuntu:act-latest platform= entrypoint=["tail" "-f" "/dev/null"] cmd=[]
+[Python Test/test] ⭐ Run Main actions/checkout@v4
+[Python Test/test]   🐳  docker cp src=/home/user/project/. dst=/github/workspace
+[Python Test/test]   ✅  Success - Main actions/checkout@v4
+[Python Test/test] ⭐ Run Main Run Python tests
+[Python Test/test]   🐳  docker exec cmd=[bash --noprofile --norc -e -o pipefail /var/run/act/workflow/1] user= workdir=
+| Traceback (most recent call last):
+|   File "<string>", line 1, in <module>
+| AssertionError: Test failed
+[Python Test/test]   ❌  Failure - Main Run Python tests
+[Python Test/test] exitcode '1': failure
+[Python Test/test] 💥  Job failed

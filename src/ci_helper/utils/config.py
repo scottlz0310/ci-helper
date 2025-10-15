@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 import tomllib
 
-from ..core.exceptions import ConfigurationError
+from ..core.exceptions import ConfigurationError, SecurityError
 
 
 class Config:
@@ -42,14 +42,21 @@ class Config:
         "save_logs": True,
     }
 
-    def __init__(self, project_root: Path | None = None):
+    def __init__(self, project_root: Path | None = None, validate_security: bool = True):
         """設定を初期化
 
         Args:
             project_root: プロジェクトルートディレクトリ（Noneの場合は現在のディレクトリ）
+            validate_security: セキュリティ検証を有効にするかどうか
         """
         self.project_root = project_root or Path.cwd()
         self.config_file = self.project_root / "ci-helper.toml"
+        self.validate_security = validate_security
+
+        if validate_security:
+            from ..core.security import SecurityValidator
+
+            self.security_validator = SecurityValidator()
 
         # 設定を読み込み
         self._config = self._load_config()
@@ -63,7 +70,15 @@ class Config:
             try:
                 with open(self.config_file, "rb") as f:
                     project_config = tomllib.load(f)
+
+                # セキュリティ検証
+                if self.validate_security:
+                    self._validate_config_security(self.config_file)
+
                 config.update(project_config.get("ci-helper", {}))
+            except SecurityError:
+                # セキュリティエラーは再発生
+                raise
             except Exception as e:
                 raise ConfigurationError(
                     f"設定ファイルの読み込みに失敗しました: {self.config_file}",
@@ -165,3 +180,105 @@ class Config:
     def __contains__(self, key: str) -> bool:
         """in演算子をサポート"""
         return key in self._config
+
+    def _validate_config_security(self, config_file: Path) -> None:
+        """設定ファイルのセキュリティを検証
+
+        Args:
+            config_file: 設定ファイルのパス
+
+        Raises:
+            SecurityError: セキュリティ問題が検出された場合
+        """
+        if not hasattr(self, "security_validator"):
+            return
+
+        try:
+            with open(config_file, encoding="utf-8") as f:
+                content = f.read()
+
+            # 設定ファイルのセキュリティ検証
+            config_files = {str(config_file): content}
+            validation_result = self.security_validator.validate_config_security(config_files)
+
+            if not validation_result["overall_valid"]:
+                # 重大な問題がある場合は例外を発生
+                critical_issues = validation_result["critical_issues"]
+                if critical_issues > 0:
+                    raise SecurityError(
+                        f"設定ファイル '{config_file}' に{critical_issues}件の重大なセキュリティ問題が検出されました",
+                        "シークレットを環境変数に移動し、設定ファイルから削除してください",
+                    )
+
+        except SecurityError:
+            raise
+        except Exception:
+            # セキュリティ検証自体のエラーは警告として扱う
+            pass
+
+    def validate_all_config_files(self) -> dict[str, Any]:
+        """全ての設定ファイルのセキュリティを検証
+
+        Returns:
+            検証結果の辞書
+        """
+        if not hasattr(self, "security_validator"):
+            return {
+                "overall_valid": True,
+                "message": "セキュリティ検証が無効になっています",
+            }
+
+        config_files = {}
+
+        # ci-helper.toml
+        if self.config_file.exists():
+            with open(self.config_file, encoding="utf-8") as f:
+                config_files[str(self.config_file)] = f.read()
+
+        # .env ファイル
+        env_file = self.project_root / ".env"
+        if env_file.exists():
+            with open(env_file, encoding="utf-8") as f:
+                config_files[str(env_file)] = f.read()
+
+        # .actrc ファイル
+        actrc_file = self.project_root / ".actrc"
+        if actrc_file.exists():
+            with open(actrc_file, encoding="utf-8") as f:
+                config_files[str(actrc_file)] = f.read()
+
+        if not config_files:
+            return {
+                "overall_valid": True,
+                "message": "検証対象の設定ファイルが見つかりませんでした",
+            }
+
+        return self.security_validator.validate_config_security(config_files)
+
+    def get_secret_recommendations(self) -> list[str]:
+        """シークレット管理の推奨事項を取得
+
+        Returns:
+            推奨事項のリスト
+        """
+        return [
+            "シークレット管理のベストプラクティス:",
+            "",
+            "1. 環境変数の使用:",
+            "   export OPENAI_API_KEY=your_api_key",
+            "   export GITHUB_TOKEN=your_token",
+            "",
+            "2. .env ファイルの使用:",
+            "   echo 'OPENAI_API_KEY=your_api_key' >> .env",
+            "   echo '.env' >> .gitignore",
+            "",
+            "3. 設定ファイルでの参照:",
+            "   [ci-helper]",
+            "   # 良い例: 環境変数参照",
+            "   api_key = '${OPENAI_API_KEY}'",
+            "   # 悪い例: 直接記載",
+            "   # api_key = 'sk-1234567890abcdef'",
+            "",
+            "4. act実行時の環境変数:",
+            "   ci-helperは自動的に安全な環境変数のみをactに渡します",
+        ]

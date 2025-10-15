@@ -1,9 +1,13 @@
 [project]
 name = "ci-helper"
-version = "0.1.0"
+version = "1.0.0"
 description = "actを使用したローカルCI/CDパイプライン検証とAI統合機能を提供するCLIツール"
 readme = "README.md"
+license = { text = "MIT" }
 authors = [
+    { name = "scottlz0310", email = "scottlz0310@users.noreply.github.com" },
+]
+maintainers = [
     { name = "scottlz0310", email = "scottlz0310@users.noreply.github.com" },
 ]
 requires-python = ">=3.12"
@@ -13,15 +17,29 @@ dependencies = [
     "tiktoken>=0.8.0",
     "tomli>=2.0.0; python_version < '3.11'",
 ]
-keywords = ["ci", "cd", "github-actions", "act", "cli", "testing"]
+keywords = [
+    "ci",
+    "cd",
+    "github-actions",
+    "act",
+    "cli",
+    "testing",
+    "local-ci",
+    "workflow",
+]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Testing",
     "Topic :: Software Development :: Build Tools",
+    "Topic :: System :: Systems Administration",
+    "Typing :: Typed",
 ]
 
 [project.scripts]
@@ -29,8 +47,10 @@ ci-run = "ci_helper.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/scottlz0310/ci-helper"
-Repository = "https://github.com/scottlz0310/ci-helper"
+Repository = "https://github.com/scottlz0310/ci-helper.git"
 Issues = "https://github.com/scottlz0310/ci-helper/issues"
+Documentation = "https://github.com/scottlz0310/ci-helper/blob/main/README.md"
+Changelog = "https://github.com/scottlz0310/ci-helper/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [

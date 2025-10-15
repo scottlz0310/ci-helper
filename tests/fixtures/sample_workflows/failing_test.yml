@@ -1,0 +1,13 @@
+name: Failing Test
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run failing test
+        run: |
+          echo "Starting test"
+          exit 1
+      - name: This should not run
+        run: echo "This step should be skipped"

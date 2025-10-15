@@ -1,0 +1,27 @@
+# ci-helper 設定ファイル
+# 詳細な設定オプションについては、ドキュメントを参照してください
+
+[ci-helper]
+# ログとキャッシュディレクトリ
+log_dir = ".ci-helper/logs"
+cache_dir = ".ci-helper/cache"
+reports_dir = ".ci-helper/reports"
+
+# ログ解析設定
+context_lines = 3  # エラー前後のコンテキスト行数
+max_log_size_mb = 100  # 最大ログファイルサイズ（MB）
+max_cache_size_mb = 500  # 最大キャッシュサイズ（MB）
+
+# act実行設定
+act_image = "ghcr.io/catthehacker/ubuntu:full-24.04"  # デフォルトDockerイメージ
+timeout_seconds = 1800  # タイムアウト（秒）
+
+# デフォルト動作
+verbose = false  # 詳細ログを有効にするか
+save_logs = true  # ログを自動保存するか
+
+# AI統合設定（フェーズ3で使用）
+# [ci-helper.ai]
+# provider = "openai"  # AI プロバイダー
+# model = "gpt-4"  # 使用するモデル
+# max_tokens = 4000  # 最大トークン数
