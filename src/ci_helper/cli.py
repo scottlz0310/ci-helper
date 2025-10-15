@@ -4,7 +4,6 @@ ci-helper CLIエントリーポイント
 Clickを使用したマルチコマンドCLIインターフェースを提供します。
 """
 
-from typing import Any, Dict
 
 import click
 
@@ -22,7 +21,7 @@ def cli(ctx: click.Context) -> None:
     """
     # コンテキストオブジェクトの初期化
     ctx.ensure_object(dict)
-    
+
     # グローバル設定の初期化（後で実装）
     ctx.obj['config'] = {}
 

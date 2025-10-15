@@ -4,10 +4,15 @@ ci-helperのデータモデル定義
 実行結果、失敗情報、設定などのデータ構造を定義します。
 """
 
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class FailureType(Enum):
@@ -25,17 +30,11 @@ class Failure:
     """失敗情報を表すデータクラス"""
     type: FailureType
     message: str
-    file_path: Optional[str] = None
-    line_number: Optional[int] = None
-    context_before: List[str] = None
-    context_after: List[str] = None
-    stack_trace: Optional[str] = None
-    
-    def __post_init__(self):
-        if self.context_before is None:
-            self.context_before = []
-        if self.context_after is None:
-            self.context_after = []
+    file_path: str | None = None
+    line_number: int | None = None
+    context_before: Sequence[str] = field(default_factory=list)
+    context_after: Sequence[str] = field(default_factory=list)
+    stack_trace: str | None = None
 
 
 @dataclass
@@ -52,15 +51,9 @@ class JobResult:
     """ワークフロージョブの実行結果"""
     name: str
     success: bool
-    failures: List[Failure]
-    steps: List[StepResult]
+    failures: Sequence[Failure] = field(default_factory=list)
+    steps: Sequence[StepResult] = field(default_factory=list)
     duration: float = 0.0
-    
-    def __post_init__(self):
-        if self.failures is None:
-            self.failures = []
-        if self.steps is None:
-            self.steps = []
 
 
 @dataclass
@@ -68,39 +61,29 @@ class WorkflowResult:
     """ワークフローの実行結果"""
     name: str
     success: bool
-    jobs: List[JobResult]
+    jobs: Sequence[JobResult] = field(default_factory=list)
     duration: float = 0.0
-    
-    def __post_init__(self):
-        if self.jobs is None:
-            self.jobs = []
 
 
 @dataclass
 class ExecutionResult:
     """CI実行の全体結果"""
     success: bool
-    workflows: List[WorkflowResult]
+    workflows: Sequence[WorkflowResult]
     total_duration: float
-    log_path: Optional[str] = None
-    timestamp: datetime = None
-    
-    def __post_init__(self):
-        if self.workflows is None:
-            self.workflows = []
-        if self.timestamp is None:
-            self.timestamp = datetime.now()
-    
+    log_path: str | None = None
+    timestamp: datetime = field(default_factory=datetime.now)
+
     @property
     def total_failures(self) -> int:
         """全失敗数を取得"""
         return sum(
-            len(job.failures) 
-            for workflow in self.workflows 
+            len(job.failures)
+            for workflow in self.workflows
             for job in workflow.jobs
         )
-    
+
     @property
-    def failed_workflows(self) -> List[WorkflowResult]:
+    def failed_workflows(self) -> Sequence[WorkflowResult]:
         """失敗したワークフローのリストを取得"""
         return [w for w in self.workflows if not w.success]
