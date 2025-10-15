@@ -14,3 +14,4 @@ wheels/
 ci-helper.toml
 .env
 uv.lock
+logs/
