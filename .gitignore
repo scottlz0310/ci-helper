@@ -13,3 +13,4 @@ wheels/
 .ci-helper/
 ci-helper.toml
 .env
+uv.lock
