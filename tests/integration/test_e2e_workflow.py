@@ -38,10 +38,12 @@ class TestE2EWorkflow:
     def test_init_command_creates_config_files(self, runner: CliRunner, temp_dir: Path):
         """initコマンドが設定ファイルを正しく作成することをテスト"""
         with runner.isolated_filesystem(temp_dir=str(temp_dir)):
-            result = runner.invoke(cli, ["init"])
+            # Confirm.ask をモックして対話的入力を回避
+            with patch("ci_helper.commands.init.Confirm.ask", return_value=False):
+                result = runner.invoke(cli, ["init"])
 
-            # initコマンドが実行されることを確認（設定エラーでも実行は試行される）
-            assert result.exit_code == 0 or "初期化" in result.output
+                # initコマンドが実行されることを確認（設定エラーでも実行は試行される）
+                assert result.exit_code == 0 or "初期化" in result.output
 
             # 実際にファイルが作成されるかは実装に依存するため、
             # 最低限コマンドが認識されることを確認
@@ -81,6 +83,9 @@ class TestE2EWorkflow:
         mock_run.return_value = mock_result
 
         with runner.isolated_filesystem(temp_dir=str(project_with_workflows)):
+            # 設定ファイルを作成
+            Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
+
             result = runner.invoke(cli, ["test", "--workflow", "simple_test.yml"])
 
             assert result.exit_code == 0
@@ -125,6 +130,9 @@ class TestE2EWorkflow:
         mock_run.return_value = mock_result
 
         with runner.isolated_filesystem(temp_dir=str(project_with_workflows)):
+            # 設定ファイルを作成
+            Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
+
             result = runner.invoke(cli, ["test", "--workflow", "failing_test.yml"])
 
             assert result.exit_code != 0
@@ -146,15 +154,18 @@ class TestE2EWorkflow:
 
     def test_logs_command_lists_execution_history(self, runner: CliRunner, temp_dir: Path):
         """logsコマンドが実行履歴を正しく表示することをテスト"""
-        # ログディレクトリとファイルを作成
-        logs_dir = temp_dir / ".ci-helper" / "logs"
-        logs_dir.mkdir(parents=True)
-
-        # サンプルログファイルを作成
-        (logs_dir / "act_20231215_103000.log").write_text("Sample log 1")
-        (logs_dir / "act_20231215_104500.log").write_text("Sample log 2")
-
         with runner.isolated_filesystem(temp_dir=str(temp_dir)):
+            # 設定ファイルを作成
+            Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
+
+            # ログディレクトリとファイルを作成
+            logs_dir = Path(".ci-helper/logs")
+            logs_dir.mkdir(parents=True)
+
+            # サンプルログファイルを作成
+            (logs_dir / "act_20231215_103000.log").write_text("Sample log 1")
+            (logs_dir / "act_20231215_104500.log").write_text("Sample log 2")
+
             result = runner.invoke(cli, ["logs"])
 
             assert result.exit_code == 0
@@ -163,19 +174,22 @@ class TestE2EWorkflow:
 
     def test_clean_command_removes_cache_files(self, runner: CliRunner, temp_dir: Path):
         """cleanコマンドがキャッシュファイルを正しく削除することをテスト"""
-        # キャッシュディレクトリとファイルを作成
-        cache_dir = temp_dir / ".ci-helper"
-        cache_dir.mkdir(parents=True)
-
-        logs_dir = cache_dir / "logs"
-        logs_dir.mkdir()
-        (logs_dir / "test.log").write_text("test log")
-
-        cache_subdir = cache_dir / "cache"
-        cache_subdir.mkdir()
-        (cache_subdir / "test.cache").write_text("test cache")
-
         with runner.isolated_filesystem(temp_dir=str(temp_dir)):
+            # 設定ファイルを作成
+            Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
+
+            # キャッシュディレクトリとファイルを作成
+            cache_dir = Path(".ci-helper")
+            cache_dir.mkdir(parents=True)
+
+            logs_dir = cache_dir / "logs"
+            logs_dir.mkdir()
+            (logs_dir / "test.log").write_text("test log")
+
+            cache_subdir = cache_dir / "cache"
+            cache_subdir.mkdir()
+            (cache_subdir / "test.cache").write_text("test cache")
+
             result = runner.invoke(cli, ["clean", "--all"], input="y\n")
 
             assert result.exit_code == 0

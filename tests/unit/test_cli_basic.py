@@ -58,7 +58,7 @@ class TestInitCommandBasic:
         result = runner.invoke(init, ["--help"])
 
         assert result.exit_code == 0
-        assert "設定ファイルテンプレートを生成します" in result.output
+        assert "プロジェクトの初期化" in result.output
         assert "--force" in result.output
 
     def test_init_force_option_help(self):
@@ -67,7 +67,7 @@ class TestInitCommandBasic:
         result = runner.invoke(init, ["--help"])
 
         assert result.exit_code == 0
-        assert "既存ファイルを上書きします" in result.output
+        assert "既存の設定ファイルを強制的に上書きします" in result.output
 
 
 class TestSetupCommandBasic:
@@ -264,7 +264,7 @@ class TestCommandStructure:
         assert result.exit_code == 0
 
         # 各コマンドの説明が含まれることを確認
-        assert "設定ファイルテンプレートを生成" in result.output
+        assert "プロジェクトの初期化" in result.output
         assert "環境依存関係をチェック" in result.output
         assert "CI/CDワークフローをローカルで実行" in result.output
         assert "実行ログを管理・表示" in result.output

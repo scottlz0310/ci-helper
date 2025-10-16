@@ -71,6 +71,7 @@ ENV_EXAMPLE_TEMPLATE = """# ci-helper 環境変数設定例
 GITIGNORE_ADDITIONS = """
 # ci-helper
 .ci-helper/
+.actrc
 ci-helper.toml
 .env
 """

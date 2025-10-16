@@ -69,8 +69,8 @@ class TestCLIEntryPoint:
 
             assert result.exit_code == 0
 
-    @patch("ci_helper.core.error_handler.ErrorHandler.handle_error")
-    @patch("ci_helper.utils.config.Config")
+    @patch("ci_helper.cli.ErrorHandler.handle_error")
+    @patch("ci_helper.cli.Config")
     def test_cli_config_error_handling(self, mock_config, mock_error_handler):
         """設定エラーのハンドリングテスト"""
         from ci_helper.core.exceptions import ConfigurationError
@@ -93,7 +93,7 @@ class TestInitCommand:
         result = runner.invoke(init, ["--help"])
 
         assert result.exit_code == 0
-        assert "設定ファイルテンプレートを生成します" in result.output
+        assert "プロジェクトの初期化" in result.output
         assert "--force" in result.output
 
     @patch("ci_helper.commands.init.console")
@@ -317,7 +317,7 @@ class TestTestCommand:
     def test_test_basic_execution(self):
         """基本的な実行テスト"""
         with patch("ci_helper.commands.test._check_dependencies"):
-            with patch("ci_helper.core.ci_runner.CIRunner") as mock_ci_runner:
+            with patch("ci_helper.commands.test.CIRunner") as mock_ci_runner:
                 with patch("ci_helper.commands.test.console"):
                     # モックの設定
                     mock_runner_instance = Mock()
@@ -366,7 +366,7 @@ class TestTestCommand:
     def test_test_workflow_option(self):
         """--workflow オプションのテスト"""
         with patch("ci_helper.commands.test._check_dependencies"):
-            with patch("ci_helper.core.ci_runner.CIRunner") as mock_ci_runner:
+            with patch("ci_helper.commands.test.CIRunner") as mock_ci_runner:
                 mock_runner_instance = Mock()
                 mock_execution_result = Mock()
                 mock_execution_result.success = True
@@ -400,13 +400,16 @@ class TestTestCommand:
 
         for format_option in format_options:
             with patch("ci_helper.commands.test._check_dependencies"):
-                with patch("ci_helper.core.ci_runner.CIRunner") as mock_ci_runner:
+                with patch("ci_helper.commands.test.CIRunner") as mock_ci_runner:
                     mock_runner_instance = Mock()
                     mock_execution_result = Mock()
                     mock_execution_result.success = True
                     mock_execution_result.total_duration = 5.0
                     mock_execution_result.total_failures = 0
                     mock_execution_result.workflows = []
+                    mock_execution_result.all_failures = []
+                    mock_execution_result.log_path = None
+                    mock_execution_result.timestamp = "2024-01-01T00:00:00"
                     mock_runner_instance.run_workflows.return_value = mock_execution_result
                     mock_ci_runner.return_value = mock_runner_instance
 
@@ -429,13 +432,16 @@ class TestTestCommand:
         """--save/--no-save オプションのテスト"""
         for save_option in ["--save", "--no-save"]:
             with patch("ci_helper.commands.test._check_dependencies"):
-                with patch("ci_helper.core.ci_runner.CIRunner") as mock_ci_runner:
+                with patch("ci_helper.commands.test.CIRunner") as mock_ci_runner:
                     mock_runner_instance = Mock()
                     mock_execution_result = Mock()
                     mock_execution_result.success = True
                     mock_execution_result.total_duration = 5.0
                     mock_execution_result.total_failures = 0
                     mock_execution_result.workflows = []
+                    mock_execution_result.all_failures = []
+                    mock_execution_result.log_path = None
+                    mock_execution_result.timestamp = "2024-01-01T00:00:00"
                     mock_runner_instance.run_workflows.return_value = mock_execution_result
                     mock_ci_runner.return_value = mock_runner_instance
 
@@ -700,9 +706,9 @@ class TestCleanCommand:
         """--dry-run オプションのテスト"""
         mock_manager_instance = Mock()
         mock_manager_instance.get_cache_statistics.return_value = {
-            "logs": {"files": 5, "size_mb": 10.0},
-            "cache": {"files": 3, "size_mb": 5.0},
-            "total": {"files": 8, "size_mb": 15.0},
+            "logs": {"files": 5, "size_mb": 10.0, "oldest_file": None, "newest_file": None},
+            "cache": {"files": 3, "size_mb": 5.0, "oldest_file": None, "newest_file": None},
+            "total": {"files": 8, "size_mb": 15.0, "oldest_file": None, "newest_file": None},
         }
         mock_manager_instance.cleanup_all.return_value = {
             "total": {"deleted_files": 8, "freed_size_mb": 15.0, "errors": 0}
@@ -711,6 +717,8 @@ class TestCleanCommand:
 
         runner = CliRunner()
         with runner.isolated_filesystem():
+            Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
+
             result = runner.invoke(cli, ["clean", "--dry-run"])
 
             assert result.exit_code == 0

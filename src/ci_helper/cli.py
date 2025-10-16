@@ -56,11 +56,13 @@ def cli(ctx: click.Context, verbose: bool, config_file: Path | None) -> None:
       logs     実行ログを管理・表示
       secrets  シークレット管理と検証
       clean    キャッシュとログをクリーンアップ
+      cache    Dockerイメージのキャッシュ管理
 
     \b
     使用例:
       ci-run init                    # 初期設定
       ci-run doctor                  # 環境チェック
+      ci-run cache --pull            # Dockerイメージを事前プル
       ci-run test                    # 全ワークフローを実行
       ci-run test -w test.yml        # 特定のワークフローを実行
       ci-run logs                    # ログ一覧を表示
@@ -103,6 +105,7 @@ cli.add_command(test)
 cli.add_command(logs)
 cli.add_command(secrets)
 cli.add_command(clean)
+cli.add_command(cache)
 
 
 def main() -> None:

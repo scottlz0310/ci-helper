@@ -27,9 +27,11 @@ class TestCommandIntegration:
         runner = CliRunner()
 
         with runner.isolated_filesystem(temp_dir=str(temp_dir)):
-            # initコマンドを実行
-            result = runner.invoke(cli, ["init"])
-            assert result.exit_code == 0
+            # Confirm.ask をモックして対話的入力を回避
+            with patch("ci_helper.commands.init.Confirm.ask", return_value=False):
+                # initコマンドを実行
+                result = runner.invoke(cli, ["init"])
+                assert result.exit_code == 0
 
             # ワークフローディレクトリを作成
             workflows_dir = temp_dir / ".github" / "workflows"
@@ -46,8 +48,9 @@ class TestCommandIntegration:
         """init → doctor の連携フローをテスト"""
         with runner.isolated_filesystem(temp_dir=str(temp_dir)):
             # 1. initコマンドを実行
-            init_result = runner.invoke(cli, ["init"])
-            assert init_result.exit_code == 0
+            with patch("ci_helper.commands.init.Confirm.ask", return_value=False):
+                init_result = runner.invoke(cli, ["init"])
+                assert init_result.exit_code == 0
 
             # 2. doctorコマンドを実行
             with (

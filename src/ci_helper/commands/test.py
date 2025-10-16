@@ -103,8 +103,8 @@ def test(
       ci-run test --dry-run --log path.log  # 既存ログを解析
     """
     try:
-        config: Config = ctx.obj["config"]
-        global_verbose: bool = ctx.obj.get("verbose", False)
+        config: Config = ctx.obj["config"] if ctx.obj else Config()
+        global_verbose: bool = ctx.obj.get("verbose", False) if ctx.obj else False
         verbose = verbose or global_verbose
 
         # ドライラン時のログファイル解析
@@ -431,7 +431,7 @@ def _display_table_results(execution_result, verbose: bool, dry_run: bool) -> No
     summary_table.add_row("ワークフロー数", str(len(execution_result.workflows)))
 
     if execution_result.log_path:
-        summary_table.add_row("ログファイル", execution_result.log_path)
+        summary_table.add_row("ログファイル", str(execution_result.log_path))
 
     console.print(summary_table)
 

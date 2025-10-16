@@ -105,6 +105,9 @@ class TestErrorScenarios:
     def test_disk_space_errors(self, runner: CliRunner, temp_dir: Path):
         """ディスク容量不足の場合のエラーハンドリングをテスト"""
         with runner.isolated_filesystem(temp_dir=str(temp_dir)):
+            # 設定ファイルを作成
+            Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
+
             with patch("shutil.disk_usage") as mock_disk_usage:
                 # ディスク容量不足をシミュレート
                 mock_disk_usage.return_value = (1000, 100, 50)  # total, used, free (bytes)
@@ -181,8 +184,11 @@ level = "INVALID_LEVEL"
     def test_concurrent_execution_conflicts(self, runner: CliRunner, temp_dir: Path):
         """同時実行時の競合状態をテスト"""
         with runner.isolated_filesystem(temp_dir=str(temp_dir)):
+            # 設定ファイルを作成
+            Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
+
             # ロックファイルを作成して同時実行をシミュレート
-            lock_file = temp_dir / ".ci-helper" / "ci-helper.lock"
+            lock_file = Path(".ci-helper/ci-helper.lock")
             lock_file.parent.mkdir(parents=True)
             lock_file.write_text("locked")
 
