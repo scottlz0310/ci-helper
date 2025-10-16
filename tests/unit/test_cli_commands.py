@@ -357,9 +357,7 @@ class TestTestCommand:
             result = runner.invoke(test, ["--dry-run", "--log", str(log_file)])
 
             if result.exit_code != 0:
-                print(f"Exit code: {result.exit_code}")
-                print(f"Output: {result.output}")
-                print(f"Exception: {result.exception}")
+                pass
             assert result.exit_code == 0
             mock_analyze_log.assert_called_once()
 

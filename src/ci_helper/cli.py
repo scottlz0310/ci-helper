@@ -15,6 +15,7 @@ from rich.console import Console
 from . import __version__
 
 # サブコマンドのインポート
+from .commands.cache import cache
 from .commands.clean import clean
 from .commands.doctor import doctor
 from .commands.init import init, setup

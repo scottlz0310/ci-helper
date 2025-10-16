@@ -274,9 +274,9 @@ Line after error 2"""
 
         # コンテキストの内容を確認
         if failure.context_before:
-            assert any("before error" in line for line in failure.context_before)
+            assert Any("before error" in line for line in failure.context_before)
         if failure.context_after:
-            assert any("after error" in line for line in failure.context_after)
+            assert Any("after error" in line for line in failure.context_after)
 
     def test_log_parsing_error_handling(self):
         """ログ解析エラーのハンドリングテスト"""

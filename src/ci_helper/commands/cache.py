@@ -48,8 +48,13 @@ DEFAULT_IMAGES = [
     multiple=True,
     help="特定のイメージを指定します（複数指定可能）",
 )
+@click.option(
+    "--timeout",
+    default=1800,
+    help="プルのタイムアウト時間（秒）デフォルト: 1800秒（30分）",
+)
 @click.pass_context
-def cache(ctx: click.Context, pull: bool, list_images: bool, clean: bool, image: tuple[str, ...]) -> None:
+def cache(ctx: click.Context, pull: bool, list_images: bool, clean: bool, image: tuple[str, ...], timeout: int) -> None:
     """Dockerイメージのキャッシュ管理
 
     act で使用するDockerイメージを事前にプルしてキャッシュすることで、
@@ -57,10 +62,11 @@ def cache(ctx: click.Context, pull: bool, list_images: bool, clean: bool, image:
 
     \b
     使用例:
-      ci-run cache --pull                    # デフォルトイメージをプル
-      ci-run cache --pull --image custom:tag # 特定のイメージをプル
-      ci-run cache --list                    # キャッシュ済みイメージを表示
-      ci-run cache --clean                   # 未使用イメージを削除
+      ci-run cache --pull                         # デフォルトイメージをプル
+      ci-run cache --pull --timeout 3600          # 60分タイムアウトでプル
+      ci-run cache --pull --image custom:tag      # 特定のイメージをプル
+      ci-run cache --list                         # キャッシュ済みイメージを表示
+      ci-run cache --clean                        # 未使用イメージを削除
     """
     try:
         if not _check_docker_available():
@@ -69,7 +75,7 @@ def cache(ctx: click.Context, pull: bool, list_images: bool, clean: bool, image:
             ctx.exit(1)
 
         if pull:
-            _pull_images(image if image else DEFAULT_IMAGES)
+            _pull_images(image if image else DEFAULT_IMAGES, timeout)
         elif list_images:
             _list_cached_images()
         elif clean:
@@ -95,9 +101,10 @@ def _check_docker_available() -> bool:
         return False
 
 
-def _pull_images(images: tuple[str, ...] | list[str]) -> None:
+def _pull_images(images: tuple[str, ...] | list[str], timeout: int = 1800) -> None:
     """Dockerイメージをプル"""
-    console.print("[bold blue]🐳 Dockerイメージをプル中...[/bold blue]\n")
+    console.print("[bold blue]🐳 Dockerイメージをプル中...[/bold blue]")
+    console.print(f"[dim]タイムアウト: {timeout // 60}分 | 対象イメージ: {len(images)}個[/dim]\n")
 
     success_count = 0
     failed_images = []
@@ -107,29 +114,31 @@ def _pull_images(images: tuple[str, ...] | list[str]) -> None:
         TextColumn("[progress.description]{task.description}"),
         console=console,
     ) as progress:
-        for image in images:
-            task = progress.add_task(f"プル中: {image}", total=None)
+        for i, image in enumerate(images, 1):
+            task = progress.add_task(f"[{i}/{len(images)}] プル中: {image}", total=None)
 
             try:
                 result = subprocess.run(
                     ["docker", "pull", image],
                     capture_output=True,
                     text=True,
-                    timeout=300,  # 5分タイムアウト
+                    timeout=timeout,
                 )
 
                 if result.returncode == 0:
-                    progress.update(task, description=f"[green]✓[/green] 完了: {image}")
+                    progress.update(task, description=f"[green]✓[/green] [{i}/{len(images)}] 完了: {image}")
                     success_count += 1
                 else:
-                    progress.update(task, description=f"[red]✗[/red] 失敗: {image}")
+                    progress.update(task, description=f"[red]✗[/red] [{i}/{len(images)}] 失敗: {image}")
                     failed_images.append(image)
 
             except subprocess.TimeoutExpired:
-                progress.update(task, description=f"[red]✗[/red] タイムアウト: {image}")
+                progress.update(
+                    task, description=f"[red]✗[/red] [{i}/{len(images)}] タイムアウト ({timeout // 60}分): {image}"
+                )
                 failed_images.append(image)
             except Exception:
-                progress.update(task, description=f"[red]✗[/red] エラー: {image}")
+                progress.update(task, description=f"[red]✗[/red] [{i}/{len(images)}] エラー: {image}")
                 failed_images.append(image)
 
     # 結果サマリー

@@ -24,7 +24,7 @@ console = Console()
 class GracefulShutdownHandler:
     """優雅なシャットダウンハンドラー"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.shutdown_requested = False
         self.active_processes: list[subprocess.Popen] = []
         self._setup_signal_handlers()

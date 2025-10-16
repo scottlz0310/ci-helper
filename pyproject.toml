@@ -97,6 +97,12 @@ select = [
 ignore = [
     "E501",   # line too long (handled by formatter)
     "S101",   # use of assert (ok in tests)
+    "S105",   # possible hardcoded password (false positives for comments)
+    "S110",   # try-except-pass (intentional for non-critical errors)
+    "S112",   # try-except-continue (intentional for non-critical errors)
+    "S603",   # subprocess call (trusted input from config)
+    "S607",   # starting process with partial executable path (ok for docker/act)
+    "B904",   # raise without from (intentional for custom exceptions)
     "RUF001", # ambiguous unicode characters in strings (ok for Japanese)
     "RUF002", # ambiguous unicode characters in docstrings (ok for Japanese)
     "RUF003", # ambiguous unicode characters in comments (ok for Japanese)

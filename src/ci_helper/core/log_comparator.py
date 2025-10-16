@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     pass
@@ -21,7 +21,7 @@ class LogComparator:
     現在の実行結果と過去の実行結果を比較し、差分を分析します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """ログ比較エンジンを初期化"""
         pass
 
@@ -91,7 +91,7 @@ class LogComparator:
             failure.line_number,
         )
 
-    def generate_diff_summary(self, comparison: LogComparisonResult) -> dict[str, any]:
+    def generate_diff_summary(self, comparison: LogComparisonResult) -> dict[str, Any]:
         """差分サマリーを生成
 
         Args:
@@ -148,7 +148,7 @@ class LogComparator:
 
         return summary
 
-    def _analyze_workflow_changes(self, comparison: LogComparisonResult) -> dict[str, any]:
+    def _analyze_workflow_changes(self, comparison: LogComparisonResult) -> dict[str, Any]:
         """ワークフロー別の変化を分析
 
         Args:
@@ -194,7 +194,7 @@ class LogComparator:
 
         return workflow_changes
 
-    def _analyze_failure_types(self, comparison: LogComparisonResult) -> dict[str, any]:
+    def _analyze_failure_types(self, comparison: LogComparisonResult) -> dict[str, Any]:
         """失敗タイプ別の分析
 
         Args:

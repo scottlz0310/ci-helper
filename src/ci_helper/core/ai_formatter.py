@@ -447,14 +447,14 @@ class AIFormatter:
             suggestions.append("失敗数が多いため、最も重要な失敗のみに絞り込む")
 
         # コンテキスト行が多い場合
-        has_long_context = any(
+        has_long_context = Any(
             len(failure.context_before) + len(failure.context_after) > 6 for failure in execution_result.all_failures
         )
         if has_long_context:
             suggestions.append("エラーのコンテキスト行数を削減する")
 
         # スタックトレースが多い場合
-        has_stack_traces = any(failure.stack_trace for failure in execution_result.all_failures)
+        has_stack_traces = Any(failure.stack_trace for failure in execution_result.all_failures)
         if has_stack_traces:
             suggestions.append("スタックトレースを要約または除外する")
 

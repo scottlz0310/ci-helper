@@ -19,7 +19,7 @@ from ..core.exceptions import SecurityError
 class SecretDetector:
     """シークレット検出とフィルタリングクラス"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """シークレット検出器を初期化"""
         self._compile_patterns()
 
@@ -198,7 +198,7 @@ class SecretDetector:
                         # シークレット部分のみを置換
                         if match.groups():
                             # グループがある場合は最初のグループ（シークレット値）を置換
-                            secret_value = match.group(1)
+                            match.group(1)
                             sanitized_content = (
                                 sanitized_content[: match.start(1)]
                                 + f"{replacement}_{secret_type.upper()}"
@@ -278,7 +278,7 @@ class SecretDetector:
 class EnvironmentSecretManager:
     """環境変数ベースのシークレット管理クラス"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """シークレット管理器を初期化"""
         self.required_secrets = {
             # AI プロバイダー用
@@ -487,7 +487,7 @@ class EnvironmentSecretManager:
 class SecurityValidator:
     """統合セキュリティ検証クラス"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """セキュリティ検証器を初期化"""
         self.secret_detector = SecretDetector()
         self.secret_manager = EnvironmentSecretManager()

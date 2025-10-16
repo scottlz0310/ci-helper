@@ -9,6 +9,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import click
 from rich.console import Console
@@ -133,7 +134,7 @@ def doctor(ctx: click.Context, verbose: bool, guide: str | None) -> None:
         )
 
 
-def _check_act_command(verbose: bool) -> dict[str, any]:
+def _check_act_command(verbose: bool) -> dict[str, Any]:
     """act コマンドのインストール状態をチェック"""
     check_name = "act コマンド"
 
@@ -180,7 +181,7 @@ def _check_act_command(verbose: bool) -> dict[str, any]:
         }
 
 
-def _check_docker_daemon(verbose: bool) -> dict[str, any]:
+def _check_docker_daemon(verbose: bool) -> dict[str, Any]:
     """Docker デーモンの実行状態をチェック"""
     check_name = "Docker デーモン"
 
@@ -239,7 +240,7 @@ def _check_docker_daemon(verbose: bool) -> dict[str, any]:
         }
 
 
-def _check_workflows_directory(verbose: bool) -> dict[str, any]:
+def _check_workflows_directory(verbose: bool) -> dict[str, Any]:
     """GitHub Workflows ディレクトリの存在をチェック"""
     check_name = ".github/workflows ディレクトリ"
 
@@ -276,7 +277,7 @@ def _check_workflows_directory(verbose: bool) -> dict[str, any]:
     }
 
 
-def _check_configuration_files(config, verbose: bool) -> dict[str, any]:
+def _check_configuration_files(config, verbose: bool) -> dict[str, Any]:
     """設定ファイルの状態をチェック"""
     check_name = "設定ファイル"
 
@@ -320,7 +321,7 @@ def _check_configuration_files(config, verbose: bool) -> dict[str, any]:
     }
 
 
-def _check_required_directories(config, verbose: bool) -> dict[str, any]:
+def _check_required_directories(config, verbose: bool) -> dict[str, Any]:
     """必要なディレクトリの状態をチェック"""
     check_name = "作業ディレクトリ"
 
@@ -370,7 +371,7 @@ def _get_act_install_instructions() -> str:
         return "GitHub Releases からダウンロード: https://github.com/nektos/act"
 
 
-def _check_disk_space(verbose: bool) -> dict[str, any]:
+def _check_disk_space(verbose: bool) -> dict[str, Any]:
     """ディスク容量をチェック"""
     check_name = "ディスク容量"
 
@@ -414,7 +415,7 @@ def _check_disk_space(verbose: bool) -> dict[str, any]:
         }
 
 
-def _display_results(checks: list[dict], verbose: bool) -> None:
+def _display_results(checks: list[dict[str, Any]], verbose: bool) -> None:
     """診断結果を表形式で表示"""
     table = Table(title="環境診断結果")
     table.add_column("項目", style="bold")
@@ -446,7 +447,7 @@ def _display_results(checks: list[dict], verbose: bool) -> None:
                 console.print(f"{i}. [bold]{check['name']}[/bold]: {check['suggestion']}")
 
 
-def _check_security_configuration(config, verbose: bool) -> dict[str, any]:
+def _check_security_configuration(config, verbose: bool) -> dict[str, Any]:
     """セキュリティ設定をチェック"""
     check_name = "セキュリティ設定"
 

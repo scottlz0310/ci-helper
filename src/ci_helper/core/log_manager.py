@@ -316,7 +316,7 @@ class LogManager:
 
         for log in logs:
             workflows = log.get("workflows", [])
-            if any(w["name"] == workflow_name for w in workflows):
+            if Any(w["name"] == workflow_name for w in workflows):
                 matching_logs.append(log)
 
         return matching_logs

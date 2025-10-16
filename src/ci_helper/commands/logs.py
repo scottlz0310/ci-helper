@@ -6,7 +6,7 @@ logs コマンドの実装
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import click
 from rich.console import Console
@@ -173,7 +173,7 @@ def _show_log_content(log_manager: LogManager, log_filename: str, verbose: bool)
         console.print(f"[red]ログファイルの読み込みに失敗しました: {e}[/red]")
 
 
-def _display_logs_table(logs_list: list, workflow_filter: str | None = None) -> None:
+def _display_logs_table(logs_list: list[dict[str, Any]], workflow_filter: str | None = None) -> None:
     """ログ一覧をテーブル形式で表示"""
     title = "実行ログ一覧"
     if workflow_filter:

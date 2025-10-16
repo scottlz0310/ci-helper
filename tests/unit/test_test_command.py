@@ -606,7 +606,7 @@ class TestTestCommandIntegration:
                         result = runner.invoke(cli, ["test", "--format", format_option])
 
                         if result.exit_code != 0:
-                            print(f"Format {format_option} failed: {result.output}")
+                            pass
                         assert result.exit_code == 0
 
     def test_test_command_sanitize_options(self):

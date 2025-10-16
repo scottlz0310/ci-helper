@@ -142,7 +142,7 @@ class DependencyChecker:
             )
 
         try:
-            result = subprocess.run(["docker", "info"], capture_output=True, text=True, timeout=10, check=True)
+            subprocess.run(["docker", "info"], capture_output=True, text=True, timeout=10, check=True)
         except subprocess.CalledProcessError:
             raise DependencyError.docker_not_running()
         except subprocess.TimeoutExpired:
@@ -176,7 +176,7 @@ class DependencyChecker:
         try:
             import shutil
 
-            total, used, free = shutil.disk_usage(Path.cwd())
+            _total, _used, free = shutil.disk_usage(Path.cwd())
             free_mb = free // (1024 * 1024)
 
             if free_mb < required_mb:
@@ -232,7 +232,7 @@ class TimeoutHandler:
     @staticmethod
     def run_with_timeout(
         command: list[str], timeout_seconds: int, cwd: Path | None = None
-    ) -> subprocess.CompletedProcess:
+    ) -> subprocess.CompletedProcess[str]:
         """タイムアウト付きでコマンドを実行"""
         try:
             return subprocess.run(command, capture_output=True, text=True, timeout=timeout_seconds, cwd=cwd, check=True)

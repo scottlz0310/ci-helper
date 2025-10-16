@@ -395,5 +395,5 @@ api_key = "sk-1234567890"
 
         assert isinstance(recommendations, list)
         assert len(recommendations) > 0
-        assert any("環境変数の使用" in rec for rec in recommendations)
-        assert any("OPENAI_API_KEY" in rec for rec in recommendations)
+        assert Any("環境変数の使用" in rec for rec in recommendations)
+        assert Any("OPENAI_API_KEY" in rec for rec in recommendations)

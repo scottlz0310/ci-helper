@@ -5,6 +5,7 @@ init コマンド実装
 """
 
 from pathlib import Path
+from typing import Any
 
 import click
 from rich.console import Console
@@ -203,7 +204,7 @@ def _generate_env_content() -> str:
     import os
 
     # 既存の環境変数をチェック
-    github_token_exists = any(key in os.environ for key in ["GITHUB_TOKEN", "GITHUB_PERSONAL_ACCESS_TOKEN", "GH_TOKEN"])
+    github_token_exists = Any(key in os.environ for key in ["GITHUB_TOKEN", "GITHUB_PERSONAL_ACCESS_TOKEN", "GH_TOKEN"])
 
     if github_token_exists:
         github_token_comment = "# GitHub token is already set in system environment variables"

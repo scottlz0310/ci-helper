@@ -6,7 +6,7 @@ clean コマンド
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     pass
@@ -136,7 +136,7 @@ def _display_cache_status(console: Console, cache_manager: CacheManager) -> None
     console.print(table)
 
 
-def _clean_all(console: Console, cache_manager: CacheManager, dry_run: bool, force: bool) -> dict:
+def _clean_all(console: Console, cache_manager: CacheManager, dry_run: bool, force: bool) -> dict[str, Any]:
     """すべてのキャッシュを削除
 
     Args:
@@ -164,7 +164,7 @@ def _clean_all(console: Console, cache_manager: CacheManager, dry_run: bool, for
         return cache_manager.reset_all_cache(confirm=True)
 
 
-def _clean_logs_only(console: Console, cache_manager: CacheManager, dry_run: bool, force: bool) -> dict:
+def _clean_logs_only(console: Console, cache_manager: CacheManager, dry_run: bool, force: bool) -> dict[str, Any]:
     """ログファイルのみを削除
 
     Args:
@@ -197,7 +197,7 @@ def _clean_logs_only(console: Console, cache_manager: CacheManager, dry_run: boo
     return cache_manager.cleanup_logs_only(dry_run=dry_run)
 
 
-def _clean_default(console: Console, cache_manager: CacheManager, dry_run: bool, force: bool) -> dict:
+def _clean_default(console: Console, cache_manager: CacheManager, dry_run: bool, force: bool) -> dict[str, Any]:
     """デフォルトのクリーンアップ
 
     Args:
@@ -235,7 +235,7 @@ def _clean_default(console: Console, cache_manager: CacheManager, dry_run: bool,
     return cache_manager.cleanup_all(dry_run=dry_run)
 
 
-def _display_cleanup_result(console: Console, result: dict, dry_run: bool, verbose: bool) -> None:
+def _display_cleanup_result(console: Console, result: dict[str, Any], dry_run: bool, verbose: bool) -> None:
     """クリーンアップ結果を表示
 
     Args:

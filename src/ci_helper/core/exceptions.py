@@ -114,7 +114,6 @@ class ExecutionError(CIHelperError):
     def command_failed(cls, command: str, exit_code: int, stderr: str | None = None) -> ExecutionError:
         """コマンド実行失敗エラー"""
         message = f"コマンド '{command}' が失敗しました (終了コード: {exit_code})"
-        details = stderr if stderr else None
 
         return cls(message, "コマンドの引数と環境を確認してください", exit_code=exit_code, command=command)
 
