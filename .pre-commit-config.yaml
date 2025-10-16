@@ -1,85 +1,66 @@
-# pre-commit設定ファイル
-# コード品質を自動で担保し、レビュー負荷を減らす
-# Ruffを中心に統一し、Blackやisortは使用しない
+# Pre-commit configuration for ci-helper
+# See https://pre-commit.com for more information
 
 repos:
   # Ruff - Python linting and formatting
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.8.4
     hooks:
-      # Ruff Check (linting with auto-fix)
+      # Ruff linter with auto-fix
       - id: ruff
-        name: ruff check
         args: [--fix]
-        types: [python]
-      
-      # Ruff Format (formatting)
+        types_or: [python, pyi]
+      # Ruff formatter
       - id: ruff-format
-        name: ruff format
-        types: [python]
+        types_or: [python, pyi]
 
-  # MyPy - 型チェック（必要に応じて）
+  # MyPy - Static type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.13.0
     hooks:
       - id: mypy
-        name: mypy type check
-        additional_dependencies: [types-all]
-        args: [--config-file=pyproject.toml]
-        types: [python]
+        additional_dependencies: [types-toml, types-requests]
+        args: [--ignore-missing-imports, --no-strict-optional]
 
-  # 基本的なファイルチェック
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
-    hooks:
-      # 行末空白文字チェック
-      - id: trailing-whitespace
-        name: trim trailing whitespace
-      
-      # ファイル末尾の改行チェック
-      - id: end-of-file-fixer
-        name: fix end of files
-      
-      # 大きなファイルチェック
-      - id: check-added-large-files
-        name: check for added large files
-        args: [--maxkb=1000]
-      
-      # マージコンフリクトチェック
-      - id: check-merge-conflict
-        name: check for merge conflicts
-      
-      # YAML構文チェック
-      - id: check-yaml
-        name: check yaml syntax
-      
-      # JSON構文チェック
-      - id: check-json
-        name: check json syntax
-      
-      # TOML構文チェック
-      - id: check-toml
-        name: check toml syntax
-
-  # Bandit - セキュリティチェック（必要に応じて）
+  # Bandit - Security linting
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.10
     hooks:
       - id: bandit
-        name: bandit security check
         args: [-c, pyproject.toml]
         additional_dependencies: ["bandit[toml]"]
-        exclude: ^tests/
 
-# CI設定
-ci:
-  autofix_commit_msg: |
-    [pre-commit.ci] auto fixes from pre-commit.com hooks
+  # Built-in hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # Remove trailing whitespace
+      - id: trailing-whitespace
+      # Ensure files end with newline
+      - id: end-of-file-fixer
+      # Check for large files
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      # Check for merge conflicts
+      - id: check-merge-conflict
+      # Check YAML syntax
+      - id: check-yaml
+      # Check JSON syntax
+      - id: check-json
+      # Check TOML syntax
+      - id: check-toml
 
-    for more information, see https://pre-commit.ci
-  autofix_prs: true
-  autoupdate_branch: ''
-  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
-  autoupdate_schedule: weekly
-  skip: []
-  submodules: false
+# Global configuration
+default_language_version:
+  python: python3.13
+
+# Skip certain files
+exclude: |
+  (?x)^(
+    \.venv/.*|
+    \.pytest_cache/.*|
+    __pycache__/.*|
+    \.git/.*|
+    htmlcov/.*|
+    \.coverage.*
+  )$

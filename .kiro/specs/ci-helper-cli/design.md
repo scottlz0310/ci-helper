@@ -25,7 +25,7 @@ graph TB
     CLI[CLI Entry Point] --> Commands[Commands Layer]
     Commands --> Core[Core Services]
     Core --> Utils[Utilities]
-    
+
     subgraph "Commands Layer"
         Init[init]
         Doctor[doctor]
@@ -33,7 +33,7 @@ graph TB
         Logs[logs]
         Clean[clean]
     end
-    
+
     subgraph "Core Services"
         CIRun[CI Runner]
         LogExtractor[Log Extractor]
@@ -41,13 +41,13 @@ graph TB
         ErrorHandler[Error Handler]
         CacheManager[Cache Manager]
     end
-    
+
     subgraph "External Dependencies"
         Act[act command]
         Docker[Docker daemon]
         FileSystem[File System]
     end
-    
+
     Core --> Act
     Core --> Docker
     Core --> FileSystem
@@ -120,10 +120,10 @@ class CIRunner:
         self.config = config
         self.log_extractor = LogExtractor()
         self.formatter = AIFormatter()
-    
+
     def run_workflows(self, workflows: List[str]) -> ExecutionResult:
         """ワークフローを実行し結果を返す"""
-    
+
     def execute_act(self, workflow: str) -> subprocess.CompletedProcess:
         """actコマンドを実行"""
 ```
@@ -133,10 +133,10 @@ class CIRunner:
 class LogExtractor:
     def extract_failures(self, log_content: str) -> List[Failure]:
         """ログから失敗情報を抽出"""
-    
+
     def parse_error_patterns(self, content: str) -> List[ErrorMatch]:
         """エラーパターンをマッチング"""
-    
+
     def get_context_lines(self, content: str, line_num: int, context: int) -> str:
         """エラー周辺のコンテキストを取得"""
 ```
@@ -146,10 +146,10 @@ class LogExtractor:
 class AIFormatter:
     def format_markdown(self, failures: List[Failure]) -> str:
         """Markdown形式でフォーマット"""
-    
+
     def format_json(self, failures: List[Failure]) -> str:
         """JSON形式でフォーマット"""
-    
+
     def count_tokens(self, content: str) -> int:
         """トークン数をカウント"""
 ```
@@ -164,14 +164,14 @@ class ExecutionResult:
     workflows: List[WorkflowResult]
     total_duration: float
     log_path: Optional[str]
-    
+
 @dataclass
 class WorkflowResult:
     name: str
     success: bool
     jobs: List[JobResult]
     duration: float
-    
+
 @dataclass
 class JobResult:
     name: str
@@ -200,7 +200,7 @@ class Config:
     def __init__(self):
         self.project_config = self._load_project_config()
         self.env_config = self._load_env_config()
-    
+
     def get(self, key: str, default=None):
         """設定値を優先順位に従って取得"""
         # 1. 環境変数
@@ -340,10 +340,10 @@ tests/
 class Plugin:
     def register_commands(self, cli_group):
         """コマンドを登録"""
-    
+
     def register_extractors(self, extractor_registry):
         """カスタム抽出器を登録"""
-    
+
     def register_formatters(self, formatter_registry):
         """カスタムフォーマッターを登録"""
 ```
@@ -356,14 +356,14 @@ class Plugin:
 class AIProvider:
     def analyze_failures(self, failures: List[Failure]) -> AnalysisResult:
         """失敗を分析"""
-    
+
     def suggest_fixes(self, analysis: AnalysisResult) -> List[Fix]:
         """修正提案を生成"""
 
 class AIIntegration:
     def __init__(self, provider: AIProvider):
         self.provider = provider
-    
+
     def process_with_ai(self, execution_result: ExecutionResult) -> AIResult:
         """AI処理を実行"""
 ```

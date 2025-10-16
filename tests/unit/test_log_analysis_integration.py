@@ -49,7 +49,7 @@ class TestLogAnalysisIntegration:
         log_content = log_file.read_text()
 
         # ログ抽出テスト
-        failures = self.extractor.extract_failures(log_content)
+        self.extractor.extract_failures(log_content)
         # 失敗ログなので何らかの失敗が検出される可能性がある
 
         # ログ解析テスト
@@ -94,8 +94,8 @@ class TestLogAnalysisIntegration:
         if failures:
             failure = failures[0]
             # コンテキストが適切に抽出されることを確認
-            assert isinstance(failure.context_before, (list, tuple))
-            assert isinstance(failure.context_after, (list, tuple))
+            assert isinstance(failure.context_before, list | tuple)
+            assert isinstance(failure.context_after, list | tuple)
 
     def test_workflow_detection_with_real_logs(self):
         """実際のログでのワークフロー検出テスト"""
@@ -108,7 +108,7 @@ class TestLogAnalysisIntegration:
 
             # 解析が正常に完了することを確認
             result = self.analyzer.analyze_log(log_content)
-            assert isinstance(result.workflows, (list, tuple))
+            assert isinstance(result.workflows, list | tuple)
 
     def test_error_pattern_coverage(self):
         """エラーパターンのカバレッジテスト"""

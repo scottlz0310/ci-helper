@@ -340,3 +340,16 @@ class CIRunner:
             シークレット設定状況の辞書
         """
         return self.secret_manager.get_secret_summary()
+
+    def _check_lock_file(self) -> None:
+        """ロックファイルをチェックして同時実行を防ぐ
+
+        Raises:
+            ExecutionError: 他のインスタンスが実行中の場合
+        """
+        lock_file = self.config.project_root / ".ci-helper" / "ci-helper.lock"
+        if lock_file.exists():
+            raise ExecutionError(
+                "他のci-helperインスタンスが実行中です",
+                "実行が完了するまでお待ちください",
+            )

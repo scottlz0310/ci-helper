@@ -101,7 +101,7 @@ class TestSecretDetector:
         -----BEGIN RSA PRIVATE KEY-----
         MIIEpAIBAAKCAQEA1234567890...
         -----END RSA PRIVATE KEY-----
-        
+
         -----BEGIN PRIVATE KEY-----
         MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC...
         -----END PRIVATE KEY-----

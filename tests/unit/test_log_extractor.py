@@ -227,7 +227,7 @@ Error: Duplicate error message"""
         failures = self.extractor.extract_failures(log_content)
 
         # 重複が除去されていることを確認
-        unique_messages = set(failure.message for failure in failures)
+        unique_messages = {failure.message for failure in failures}
         assert len(unique_messages) == 2  # "Duplicate error message" と "Different error message"
         assert "Duplicate error message" in unique_messages
         assert "Different error message" in unique_messages

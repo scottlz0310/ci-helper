@@ -11,10 +11,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from ci_helper.core.ci_runner import CIRunner
-from ci_helper.core.exceptions import (
-    ExecutionError,
-    SecurityError,
-)
+from ci_helper.core.exceptions import ExecutionError, SecurityError
 from ci_helper.core.models import ExecutionResult, WorkflowResult
 from ci_helper.utils.config import Config
 
@@ -420,7 +417,7 @@ class TestWorkflowsExecution:
         mock_log_manager.return_value = mock_log_manager_instance
 
         runner = CIRunner(sample_config)
-        result = runner.run_workflows(workflows=None, verbose=False, dry_run=False, save_logs=True)
+        runner.run_workflows(workflows=None, verbose=False, dry_run=False, save_logs=True)
 
         # ログ保存メソッドが呼ばれることを確認
         mock_log_manager_instance.save_execution_log.assert_called_once()
@@ -701,7 +698,7 @@ class TestLogSaving:
         mock_log_manager.return_value = mock_log_manager_instance
 
         runner = CIRunner(sample_config)
-        result = runner.run_workflows(workflows=["test"], verbose=True, dry_run=False, save_logs=True)
+        runner.run_workflows(workflows=["test"], verbose=True, dry_run=False, save_logs=True)
 
         # ログ保存が適切な引数で呼ばれることを確認
         mock_log_manager_instance.save_execution_log.assert_called_once()
@@ -732,7 +729,7 @@ class TestLogSaving:
             mock_log_manager.return_value = mock_log_manager_instance
 
             runner = CIRunner(sample_config)
-            result = runner.run_workflows(
+            runner.run_workflows(
                 workflows=None,
                 verbose=False,
                 dry_run=True,

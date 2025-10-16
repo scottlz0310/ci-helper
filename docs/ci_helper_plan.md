@@ -158,7 +158,7 @@ cli.add_command(clean.clean)
 @click.command()
 @click.option('--workflow', '-w', multiple=True, help='対象ワークフロー')
 @click.option('--verbose', '-v', is_flag=True, help='詳細出力')
-@click.option('--format', type=click.Choice(['markdown', 'json']), 
+@click.option('--format', type=click.Choice(['markdown', 'json']),
               default='markdown', help='出力形式')
 @click.option('--dry-run', is_flag=True, help='ログ解析のみ')
 @click.option('--log', type=click.Path(exists=True), help='既存ログを解析')

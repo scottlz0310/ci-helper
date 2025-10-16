@@ -10,6 +10,7 @@ from unittest.mock import Mock, patch
 import pytest
 from click.testing import CliRunner
 
+from ci_helper.cli import cli
 from ci_helper.commands.test import (
     _analyze_existing_log,
     _check_dependencies,
@@ -17,8 +18,19 @@ from ci_helper.commands.test import (
     _display_markdown_results,
     _display_table_results,
     _show_diff_with_previous,
-    test,
 )
+
+
+def create_mock_execution_result():
+    """テスト用のExecutionResultモックを作成"""
+    mock_execution_result = Mock()
+    mock_execution_result.workflows = []
+    mock_execution_result.total_failures = 0
+    mock_execution_result.total_duration = 10.5
+    mock_execution_result.timestamp = Mock()
+    mock_execution_result.timestamp.strftime.return_value = "2024-01-01 12:00:00"
+    mock_execution_result.all_failures = []
+    return mock_execution_result
 
 
 class TestCheckDependencies:
@@ -139,11 +151,14 @@ class TestAnalyzeExistingLog:
 class TestShowDiffWithPrevious:
     """前回実行との差分表示のテスト"""
 
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.test.LogManager")
     @patch("ci_helper.commands.test.console")
     def test_show_diff_success(self, mock_console, mock_log_manager):
         """差分表示成功のテスト"""
+        from pathlib import Path
+
         mock_config = Mock()
+        mock_config.get_path.return_value = Path("/tmp/test_logs")
         mock_current_result = Mock()
         mock_current_result.timestamp = "2024-01-01T12:00:00"
 
@@ -161,15 +176,21 @@ class TestShowDiffWithPrevious:
             with patch("ci_helper.commands.test._display_diff_summary") as mock_display:
                 _show_diff_with_previous(mock_config, mock_current_result, verbose=False)
 
-                mock_manager_instance.get_previous_execution.assert_called_once()
-                mock_comparator_instance.compare_executions.assert_called_once()
-                mock_display.assert_called_once()
+                mock_log_manager.assert_called_once_with(mock_config)
+                mock_manager_instance.get_previous_execution.assert_called_once_with("2024-01-01T12:00:00")
+                mock_comparator_instance.compare_executions.assert_called_once_with(
+                    mock_current_result, mock_previous_result
+                )
+                mock_display.assert_called_once_with(mock_comparison, False)
 
     @patch("ci_helper.core.log_manager.LogManager")
     @patch("ci_helper.commands.test.console")
     def test_show_diff_no_previous(self, mock_console, mock_log_manager):
         """前回実行が存在しない場合のテスト"""
+        from pathlib import Path
+
         mock_config = Mock()
+        mock_config.get_path.return_value = Path("/tmp/test_logs")
         mock_current_result = Mock()
         mock_current_result.timestamp = "2024-01-01T12:00:00"
 
@@ -188,7 +209,10 @@ class TestShowDiffWithPrevious:
     @patch("ci_helper.commands.test.console")
     def test_show_diff_error(self, mock_console, mock_log_manager):
         """差分計算でエラーが発生する場合のテスト"""
+        from pathlib import Path
+
         mock_config = Mock()
+        mock_config.get_path.return_value = Path("/tmp/test_logs")
         mock_current_result = Mock()
         mock_current_result.timestamp = "2024-01-01T12:00:00"
 
@@ -205,7 +229,10 @@ class TestShowDiffWithPrevious:
     @patch("ci_helper.commands.test.console")
     def test_show_diff_verbose_mode(self, mock_console, mock_log_manager):
         """詳細モードでの差分表示テスト"""
+        from pathlib import Path
+
         mock_config = Mock()
+        mock_config.get_path.return_value = Path("/tmp/test_logs")
         mock_current_result = Mock()
         mock_current_result.timestamp = "2024-01-01T12:00:00"
 
@@ -283,7 +310,7 @@ class TestDisplayResults:
 
             mock_console.print.assert_called()
 
-    @patch("ci_helper.core.ai_formatter.AIFormatter")
+    @patch("ci_helper.commands.test.AIFormatter")
     def test_display_json_results(self, mock_ai_formatter):
         """JSON形式結果表示のテスト"""
         mock_formatter_instance = Mock()
@@ -294,7 +321,7 @@ class TestDisplayResults:
         }
         mock_ai_formatter.return_value = mock_formatter_instance
 
-        mock_execution_result = Mock()
+        mock_execution_result = create_mock_execution_result()
 
         with patch("ci_helper.commands.test.console") as mock_console:
             _display_json_results(mock_execution_result, verbose=False, dry_run=False, sanitize=True)
@@ -302,7 +329,7 @@ class TestDisplayResults:
             mock_formatter_instance.format_json.assert_called_once()
             mock_console.print.assert_called()
 
-    @patch("ci_helper.core.ai_formatter.AIFormatter")
+    @patch("ci_helper.commands.test.AIFormatter")
     def test_display_json_results_with_secrets(self, mock_ai_formatter):
         """シークレット検出ありのJSON表示テスト"""
         mock_formatter_instance = Mock()
@@ -311,9 +338,16 @@ class TestDisplayResults:
             "has_secrets": True,
             "secret_count": 2,
         }
+        mock_formatter_instance.check_token_limits.return_value = {
+            "token_count": 1000,
+            "token_limit": 4000,
+            "usage_percentage": 25.0,
+            "warning_level": "none",
+            "warning_message": "",
+        }
         mock_ai_formatter.return_value = mock_formatter_instance
 
-        mock_execution_result = Mock()
+        mock_execution_result = create_mock_execution_result()
 
         with patch("ci_helper.commands.test.console") as mock_console:
             _display_json_results(mock_execution_result, verbose=True, dry_run=False, sanitize=True)
@@ -321,7 +355,7 @@ class TestDisplayResults:
             # セキュリティ警告が表示されることを確認
             mock_console.print.assert_called()
 
-    @patch("ci_helper.core.ai_formatter.AIFormatter")
+    @patch("ci_helper.commands.test.AIFormatter")
     def test_display_json_results_with_token_info(self, mock_ai_formatter):
         """トークン情報付きのJSON表示テスト"""
         mock_formatter_instance = Mock()
@@ -339,7 +373,7 @@ class TestDisplayResults:
         }
         mock_ai_formatter.return_value = mock_formatter_instance
 
-        mock_execution_result = Mock()
+        mock_execution_result = create_mock_execution_result()
 
         with patch("ci_helper.commands.test.console") as mock_console:
             _display_json_results(mock_execution_result, verbose=True, dry_run=False, sanitize=True)
@@ -347,7 +381,7 @@ class TestDisplayResults:
             # トークン情報が表示されることを確認
             mock_console.print.assert_called()
 
-    @patch("ci_helper.core.ai_formatter.AIFormatter")
+    @patch("ci_helper.commands.test.AIFormatter")
     def test_display_markdown_results(self, mock_ai_formatter):
         """Markdown形式結果表示のテスト"""
         mock_formatter_instance = Mock()
@@ -358,7 +392,7 @@ class TestDisplayResults:
         }
         mock_ai_formatter.return_value = mock_formatter_instance
 
-        mock_execution_result = Mock()
+        mock_execution_result = create_mock_execution_result()
 
         with patch("ci_helper.commands.test.console") as mock_console:
             _display_markdown_results(mock_execution_result, verbose=False, dry_run=False, sanitize=True)
@@ -366,7 +400,7 @@ class TestDisplayResults:
             mock_formatter_instance.format_markdown.assert_called_once()
             mock_console.print.assert_called()
 
-    @patch("ci_helper.core.ai_formatter.AIFormatter")
+    @patch("ci_helper.commands.test.AIFormatter")
     def test_display_markdown_results_dry_run(self, mock_ai_formatter):
         """ドライラン時のMarkdown表示テスト"""
         mock_formatter_instance = Mock()
@@ -377,7 +411,7 @@ class TestDisplayResults:
         }
         mock_ai_formatter.return_value = mock_formatter_instance
 
-        mock_execution_result = Mock()
+        mock_execution_result = create_mock_execution_result()
 
         with patch("ci_helper.commands.test.console") as mock_console:
             _display_markdown_results(mock_execution_result, verbose=False, dry_run=True, sanitize=True)
@@ -385,7 +419,7 @@ class TestDisplayResults:
             # ドライラン用のヘッダーが追加されることを確認
             mock_console.print.assert_called()
 
-    @patch("ci_helper.core.ai_formatter.AIFormatter")
+    @patch("ci_helper.commands.test.AIFormatter")
     def test_display_markdown_results_with_compression_suggestions(self, mock_ai_formatter):
         """圧縮提案付きのMarkdown表示テスト"""
         mock_formatter_instance = Mock()
@@ -408,7 +442,7 @@ class TestDisplayResults:
         ]
         mock_ai_formatter.return_value = mock_formatter_instance
 
-        mock_execution_result = Mock()
+        mock_execution_result = create_mock_execution_result()
 
         with patch("ci_helper.commands.test.console") as mock_console:
             _display_markdown_results(mock_execution_result, verbose=True, dry_run=False, sanitize=True)
@@ -421,7 +455,7 @@ class TestTestCommandIntegration:
     """test コマンドの統合テスト"""
 
     @patch("ci_helper.commands.test._check_dependencies")
-    @patch("ci_helper.core.ci_runner.CIRunner")
+    @patch("ci_helper.commands.test.CIRunner")
     def test_test_command_basic_execution(self, mock_ci_runner, mock_check_deps):
         """基本的なtest コマンド実行テスト"""
         mock_runner_instance = Mock()
@@ -438,14 +472,14 @@ class TestTestCommandIntegration:
         with runner.isolated_filesystem():
             Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-            result = runner.invoke(test)
+            result = runner.invoke(cli, ["test"])
 
             assert result.exit_code == 0
             mock_check_deps.assert_called_once()
             mock_runner_instance.run_workflows.assert_called_once()
 
     @patch("ci_helper.commands.test._check_dependencies")
-    @patch("ci_helper.core.ci_runner.CIRunner")
+    @patch("ci_helper.commands.test.CIRunner")
     def test_test_command_with_failure(self, mock_ci_runner, mock_check_deps):
         """失敗を含むtest コマンド実行テスト"""
         mock_runner_instance = Mock()
@@ -462,7 +496,7 @@ class TestTestCommandIntegration:
         with runner.isolated_filesystem():
             Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-            result = runner.invoke(test)
+            result = runner.invoke(cli, ["test"])
 
             assert result.exit_code == 1  # 失敗時は終了コード1
 
@@ -474,12 +508,12 @@ class TestTestCommandIntegration:
             log_file = Path("test.log")
             log_file.write_text("test log content")
 
-            result = runner.invoke(test, ["--dry-run", "--log", str(log_file)])
+            result = runner.invoke(cli, ["test", "--dry-run", "--log", str(log_file)])
 
             assert result.exit_code == 0
 
     @patch("ci_helper.commands.test._check_dependencies")
-    @patch("ci_helper.core.ci_runner.CIRunner")
+    @patch("ci_helper.commands.test.CIRunner")
     def test_test_command_with_diff(self, mock_ci_runner, mock_check_deps):
         """差分表示付きのtest コマンド実行テスト"""
         mock_runner_instance = Mock()
@@ -497,7 +531,7 @@ class TestTestCommandIntegration:
             with runner.isolated_filesystem():
                 Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-                result = runner.invoke(test, ["--diff"])
+                result = runner.invoke(cli, ["test", "--diff"])
 
                 assert result.exit_code == 0
                 mock_show_diff.assert_called_once()
@@ -505,7 +539,7 @@ class TestTestCommandIntegration:
     def test_test_command_multiple_workflows(self):
         """複数ワークフロー指定のテスト"""
         with patch("ci_helper.commands.test._check_dependencies"):
-            with patch("ci_helper.core.ci_runner.CIRunner") as mock_ci_runner:
+            with patch("ci_helper.commands.test.CIRunner") as mock_ci_runner:
                 mock_runner_instance = Mock()
                 mock_execution_result = Mock()
                 mock_execution_result.success = True
@@ -519,7 +553,7 @@ class TestTestCommandIntegration:
                 with runner.isolated_filesystem():
                     Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-                    result = runner.invoke(test, ["-w", "test.yml", "-w", "build.yml", "-w", "deploy.yml"])
+                    result = runner.invoke(cli, ["test", "-w", "test.yml", "-w", "build.yml", "-w", "deploy.yml"])
 
                     assert result.exit_code == 0
                     # 指定されたワークフローが渡されることを確認
@@ -537,7 +571,7 @@ class TestTestCommandIntegration:
         with runner.isolated_filesystem():
             Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-            result = runner.invoke(test)
+            result = runner.invoke(cli, ["test"])
 
             assert result.exit_code == 1
 
@@ -547,7 +581,7 @@ class TestTestCommandIntegration:
 
         for format_option in formats:
             with patch("ci_helper.commands.test._check_dependencies"):
-                with patch("ci_helper.core.ci_runner.CIRunner") as mock_ci_runner:
+                with patch("ci_helper.commands.test.CIRunner") as mock_ci_runner:
                     mock_runner_instance = Mock()
                     mock_execution_result = Mock()
                     mock_execution_result.success = True
@@ -561,7 +595,7 @@ class TestTestCommandIntegration:
                     with runner.isolated_filesystem():
                         Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-                        result = runner.invoke(test, ["--format", format_option])
+                        result = runner.invoke(cli, ["test", "--format", format_option])
 
                         assert result.exit_code == 0
 
@@ -571,7 +605,7 @@ class TestTestCommandIntegration:
 
         for sanitize_option in sanitize_options:
             with patch("ci_helper.commands.test._check_dependencies"):
-                with patch("ci_helper.core.ci_runner.CIRunner") as mock_ci_runner:
+                with patch("ci_helper.commands.test.CIRunner") as mock_ci_runner:
                     mock_runner_instance = Mock()
                     mock_execution_result = Mock()
                     mock_execution_result.success = True
@@ -585,6 +619,6 @@ class TestTestCommandIntegration:
                     with runner.isolated_filesystem():
                         Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-                        result = runner.invoke(test, [sanitize_option])
+                        result = runner.invoke(cli, ["test", sanitize_option])
 
                         assert result.exit_code == 0

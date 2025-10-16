@@ -334,6 +334,13 @@ class TestTestCommand:
                     with runner.isolated_filesystem():
                         Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
+                        # .github/workflows ディレクトリとダミーワークフローを作成
+                        workflows_dir = Path(".github/workflows")
+                        workflows_dir.mkdir(parents=True, exist_ok=True)
+                        (workflows_dir / "test.yml").write_text(
+                            "name: test\non: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo test"
+                        )
+
                         result = runner.invoke(cli, ["test"])
 
                         assert result.exit_code == 0
@@ -349,6 +356,10 @@ class TestTestCommand:
 
             result = runner.invoke(test, ["--dry-run", "--log", str(log_file)])
 
+            if result.exit_code != 0:
+                print(f"Exit code: {result.exit_code}")
+                print(f"Output: {result.output}")
+                print(f"Exception: {result.exception}")
             assert result.exit_code == 0
             mock_analyze_log.assert_called_once()
 
@@ -368,6 +379,13 @@ class TestTestCommand:
                 runner = CliRunner()
                 with runner.isolated_filesystem():
                     Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
+
+                    # .github/workflows ディレクトリとダミーワークフローを作成
+                    workflows_dir = Path(".github/workflows")
+                    workflows_dir.mkdir(parents=True, exist_ok=True)
+                    (workflows_dir / "test.yml").write_text(
+                        "name: test\non: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo test"
+                    )
 
                     result = runner.invoke(cli, ["test", "-w", "test.yml", "-w", "build.yml"])
 
@@ -396,6 +414,13 @@ class TestTestCommand:
                     with runner.isolated_filesystem():
                         Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
+                        # .github/workflows ディレクトリとダミーワークフローを作成
+                        workflows_dir = Path(".github/workflows")
+                        workflows_dir.mkdir(parents=True, exist_ok=True)
+                        (workflows_dir / "test.yml").write_text(
+                            "name: test\non: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo test"
+                        )
+
                         result = runner.invoke(cli, ["test", "--format", format_option])
 
                         assert result.exit_code == 0
@@ -417,6 +442,13 @@ class TestTestCommand:
                     runner = CliRunner()
                     with runner.isolated_filesystem():
                         Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
+
+                        # .github/workflows ディレクトリとダミーワークフローを作成
+                        workflows_dir = Path(".github/workflows")
+                        workflows_dir.mkdir(parents=True, exist_ok=True)
+                        (workflows_dir / "test.yml").write_text(
+                            "name: test\non: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo test"
+                        )
 
                         result = runner.invoke(cli, ["test", save_option])
 
@@ -444,7 +476,7 @@ class TestLogsCommand:
         assert "--diff" in result.output
         assert "--format" in result.output
 
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.logs.LogManager")
     @patch("ci_helper.commands.logs.console")
     def test_logs_basic_listing(self, mock_console, mock_log_manager):
         """基本的なログ一覧表示のテスト"""
@@ -470,7 +502,7 @@ class TestLogsCommand:
             assert result.exit_code == 0
             mock_manager_instance.list_logs.assert_called_once_with(10)
 
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.logs.LogManager")
     def test_logs_limit_option(self, mock_log_manager):
         """--limit オプションのテスト"""
         mock_manager_instance = Mock()
@@ -486,7 +518,7 @@ class TestLogsCommand:
             assert result.exit_code == 0
             mock_manager_instance.list_logs.assert_called_once_with(20)
 
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.logs.LogManager")
     def test_logs_workflow_filter(self, mock_log_manager):
         """--workflow オプションのテスト"""
         mock_manager_instance = Mock()
@@ -503,7 +535,7 @@ class TestLogsCommand:
             mock_manager_instance.find_logs_by_workflow.assert_called_once_with("test.yml")
 
     @patch("ci_helper.commands.logs._show_log_statistics")
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.logs.LogManager")
     def test_logs_stats_option(self, mock_log_manager, mock_show_stats):
         """--stats オプションのテスト"""
         mock_manager_instance = Mock()
@@ -519,7 +551,7 @@ class TestLogsCommand:
             mock_show_stats.assert_called_once_with(mock_manager_instance)
 
     @patch("ci_helper.commands.logs._show_log_content")
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.logs.LogManager")
     def test_logs_show_content_option(self, mock_log_manager, mock_show_content):
         """--show-content オプションのテスト"""
         mock_manager_instance = Mock()
@@ -535,7 +567,7 @@ class TestLogsCommand:
             mock_show_content.assert_called_once()
 
     @patch("ci_helper.commands.logs._show_log_diff")
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.logs.LogManager")
     def test_logs_diff_option(self, mock_log_manager, mock_show_diff):
         """--diff オプションのテスト"""
         mock_manager_instance = Mock()
@@ -600,7 +632,7 @@ class TestCleanCommand:
         assert "--force" in result.output
         assert "--verbose" in result.output
 
-    @patch("ci_helper.core.cache_manager.CacheManager")
+    @patch("ci_helper.commands.clean.CacheManager")
     def test_clean_basic_execution(self, mock_cache_manager):
         """基本的なクリーンアップのテスト"""
         mock_manager_instance = Mock()
@@ -620,7 +652,7 @@ class TestCleanCommand:
             # コマンドが正常に実行されることを確認
             assert result.exit_code in [0, 1]
 
-    @patch("ci_helper.core.cache_manager.CacheManager")
+    @patch("ci_helper.commands.clean.CacheManager")
     def test_clean_logs_only_option(self, mock_cache_manager):
         """--logs-only オプションのテスト"""
         mock_manager_instance = Mock()
@@ -633,12 +665,12 @@ class TestCleanCommand:
 
         runner = CliRunner()
         with runner.isolated_filesystem():
-            result = runner.invoke(clean, ["--logs-only", "--force"])
+            result = runner.invoke(cli, ["clean", "--logs-only", "--force"])
 
             assert result.exit_code == 0
             mock_manager_instance.cleanup_logs_only.assert_called_once()
 
-    @patch("ci_helper.core.cache_manager.CacheManager")
+    @patch("ci_helper.commands.clean.CacheManager")
     def test_clean_all_option(self, mock_cache_manager):
         """--all オプションのテスト"""
         mock_manager_instance = Mock()
@@ -651,7 +683,7 @@ class TestCleanCommand:
 
         runner = CliRunner()
         with runner.isolated_filesystem():
-            result = runner.invoke(clean, ["--all", "--force"])
+            result = runner.invoke(cli, ["clean", "--all", "--force"])
 
             assert result.exit_code == 0
             mock_manager_instance.reset_all_cache.assert_called_once()
@@ -663,7 +695,7 @@ class TestCleanCommand:
 
         assert result.exit_code == 1
 
-    @patch("ci_helper.core.cache_manager.CacheManager")
+    @patch("ci_helper.commands.clean.CacheManager")
     def test_clean_dry_run_option(self, mock_cache_manager):
         """--dry-run オプションのテスト"""
         mock_manager_instance = Mock()
@@ -679,7 +711,7 @@ class TestCleanCommand:
 
         runner = CliRunner()
         with runner.isolated_filesystem():
-            result = runner.invoke(clean, ["--dry-run"])
+            result = runner.invoke(cli, ["clean", "--dry-run"])
 
             assert result.exit_code == 0
             # dry_run=True で呼ばれることを確認
@@ -730,7 +762,7 @@ class TestCommandIntegration:
                 with runner.isolated_filesystem():
                     Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-                    result = runner.invoke(cli, [command.name] + args)
+                    result = runner.invoke(cli, [command.name, *args])
 
                     # エラーハンドラーが呼ばれることを確認
                     assert result.exit_code == 1

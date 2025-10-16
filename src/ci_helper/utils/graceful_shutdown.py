@@ -142,7 +142,7 @@ class TimeoutManager:
                     console=console,
                     transient=True,
                 ) as progress:
-                    task = progress.add_task(f"実行中: {' '.join(command)}", total=None)
+                    progress.add_task(f"実行中: {' '.join(command)}", total=None)
 
                     process = subprocess.Popen(
                         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=cwd, env=env

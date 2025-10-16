@@ -235,22 +235,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
-    
+
     - name: Install dependencies
       run: npm ci
-    
+
     - name: Run tests
       run: npm test
-    
+
     - name: Run linter
       run: npm run lint
 ```
@@ -274,17 +274,17 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-    
+
     - name: Run tests
       run: |
         python -m pytest
@@ -370,7 +370,7 @@ ci-run doctor  # 詳細な診断を実行
 
 ### 3. ワークフローファイルが見つからない
 **症状**: `No workflow files found`
-**解決方法**: 
+**解決方法**:
 - `.github/workflows/` ディレクトリを作成
 - `.yml` または `.yaml` ファイルを配置
 

@@ -167,7 +167,7 @@ jobs:
 """)
 
             # doctorコマンドでワークフローが検出されることを確認
-            doctor_result = runner.invoke(cli, ["doctor"])
+            runner.invoke(cli, ["doctor"])
 
             # testコマンドでワークフローが認識されることを確認
             test_result = runner.invoke(cli, ["test", "--help"])

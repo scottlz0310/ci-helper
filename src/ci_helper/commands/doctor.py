@@ -15,8 +15,16 @@ from rich.console import Console
 from rich.table import Table
 
 from ..core.exceptions import DependencyError
+from ..utils.recovery_guide import RecoveryGuide
 
 console = Console()
+
+
+# Public wrapper functions for testing
+def check_docker_daemon() -> bool:
+    """Docker デーモンの実行状態をチェック（テスト用パブリック関数）"""
+    result = _check_docker_daemon(verbose=False)
+    return result["passed"]
 
 
 @click.command()

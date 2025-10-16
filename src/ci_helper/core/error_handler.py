@@ -9,6 +9,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 from pathlib import Path
+from typing import ClassVar
 
 from rich.console import Console
 from rich.panel import Panel
@@ -245,7 +246,7 @@ class SecurityValidator:
     """セキュリティ検証"""
 
     # 一般的なシークレットパターン
-    SECRET_PATTERNS = [
+    SECRET_PATTERNS: ClassVar[list[str]] = [
         r'(?i)(api[_-]?key|apikey)\s*[:=]\s*["\']?([a-zA-Z0-9_-]{20,})["\']?',
         r'(?i)(secret|password|passwd|pwd)\s*[:=]\s*["\']?([a-zA-Z0-9_@#$%^&*-]{8,})["\']?',
         r'(?i)(token|auth[_-]?token)\s*[:=]\s*["\']?([a-zA-Z0-9_-]{20,})["\']?',

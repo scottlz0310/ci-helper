@@ -82,10 +82,10 @@ def logs(
       ci-run logs -d act_20240101.log # 指定ログと前回実行の差分を表示
       ci-run logs -d act_20240101.log --format json # JSON形式で差分表示
     """
-    try:
-        config: Config = ctx.obj["config"]
-        verbose: bool = ctx.obj.get("verbose", False)
+    config: Config = ctx.obj["config"]
+    verbose: bool = ctx.obj.get("verbose", False)
 
+    try:
         log_manager = LogManager(config)
 
         # 統計情報表示
@@ -265,7 +265,7 @@ def _show_log_diff(log_manager: LogManager, log_filename: str, output_format: st
         console.print(f"[red]差分表示中にエラーが発生しました: {e}[/red]")
 
 
-def _display_initial_execution(execution: ExecutionResult, output_format: str) -> None:
+def _display_initial_execution(execution, output_format: str) -> None:
     """初回実行の情報を表示"""
     if output_format == "json":
         import json
@@ -317,7 +317,7 @@ def _display_initial_execution(execution: ExecutionResult, output_format: str) -
         console.print(table)
 
 
-def _display_diff_table(comparison: LogComparisonResult, verbose: bool) -> None:
+def _display_diff_table(comparison, verbose: bool) -> None:
     """テーブル形式で差分を表示"""
     from ..core.log_comparator import LogComparator
 

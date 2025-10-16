@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 
 from click.testing import CliRunner
 
+from ci_helper.cli import cli
 from ci_helper.commands.logs import (
     _display_diff_table,
     _display_initial_execution,
@@ -16,7 +17,6 @@ from ci_helper.commands.logs import (
     _show_log_content,
     _show_log_diff,
     _show_log_statistics,
-    logs,
 )
 
 
@@ -168,7 +168,7 @@ class TestDisplayLogsTable:
 class TestShowLogDiff:
     """ログ差分表示のテスト"""
 
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.logs.LogManager")
     @patch("ci_helper.commands.logs.console")
     def test_show_log_diff_success(self, mock_console, mock_log_manager_class):
         """ログ差分表示成功のテスト"""
@@ -425,7 +425,7 @@ class TestDisplayDiffTable:
 class TestLogsCommandIntegration:
     """logs コマンドの統合テスト"""
 
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.logs.LogManager")
     def test_logs_command_basic_listing(self, mock_log_manager_class):
         """基本的なログ一覧表示テスト"""
         mock_log_manager = Mock()
@@ -445,12 +445,12 @@ class TestLogsCommandIntegration:
         with runner.isolated_filesystem():
             Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-            result = runner.invoke(logs)
+            result = runner.invoke(cli, ["logs"])
 
             assert result.exit_code == 0
             mock_log_manager.list_logs.assert_called_once_with(10)
 
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.logs.LogManager")
     def test_logs_command_with_limit(self, mock_log_manager_class):
         """制限数指定でのログ一覧表示テスト"""
         mock_log_manager = Mock()
@@ -461,12 +461,12 @@ class TestLogsCommandIntegration:
         with runner.isolated_filesystem():
             Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-            result = runner.invoke(logs, ["--limit", "20"])
+            result = runner.invoke(cli, ["logs", "--limit", "20"])
 
             assert result.exit_code == 0
             mock_log_manager.list_logs.assert_called_once_with(20)
 
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.logs.LogManager")
     def test_logs_command_workflow_filter(self, mock_log_manager_class):
         """ワークフローフィルターでのログ表示テスト"""
         mock_log_manager = Mock()
@@ -477,13 +477,13 @@ class TestLogsCommandIntegration:
         with runner.isolated_filesystem():
             Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-            result = runner.invoke(logs, ["--workflow", "test.yml"])
+            result = runner.invoke(cli, ["logs", "--workflow", "test.yml"])
 
             assert result.exit_code == 0
             mock_log_manager.find_logs_by_workflow.assert_called_once_with("test.yml")
 
     @patch("ci_helper.commands.logs._show_log_statistics")
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.logs.LogManager")
     def test_logs_command_stats(self, mock_log_manager_class, mock_show_stats):
         """統計情報表示テスト"""
         mock_log_manager = Mock()
@@ -493,13 +493,13 @@ class TestLogsCommandIntegration:
         with runner.isolated_filesystem():
             Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-            result = runner.invoke(logs, ["--stats"])
+            result = runner.invoke(cli, ["logs", "--stats"])
 
             assert result.exit_code == 0
             mock_show_stats.assert_called_once_with(mock_log_manager)
 
     @patch("ci_helper.commands.logs._show_log_content")
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.logs.LogManager")
     def test_logs_command_show_content(self, mock_log_manager_class, mock_show_content):
         """ログ内容表示テスト"""
         mock_log_manager = Mock()
@@ -509,13 +509,13 @@ class TestLogsCommandIntegration:
         with runner.isolated_filesystem():
             Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-            result = runner.invoke(logs, ["--show-content", "test.log"])
+            result = runner.invoke(cli, ["logs", "--show-content", "test.log"])
 
             assert result.exit_code == 0
             mock_show_content.assert_called_once()
 
     @patch("ci_helper.commands.logs._show_log_diff")
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.logs.LogManager")
     def test_logs_command_diff(self, mock_log_manager_class, mock_show_diff):
         """差分表示テスト"""
         mock_log_manager = Mock()
@@ -525,12 +525,12 @@ class TestLogsCommandIntegration:
         with runner.isolated_filesystem():
             Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-            result = runner.invoke(logs, ["--diff", "test.log"])
+            result = runner.invoke(cli, ["logs", "--diff", "test.log"])
 
             assert result.exit_code == 0
             mock_show_diff.assert_called_once()
 
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.logs.LogManager")
     @patch("ci_helper.commands.logs.console")
     def test_logs_command_no_logs(self, mock_console, mock_log_manager_class):
         """ログが存在しない場合のテスト"""
@@ -542,13 +542,13 @@ class TestLogsCommandIntegration:
         with runner.isolated_filesystem():
             Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-            result = runner.invoke(logs)
+            result = runner.invoke(cli, ["logs"])
 
             assert result.exit_code == 0
             # ログが見つからないメッセージが表示されることを確認
             mock_console.print.assert_called()
 
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.logs.LogManager")
     @patch("ci_helper.commands.logs.console")
     def test_logs_command_workflow_not_found(self, mock_console, mock_log_manager_class):
         """指定ワークフローのログが見つからない場合のテスト"""
@@ -560,7 +560,7 @@ class TestLogsCommandIntegration:
         with runner.isolated_filesystem():
             Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-            result = runner.invoke(logs, ["--workflow", "nonexistent.yml"])
+            result = runner.invoke(cli, ["logs", "--workflow", "nonexistent.yml"])
 
             assert result.exit_code == 0
             # ワークフローが見つからないメッセージが表示されることを確認
@@ -580,7 +580,7 @@ class TestLogsCommandIntegration:
                     with runner.isolated_filesystem():
                         Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-                        result = runner.invoke(logs, ["--diff", "test.log", "--format", format_option])
+                        result = runner.invoke(cli, ["logs", "--diff", "test.log", "--format", format_option])
 
                         assert result.exit_code == 0
                         # 指定されたフォーマットが渡されることを確認
@@ -588,7 +588,7 @@ class TestLogsCommandIntegration:
                         assert call_args[0][2] == format_option
 
     @patch("ci_helper.core.error_handler.ErrorHandler.handle_error")
-    @patch("ci_helper.core.log_manager.LogManager")
+    @patch("ci_helper.commands.logs.LogManager")
     def test_logs_command_error_handling(self, mock_log_manager_class, mock_error_handler):
         """エラーハンドリングのテスト"""
         from ci_helper.core.exceptions import CIHelperError
@@ -601,7 +601,7 @@ class TestLogsCommandIntegration:
         with runner.isolated_filesystem():
             Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-            result = runner.invoke(logs)
+            result = runner.invoke(cli, ["logs"])
 
             assert result.exit_code == 1
             mock_error_handler.assert_called_once()

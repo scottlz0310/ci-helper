@@ -2,9 +2,9 @@
 pytest設定と共有フィクスチャ
 """
 
+from collections.abc import Generator
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Generator
 
 import pytest
 
@@ -29,7 +29,7 @@ def sample_workflow_dir(temp_dir: Path) -> Path:
     """サンプルワークフローディレクトリを作成するフィクスチャ"""
     workflow_dir = temp_dir / ".github" / "workflows"
     workflow_dir.mkdir(parents=True)
-    
+
     # サンプルワークフローファイルを作成
     sample_workflow = workflow_dir / "test.yml"
     sample_workflow.write_text("""
@@ -43,5 +43,5 @@ jobs:
       - name: Run tests
         run: echo "Running tests"
 """)
-    
+
     return workflow_dir

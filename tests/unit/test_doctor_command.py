@@ -10,6 +10,7 @@ from unittest.mock import Mock, patch
 
 from click.testing import CliRunner
 
+from ci_helper.cli import cli
 from ci_helper.commands.doctor import (
     _check_act_command,
     _check_configuration_files,
@@ -19,7 +20,6 @@ from ci_helper.commands.doctor import (
     _check_security_configuration,
     _check_workflows_directory,
     _get_act_install_instructions,
-    doctor,
 )
 
 
@@ -545,7 +545,7 @@ class TestDoctorCommandIntegration:
                                     with runner.isolated_filesystem():
                                         Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-                                        result = runner.invoke(doctor)
+                                        result = runner.invoke(cli, ["doctor"])
 
                                         assert result.exit_code == 0
                                         assert "すべてのチェックが成功" in result.output
@@ -590,7 +590,7 @@ class TestDoctorCommandIntegration:
                                     with runner.isolated_filesystem():
                                         Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-                                        result = runner.invoke(doctor)
+                                        result = runner.invoke(cli, ["doctor"])
 
                                         assert result.exit_code == 1
                                         assert "一部のチェックが失敗" in result.output
@@ -634,7 +634,7 @@ class TestDoctorCommandIntegration:
                                     with runner.isolated_filesystem():
                                         Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
 
-                                        result = runner.invoke(doctor, ["--verbose"])
+                                        result = runner.invoke(cli, ["doctor", "--verbose"])
 
                                         assert result.exit_code == 0
                                         # 詳細情報が表示されることを確認

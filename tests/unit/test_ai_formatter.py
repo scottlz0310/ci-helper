@@ -676,7 +676,7 @@ class TestSecurityFeatures:
         execution_result = ExecutionResult(success=True, workflows=[workflow], total_duration=1.0)
 
         # Markdown形式でフォーマット
-        result = formatter.format_markdown(execution_result)
+        formatter.format_markdown(execution_result)
 
         # サニタイズが呼ばれたことを確認
         mock_detector.sanitize_content.assert_called_once()

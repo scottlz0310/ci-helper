@@ -155,22 +155,23 @@ class Config:
 
     def validate(self) -> None:
         """設定の妥当性をチェック"""
-        # 必須設定のチェック
+        # 必須設定のチェック - デフォルト値があるので基本的にNoneにはならない
         required_keys = ["log_dir", "cache_dir", "reports_dir"]
         for key in required_keys:
-            if self.get(key) is None:
+            value = self.get(key)
+            if value is None or (isinstance(value, str) and not value.strip()):
                 raise ConfigurationError(
                     f"必須設定 '{key}' が設定されていません",
                     f"ci-helper.tomlまたは環境変数 CI_HELPER_{key.upper()} を設定してください",
                 )
 
         # 数値設定の範囲チェック
-        timeout = self.get("timeout_seconds")
-        if timeout <= 0:
+        timeout = self.get("timeout_seconds", self.DEFAULT_CONFIG["timeout_seconds"])
+        if not isinstance(timeout, (int, float)) or timeout <= 0:
             raise ConfigurationError(f"タイムアウト設定が無効です: {timeout}", "正の整数を指定してください")
 
-        max_log_size = self.get("max_log_size_mb")
-        if max_log_size <= 0:
+        max_log_size = self.get("max_log_size_mb", self.DEFAULT_CONFIG["max_log_size_mb"])
+        if not isinstance(max_log_size, (int, float)) or max_log_size <= 0:
             raise ConfigurationError(f"最大ログサイズ設定が無効です: {max_log_size}", "正の整数を指定してください")
 
     def __getitem__(self, key: str) -> Any:
@@ -282,3 +283,11 @@ class Config:
             "4. act実行時の環境変数:",
             "   ci-helperは自動的に安全な環境変数のみをactに渡します",
         ]
+
+    def get_project_root(self) -> Path:
+        """プロジェクトルートディレクトリを取得
+
+        Returns:
+            プロジェクトルートディレクトリのパス
+        """
+        return self.project_root
