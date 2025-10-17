@@ -213,7 +213,7 @@ class CacheManager:
         directory: Path,
         max_count: int | None = None,
         max_size_mb: int | None = None,
-        max_age_days: int | None = None,
+        max_age_days: float | int | None = None,
         dry_run: bool = False,
         file_pattern: str = "*",
         exclude_files: list[str] | None = None,

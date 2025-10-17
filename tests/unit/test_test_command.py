@@ -5,6 +5,7 @@ CI実行機能の個別テストを提供します。
 """
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -21,7 +22,7 @@ from ci_helper.commands.test import (
 )
 
 
-def create_mock_execution_result():
+def create_mock_execution_result() -> Any:
     """テスト用のExecutionResultモックを作成"""
     mock_execution_result = Mock()
     mock_execution_result.workflows = []

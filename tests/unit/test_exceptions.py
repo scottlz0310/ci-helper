@@ -83,6 +83,7 @@ class TestDependencyError:
         error = DependencyError.act_not_found()
 
         assert "act コマンドが見つかりません" in error.message
+        assert error.suggestion is not None
         assert "brew install act" in error.suggestion
         assert error.missing_dependency == "act"
 
@@ -94,6 +95,7 @@ class TestDependencyError:
         error = DependencyError.act_not_found()
 
         assert "act コマンドが見つかりません" in error.message
+        assert error.suggestion is not None
         assert "パッケージマネージャー" in error.suggestion
         assert error.missing_dependency == "act"
 
@@ -105,6 +107,7 @@ class TestDependencyError:
         error = DependencyError.act_not_found()
 
         assert "act コマンドが見つかりません" in error.message
+        assert error.suggestion is not None
         assert "choco install act-cli" in error.suggestion
         assert error.missing_dependency == "act"
 
@@ -116,6 +119,7 @@ class TestDependencyError:
         error = DependencyError.act_not_found()
 
         assert "act コマンドが見つかりません" in error.message
+        assert error.suggestion is not None
         assert "GitHub Releases からダウンロード" in error.suggestion
         assert error.missing_dependency == "act"
 
@@ -124,6 +128,7 @@ class TestDependencyError:
         error = DependencyError.docker_not_running()
 
         assert "Docker デーモンが実行されていません" in error.message
+        assert error.suggestion is not None
         assert "Docker Desktop を起動してください" in error.suggestion
         assert error.missing_dependency == "docker"
 
@@ -145,6 +150,7 @@ class TestConfigurationError:
 
         assert "設定ファイル 'ci-helper.toml' が無効です" in error.message
         assert "TOML 構文エラー" in error.message
+        assert error.suggestion is not None
         assert "ci-run init" in error.suggestion
         assert error.config_file == "ci-helper.toml"
 
@@ -153,6 +159,7 @@ class TestConfigurationError:
         error = ConfigurationError.missing_config("ci-helper.toml")
 
         assert "設定ファイル 'ci-helper.toml' が見つかりません" in error.message
+        assert error.suggestion is not None
         assert "ci-run init" in error.suggestion
         assert error.config_file == "ci-helper.toml"
 
@@ -174,6 +181,7 @@ class TestExecutionError:
         error = ExecutionError.timeout_error("act test", 300)
 
         assert "コマンド 'act test' が 300 秒でタイムアウトしました" in error.message
+        assert error.suggestion is not None
         assert "より長いタイムアウト値" in error.suggestion
         assert error.command == "act test"
 
@@ -183,6 +191,7 @@ class TestExecutionError:
 
         assert "コマンド 'act test' が失敗しました" in error.message
         assert "終了コード: 1" in error.message
+        assert error.suggestion is not None
         assert "コマンドの引数と環境を確認してください" in error.suggestion
         assert error.exit_code == 1
         assert error.command == "act test"

@@ -286,15 +286,16 @@ class LogExtractor:
                 stack_lines = []
                 for line in lines:
                     # スタックトレースの行かどうかを判定
-                    if (
-                        line.strip().startswith("at ")
-                        or line.strip().startswith("File ")
-                        or "Traceback" in line
-                        or re.match(r"^\s*at\s+", line)
-                        or re.match(r'^\s*File\s+".*", line \d+', line)
-                    ):
+                    stripped = line.strip()
+                    has_at = stripped.startswith("at ")
+                    has_file = stripped.startswith("File ")
+                    has_traceback = "Traceback" in line
+                    matches_at = re.match(r"^\s*at\s+", line) is not None
+                    matches_file = re.match(r'^\s*File\s+".*", line \d+', line) is not None
+                    is_stack_line = has_at or has_file or has_traceback or matches_at or matches_file
+                    if is_stack_line:
                         stack_lines.append(line)
-                    elif stack_lines and not line.strip():
+                    elif stack_lines and not stripped:
                         # 空行はスタックトレースの一部として含める
                         stack_lines.append(line)
                     elif stack_lines:

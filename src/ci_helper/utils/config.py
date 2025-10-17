@@ -167,11 +167,11 @@ class Config:
 
         # 数値設定の範囲チェック
         timeout = self.get("timeout_seconds", self.DEFAULT_CONFIG["timeout_seconds"])
-        if not isinstance(timeout, (int, float)) or timeout <= 0:
+        if not isinstance(timeout, int | float) or timeout <= 0:
             raise ConfigurationError(f"タイムアウト設定が無効です: {timeout}", "正の整数を指定してください")
 
         max_log_size = self.get("max_log_size_mb", self.DEFAULT_CONFIG["max_log_size_mb"])
-        if not isinstance(max_log_size, (int, float)) or max_log_size <= 0:
+        if not isinstance(max_log_size, int | float) or max_log_size <= 0:
             raise ConfigurationError(f"最大ログサイズ設定が無効です: {max_log_size}", "正の整数を指定してください")
 
     def __getitem__(self, key: str) -> Any:

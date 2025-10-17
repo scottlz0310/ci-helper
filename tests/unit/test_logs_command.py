@@ -158,7 +158,7 @@ class TestDisplayLogsTable:
     @patch("ci_helper.commands.logs.console")
     def test_display_logs_table_empty(self, mock_console):
         """空のログリストの表示テスト"""
-        logs_list = []
+        logs_list: list[dict[str, str]] = []
 
         _display_logs_table(logs_list)
 

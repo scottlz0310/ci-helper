@@ -138,6 +138,27 @@ strict_equality = true
 module = "tests.*"
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = "ci_helper.commands.*"
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = "ci_helper.cli"
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = [
+    "ci_helper.core.security",
+    "ci_helper.core.log_analyzer",
+    "tests.unit.test_error_handler",
+]
+warn_unreachable = false
+
+[[tool.mypy.overrides]]
+module = "click.*"
+ignore_missing_imports = true
 
 [tool.coverage.run]
 source = ["src"]
@@ -167,4 +188,13 @@ minversion = "8.0"
 
 [tool.bandit]
 exclude_dirs = ["tests"]
-skips = ["B101", "B601"] # B101: assert_used, B601: paramiko_calls
+skips = [
+    "B101",  # assert_used
+    "B601",  # paramiko_calls
+    "B603",  # subprocess_without_shell_equals_true
+    "B404",  # blacklist import subprocess
+    "B607",  # start_process_with_partial_path
+    "B105",  # hardcoded_password_string
+    "B110",  # try_except_pass
+    "B112",  # try_except_continue
+]

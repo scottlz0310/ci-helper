@@ -7,6 +7,7 @@ CI/CDワークフローをローカルで実行し、結果を分析・フォー
 from __future__ import annotations
 
 import os
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -161,7 +162,7 @@ def test(
 
 
 @contextmanager
-def _temporary_cwd(path: Path) -> None:
+def _temporary_cwd(path: Path) -> Generator[None, None, None]:
     """一時的にカレントディレクトリを変更"""
     original_cwd = Path.cwd()
     try:

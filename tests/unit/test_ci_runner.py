@@ -532,7 +532,12 @@ class TestSecurityValidation:
         runner = CIRunner(sample_config)
 
         with patch.object(runner.secret_manager, "validate_secrets") as mock_validate:
-            mock_validate.return_value = {"valid": True, "missing_secrets": []}
+            mock_validate.return_value = {
+                "valid": True,
+                "missing_secrets": [],
+                "available_secrets": [],
+                "recommendations": [],
+            }
 
             result = runner.validate_security(["API_KEY", "SECRET_TOKEN"])
 
@@ -544,24 +549,45 @@ class TestSecurityValidation:
         runner = CIRunner(sample_config)
 
         with patch.object(runner.secret_manager, "validate_secrets") as mock_validate:
-            mock_validate.return_value = {"valid": False, "missing_secrets": ["API_KEY"]}
+            mock_validate.return_value = {
+                "valid": False,
+                "missing_secrets": [
+                    {
+                        "key": "API_KEY",
+                        "description": "API key",
+                        "configured": False,
+                    }
+                ],
+                "available_secrets": [],
+                "recommendations": [],
+            }
 
             result = runner.validate_security(["API_KEY", "SECRET_TOKEN"])
 
             assert result["valid"] is False
-            assert "API_KEY" in result["missing_secrets"]
+            assert any(secret["key"] == "API_KEY" for secret in result["missing_secrets"])
 
     def test_get_secret_summary(self, sample_config: Config):
         """シークレット設定状況取得のテスト"""
         runner = CIRunner(sample_config)
 
         with patch.object(runner.secret_manager, "get_secret_summary") as mock_summary:
-            mock_summary.return_value = {"total_secrets": 3, "environment_secrets": 2, "file_secrets": 1}
+            mock_summary.return_value = {
+                "required_secrets": {
+                    "OPENAI_API_KEY": {
+                        "description": "OpenAI API キー",
+                        "configured": True,
+                    }
+                },
+                "optional_secrets": {},
+                "total_configured": 1,
+                "total_missing": 0,
+            }
 
             result = runner.get_secret_summary()
 
-            assert result["total_secrets"] == 3
-            assert result["environment_secrets"] == 2
+            assert result["total_configured"] == 1
+            assert result["total_missing"] == 0
             mock_summary.assert_called_once()
 
 
