@@ -16,6 +16,11 @@ dependencies = [
     "rich>=13.9.0",
     "tiktoken>=0.8.0",
     "tomli>=2.0.0; python_version < '3.11'",
+    # AI統合用の依存関係
+    "openai>=1.50.0",
+    "anthropic>=0.34.0",
+    "aiohttp>=3.10.0",
+    "aiofiles>=24.1.0",
 ]
 keywords = [
     "ci",

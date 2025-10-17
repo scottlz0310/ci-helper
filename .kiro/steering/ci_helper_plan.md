@@ -126,6 +126,7 @@ ci-helper/
 ## 🧩 各モジュールの詳細
 
 ### `cli.py`
+
 マルチコマンドCLIのエントリーポイント（Click Group使用）
 
 ```python
@@ -152,6 +153,7 @@ cli.add_command(clean.clean)
 ```
 
 ### `commands/test.py`
+
 メインのCI実行コマンド
 
 ```python
@@ -172,6 +174,7 @@ def test(**kwargs):
 ### Phase別コマンド構成
 
 #### Phase 1 コマンド
+
 - `init`: 設定ファイルのテンプレート生成
 - `doctor`: 環境チェック（act, Docker確認）
 - `test`: act実行＋ログ抽出（メイン機能）
@@ -179,9 +182,11 @@ def test(**kwargs):
 - `clean`: キャッシュクリア
 
 #### Phase 3 コマンド
+
 - `analyze`: AI分析コマンド（新規追加）
 
 ### `core/ci_run.py`
+
 - `act` コマンドの実行（subprocess）
 - ログを `.ci-helper/logs/act_TIMESTAMP.log` に保存
 - タイムアウト制御
@@ -190,6 +195,7 @@ def test(**kwargs):
 - `error_handler.py` でエラーハンドリング
 
 ### `core/extract_failures.py`
+
 - `act.log` から `FAILURES` セクションを抽出
 - pytest の失敗サマリ、スタックトレース、アサーションエラーを特定
 - カスタム抽出パターン対応（正規表現）
@@ -197,6 +203,7 @@ def test(**kwargs):
 - 複数ワークフロー・ジョブの並列処理
 
 ### `core/log_compressor.py`
+
 - 重要度によるログフィルタリング（ERROR > WARN > INFO）
 - 重複行の削除
 - 大量のスタックトレースの要約
@@ -204,12 +211,14 @@ def test(**kwargs):
 - 要約アルゴリズム（テキスト圧縮）
 
 ### `core/token_counter.py`
+
 - トークン数のカウント（tiktoken使用）
 - モデル別のトークン制限チェック
 - 推定コスト計算
 - 制限超過時の警告
 
 ### `core/format_for_ai.py`
+
 - Markdown 形式での整形
   - 構造化されたエラーサマリ
   - コードブロックの適切な配置
@@ -218,7 +227,9 @@ def test(**kwargs):
 - プロバイダー非依存の抽象化
 
 ### `core/error_handler.py`
+
 包括的なエラーハンドリング：
+
 - `act` コマンドの存在確認
 - Docker デーモンの起動状態チェック
 - `.github/workflows` ディレクトリの存在確認
@@ -231,18 +242,21 @@ def test(**kwargs):
 - 適切なエラーメッセージとセットアップガイドの表示
 
 ### `core/diff_analyzer.py`
+
 - 前回実行ログとの差分表示（unified diff）
 - 新規エラー・解消済みエラーの分類
 - 改善・悪化の判定と統計
 - 変更履歴の管理（SQLite or JSON）
 
 ### `core/cache_manager.py`
+
 - ログファイルのキャッシュ管理
 - 古いログの自動削除
 - ログのインデックス作成
 - クイックサーチ機能
 
 ### `ai/integration.py` (Phase 3)
+
 - 複数AIプロバイダー対応（OpenAI / Anthropic / ローカルLLM）
 - プロンプトテンプレート管理
 - ストリーミングレスポンス対応
@@ -255,6 +269,7 @@ def test(**kwargs):
 ## ⚙️ 設定ファイル
 
 ### `.actrc.example`
+
 ```bash
 # Docker設定
 -P ubuntu-latest=ghcr.io/catthehacker/ubuntu:full-24.04
@@ -271,6 +286,7 @@ def test(**kwargs):
 ```
 
 ### `ci-helper.toml.example`
+
 ```toml
 [project]
 name = "ci-helper"
@@ -346,6 +362,7 @@ cleanup_days = 30
 ```
 
 ### `.env.example`
+
 ```bash
 # AI API Keys（実際の値は .env に記載し、.gitignore に追加）
 # 優先順位: CI_HELPER_API_KEY > プロバイダー固有のキー
@@ -368,6 +385,7 @@ CI_HELPER_DEBUG=false
 ## 🚀 使用方法
 
 ### インストール
+
 ```bash
 # uvでインストール
 uv tool install git+https://github.com/scottlz0310/ci-helper.git
@@ -379,6 +397,7 @@ uv pip install -e .
 ```
 
 ### 初期設定（Phase 1）
+
 ```bash
 # 設定ファイルの生成
 ci-run init
@@ -392,6 +411,7 @@ ci-run test --help
 ```
 
 ### 基本実行（Phase 1）
+
 ```bash
 # デフォルト実行（全ワークフロー）
 ci-run test
@@ -419,6 +439,7 @@ ci-run test --no-save
 ```
 
 ### ユーティリティコマンド（Phase 1）
+
 ```bash
 # 過去のログ一覧表示
 ci-run logs
@@ -434,6 +455,7 @@ ci-run clean --logs-only
 ```
 
 ### Phase 2 で追加される機能
+
 Phase 2では `test` コマンドに以下のオプションが追加されます：
 
 ```bash
@@ -451,6 +473,7 @@ ci-run test --interactive
 ```
 
 ### Phase 3 で追加される機能（AI連携）
+
 Phase 3では新しい `analyze` コマンドが追加されます：
 
 ```bash
@@ -508,45 +531,27 @@ ci-run test && ci-run analyze
 
 ---
 
-## 📋 段階的実装計画
+## 📋 段階的実装計画（更新版 v2.2）
 
-### Phase 1: コア機能（MVP）
+### Phase 1: コア機能（MVP） ✅ **完了済み**
+
 **目標**: ローカルでのCI検証とログ抽出の基本機能
 
-#### CLI実装
-- [ ] マルチコマンド構造のセットアップ（Click Group）
-- [ ] `init` コマンド実装
-- [ ] `doctor` コマンド実装
-- [ ] `test` コマンド実装（メイン機能）
-  - [ ] `--workflow` オプション
-  - [ ] `--verbose` オプション
-  - [ ] `--format` オプション（markdown/json）
-  - [ ] `--dry-run` オプション
-  - [ ] `--log` オプション
-  - [ ] `--diff` オプション
-  - [ ] `--save/--no-save` オプション
-- [ ] `logs` コマンド実装
-- [ ] `clean` コマンド実装
+**実装済み機能**:
 
-#### コア機能
-- [ ] プロジェクト構造のセットアップ
-- [ ] `act` と Docker の導入ドキュメント整備
-- [ ] 基本的な `act` 実行機能
-- [ ] ログ保存とファイル管理
-- [ ] 失敗箇所の抽出ロジック
-- [ ] Markdown形式での基本的な整形
-- [ ] 包括的なエラーハンドリング
-- [ ] **トークン数カウント機能**（AI連携の準備）
-- [ ] 設定ファイル読み込み機能
-- [ ] ユニットテストの作成
-- [ ] README とドキュメント整備
+- ✅ マルチコマンド構造（Click Group）
+- ✅ 全CLIコマンド（init, doctor, test, logs, clean）
+- ✅ act実行とログ管理
+- ✅ 失敗箇所の抽出ロジック
+- ✅ Markdown/JSON形式での整形
+- ✅ 包括的なエラーハンドリング
+- ✅ トークン数カウント機能（AI連携準備完了）
+- ✅ 設定ファイル読み込み機能
+- ✅ 81%のテストカバレッジ
+- ✅ 完全なドキュメント
 
-**完了条件**:
-- `ci-run test` コマンドで act が実行でき、失敗箇所が整形されて表示される
-- `ci-run doctor` で環境チェックができる
-- トークン数が表示され、AI に渡す準備ができている
+**提供中のコマンド**:
 
-**提供されるコマンド**:
 ```bash
 ci-run init
 ci-run doctor
@@ -557,64 +562,54 @@ ci-run clean
 
 ---
 
-### Phase 2: 出力最適化と拡張機能
-**目標**: AI に渡すための最適化と利便性の向上
+### Phase 2: 出力最適化（優先度調整版）
 
-#### CLI拡張
-- [ ] `test` コマンドへのオプション追加
-  - [ ] `--watch` オプション
-  - [ ] `--job` オプション
-  - [ ] `--report` オプション
-  - [ ] `--output` オプション
-  - [ ] `--interactive` オプション
+**目標**: AI統合の前提となる出力最適化機能
 
-#### コア機能
+#### 高優先度機能（AI統合の前提）
+
 - [ ] ログ圧縮・要約機能の実装
 - [ ] 複数の圧縮戦略（smart / aggressive / minimal）
-- [ ] カスタム抽出パターンの対応
-- [ ] 差分表示機能の強化
-- [ ] 変更履歴の管理
-- [ ] キャッシュ管理機能
-- [ ] 詳細な設定オプション
-- [ ] 複数ワークフロー・ジョブの並列実行
 - [ ] **AI用出力フォーマットの抽象化**（プロバイダー非依存）
 - [ ] JSON出力とAPI連携準備
-- [ ] ウォッチモード実装
-- [ ] インタラクティブモード実装
-- [ ] HTMLレポート生成
-- [ ] パフォーマンス最適化
-- [ ] 統合テストの作成
+- [ ] カスタム抽出パターンの対応
+- [ ] パフォーマンス最適化（大きなログファイル処理）
+
+#### 低優先度機能（Phase 3後に延期）
+
+- [ ] `--watch` オプション（ファイル監視モード）
+- [ ] `--job` オプション（特定ジョブのみ実行）
+- [ ] `--report` オプション（HTMLレポート生成）
+- [ ] `--interactive` オプション（対話モード）
 
 **完了条件**:
-- ログが効率的に圧縮され、トークン制限内に収まる
-- 差分表示で改善・悪化が一目でわかる
-- 様々な出力形式に対応
-- ファイル監視で自動実行が可能
 
-**提供されるコマンド（Phase 1 + 追加オプション）**:
-```bash
-ci-run test [--watch] [--job TEXT] [--report TYPE] [--output PATH] [--interactive]
-```
+- ログが効率的に圧縮され、トークン制限内に収まる
+- AI統合に必要な出力フォーマットが準備完了
+- 大きなログファイルの処理が最適化される
 
 ---
 
-### Phase 3: AI統合
+### Phase 3: AI統合（最優先）
+
 **目標**: AI による自動分析と修正提案
 
 #### CLI拡張
+
 - [ ] 新しい `analyze` コマンドの実装
-  - [ ] `--log` オプション
-  - [ ] `--provider` オプション
-  - [ ] `--model` オプション
-  - [ ] `--prompt` オプション
-  - [ ] `--fix` オプション
-  - [ ] `--interactive` オプション
+  - [ ] `--log` オプション（特定ログファイルを分析）
+  - [ ] `--provider` オプション（AIプロバイダー選択）
+  - [ ] `--model` オプション（モデル選択）
+  - [ ] `--prompt` オプション（カスタムプロンプト）
+  - [ ] `--fix` オプション（自動修正提案）
+  - [ ] `--interactive` オプション（AI対話モード）
 
 #### AI機能
+
 - [ ] AI API統合基盤の構築
 - [ ] 複数プロバイダー対応
-  - [ ] OpenAI (GPT-5 codex, GPT-5)
-  - [ ] Anthropic (Claude Sonnet 4.5)
+  - [ ] OpenAI (GPT-4o, GPT-4o-mini)
+  - [ ] Anthropic (Claude 3.5 Sonnet)
   - [ ] ローカルLLM (Ollama等)
 - [ ] プロンプトテンプレート管理
 - [ ] ストリーミングレスポンス対応
@@ -622,26 +617,50 @@ ci-run test [--watch] [--job TEXT] [--report TYPE] [--output PATH] [--interactiv
 - [ ] 修正提案の生成
 - [ ] 修正の自動適用機能（オプション）
 - [ ] 対話モード（AIとの会話でデバッグ）
-- [ ] 学習機能（よくある失敗パターンのデータベース）
-- [ ] フィードバックループ
 - [ ] コスト管理と使用統計
 - [ ] AIレスポンスのキャッシュ
-- [ ] セキュリティ強化
-- [ ] E2Eテストの作成
+- [ ] セキュリティ強化（APIキー管理）
+- [ ] AI統合のE2Eテスト作成
 
 **完了条件**:
+
 - `ci-run analyze` で自動的にエラー分析と修正提案が得られる
 - 複数のAIプロバイダーが利用可能
 - 対話的なデバッグが可能
+- セキュアなAPIキー管理が実装される
 
-**提供されるコマンド（Phase 1 + Phase 2 + 新規）**:
+**提供されるコマンド（Phase 1 + 新規）**:
+
 ```bash
 ci-run analyze [--log PATH] [--provider TEXT] [--model TEXT] [--prompt TEXT] [--fix] [--interactive]
 ```
 
 ---
 
+### Phase 4: 拡張機能（Phase 2延期分 + 新機能）
+
+**目標**: ユーザビリティ向上と高度な機能
+
+#### Phase 2から延期された機能
+
+- [ ] `--watch` オプション（ファイル監視モード）
+- [ ] `--job` オプション（特定ジョブのみ実行）
+- [ ] `--report` オプション（HTMLレポート生成）
+- [ ] `--interactive` オプション（testコマンド用対話モード）
+
+#### 新機能
+
+- [ ] Web UI / ローカルダッシュボード（`ci-run serve` コマンド）
+- [ ] GitHub Actions統合（実行結果の比較）
+- [ ] プラグインシステム
+- [ ] 統計機能（失敗率、実行時間の推移）（`ci-run stats` コマンド）
+- [ ] チーム機能（共有設定、ナレッジベース）
+- [ ] CI/CD プラットフォーム対応拡張（GitLab CI等）
+
+---
+
 ### Phase 4: 拡張機能（将来的な展望）
+
 - [ ] Web UI / ローカルダッシュボード（`ci-run serve` コマンド）
 - [ ] GitHub Actions統合（実行結果の比較）
 - [ ] プラグインシステム
@@ -655,6 +674,7 @@ ci-run analyze [--log PATH] [--provider TEXT] [--model TEXT] [--prompt TEXT] [--
 ## 🧪 テスト戦略
 
 ### ユニットテスト
+
 - 各モジュールの個別機能をテスト
 - pytest + pytest-cov でカバレッジ80%以上を目標
 - モックを使用した外部依存の分離
@@ -662,16 +682,19 @@ ci-run analyze [--log PATH] [--provider TEXT] [--model TEXT] [--prompt TEXT] [--
 - pytest-xdistによる並列実行への対応
 
 ### 統合テスト
+
 - 実際のワークフローファイルを使用
 - act の実行から出力までの一連の流れをテスト
 - 様々なエラーパターンの検証
 - コマンド間の連携テスト
 
 ### E2Eテスト（Phase 3）
+
 - AI連携を含む完全なワークフローのテスト
 - 複数のプロバイダーでの動作確認
 
 ### CI/CD
+
 - GitHub Actions でプッシュごとに自動テスト
 - 複数のPythonバージョンでテスト（3.12, 3.13, 3.14）
 - コードスタイルチェック（ruff check, ruff format）
@@ -682,6 +705,7 @@ ci-run analyze [--log PATH] [--provider TEXT] [--model TEXT] [--prompt TEXT] [--
 ## 🔒 セキュリティ考慮事項
 
 ### API キーの管理
+
 - ✅ **環境変数からの読み込みを優先**
   - `CI_HELPER_API_KEY`（共通）
   - `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`（プロバイダー固有）
@@ -690,11 +714,13 @@ ci-run analyze [--log PATH] [--provider TEXT] [--model TEXT] [--prompt TEXT] [--
 - ⚠️ README とドキュメントに明確な警告を記載
 
 ### シークレットの取り扱い
+
 - act 実行時のシークレットは環境変数経由
 - ログにシークレットが含まれないようフィルタリング
 - 共有時のサニタイズ機能
 
 ### 依存関係のセキュリティ
+
 - 定期的な依存関係の更新
 - Dependabot の有効化
 - 脆弱性スキャン
@@ -704,6 +730,7 @@ ci-run analyze [--log PATH] [--provider TEXT] [--model TEXT] [--prompt TEXT] [--
 ## 📖 ドキュメント構成
 
 ### `docs/setup.md`
+
 - act のインストール方法（macOS, Linux, Windows）
 - Docker のインストールと設定
 - uv のインストール
@@ -711,17 +738,20 @@ ci-run analyze [--log PATH] [--provider TEXT] [--model TEXT] [--prompt TEXT] [--
 - 初期設定手順
 
 ### `docs/usage.md`
+
 - 基本的な使い方
 - 各コマンドの詳細説明（Phase別）
 - 設定ファイルのカスタマイズ
 - ベストプラクティス
 
 ### `docs/configuration.md`
+
 - 設定ファイルの完全リファレンス
 - 各オプションの詳細説明
 - 設定例
 
 ### `docs/troubleshooting.md`
+
 - よくあるエラーと解決方法
   - act がインストールされていない
   - Docker が起動していない
@@ -733,11 +763,13 @@ ci-run analyze [--log PATH] [--provider TEXT] [--model TEXT] [--prompt TEXT] [--
 - FAQ
 
 ### `docs/examples.md`
+
 - 実際の使用例（Phase別）
 - 様々なワークフローでの適用例
 - CI設定のベストプラクティス
 
 ### `docs/api-reference.md`
+
 - 各モジュールの API リファレンス
 - 内部アーキテクチャ
 - 拡張ポイント
@@ -747,6 +779,7 @@ ci-run analyze [--log PATH] [--provider TEXT] [--model TEXT] [--prompt TEXT] [--
 ## 🤝 コントリビューション
 
 ### 開発環境のセットアップ
+
 ```bash
 # リポジトリのクローン
 git clone https://github.com/scottlz0310/ci-helper.git
@@ -766,6 +799,7 @@ pytest --cov=ci_helper --cov-report=html
 ```
 
 ### コーディング規約
+
 - PEP 8 に準拠
 - 行長120文字
 - Ruff でリント、フォーマット
@@ -773,6 +807,7 @@ pytest --cov=ci_helper --cov-report=html
 - Docstring の記載（Google スタイル）
 
 ### プルリクエスト
+
 - 機能追加・バグ修正は別ブランチで作業
 - テストを必ず追加
 - ドキュメントを更新
@@ -783,18 +818,21 @@ pytest --cov=ci_helper --cov-report=html
 ## 📊 成功指標（KPI）
 
 ### Phase 1
+
 - ✅ 基本機能の動作
 - ✅ 全コマンドの実装完了
 - ✅ テストカバレッジ 80% 以上
 - ✅ ドキュメント完成度
 
 ### Phase 2
+
 - ✅ ログ圧縮率（元のサイズの30%以下）
 - ✅ トークン削減率（70%削減目標）
 - ✅ 処理速度（10秒以内）
 - ✅ 新機能の実用性
 
 ### Phase 3
+
 - ✅ AI分析の精度
 - ✅ 修正提案の実用性
 - ✅ ユーザー満足度

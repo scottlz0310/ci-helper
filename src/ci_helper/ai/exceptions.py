@@ -1,0 +1,133 @@
+"""
+AI統合用の例外クラス
+
+AI機能で発生する様々なエラーを適切に分類し、処理するための例外クラスを定義します。
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Optional
+
+
+class AIError(Exception):
+    """AI統合の基底例外クラス"""
+
+    def __init__(self, message: str, details: Optional[str] = None, suggestion: Optional[str] = None):
+        super().__init__(message)
+        self.message = message
+        self.details = details
+        self.suggestion = suggestion
+
+
+class ProviderError(AIError):
+    """プロバイダー固有のエラー"""
+
+    def __init__(self, provider: str, message: str, details: Optional[str] = None):
+        super().__init__(message, details)
+        self.provider = provider
+
+
+class APIKeyError(AIError):
+    """APIキー関連のエラー"""
+
+    def __init__(self, provider: str, message: str = "APIキーが無効または設定されていません"):
+        super().__init__(
+            message,
+            f"{provider}のAPIキーを確認してください",
+            f"環境変数 {provider.upper()}_API_KEY を設定してください",
+        )
+        self.provider = provider
+
+
+class RateLimitError(AIError):
+    """レート制限エラー"""
+
+    def __init__(self, provider: str, reset_time: Optional[datetime] = None, retry_after: Optional[int] = None):
+        message = f"{provider}のレート制限に達しました"
+        details = None
+        suggestion = "しばらく待ってから再試行してください"
+
+        if reset_time:
+            details = f"制限リセット時刻: {reset_time.strftime('%Y-%m-%d %H:%M:%S')}"
+        if retry_after:
+            suggestion = f"{retry_after}秒後に再試行してください"
+
+        super().__init__(message, details, suggestion)
+        self.provider = provider
+        self.reset_time = reset_time
+        self.retry_after = retry_after
+
+
+class TokenLimitError(AIError):
+    """トークン制限エラー"""
+
+    def __init__(self, used_tokens: int, limit: int, model: str):
+        message = f"トークン制限を超過しました: {used_tokens}/{limit}"
+        details = f"モデル: {model}"
+        suggestion = "入力を短縮するか、より大きなコンテキストウィンドウを持つモデルを使用してください"
+
+        super().__init__(message, details, suggestion)
+        self.used_tokens = used_tokens
+        self.limit = limit
+        self.model = model
+
+
+class NetworkError(AIError):
+    """ネットワーク関連のエラー"""
+
+    def __init__(self, message: str, retry_count: int = 0):
+        super().__init__(
+            message,
+            f"リトライ回数: {retry_count}",
+            "ネットワーク接続を確認し、再試行してください",
+        )
+        self.retry_count = retry_count
+
+
+class ConfigurationError(AIError):
+    """設定関連のエラー"""
+
+    def __init__(self, message: str, config_key: Optional[str] = None):
+        details = f"設定キー: {config_key}" if config_key else None
+        super().__init__(message, details, "設定ファイルまたは環境変数を確認してください")
+        self.config_key = config_key
+
+
+class CacheError(AIError):
+    """キャッシュ関連のエラー"""
+
+    def __init__(self, message: str, cache_path: Optional[str] = None):
+        details = f"キャッシュパス: {cache_path}" if cache_path else None
+        super().__init__(message, details, "キャッシュディレクトリの権限を確認してください")
+        self.cache_path = cache_path
+
+
+class SecurityError(AIError):
+    """セキュリティ関連のエラー"""
+
+    def __init__(self, message: str, security_issue: Optional[str] = None):
+        super().__init__(
+            message,
+            security_issue,
+            "セキュリティ設定を確認し、機密情報が適切に保護されていることを確認してください",
+        )
+        self.security_issue = security_issue
+
+
+class AnalysisError(AIError):
+    """分析処理関連のエラー"""
+
+    def __init__(self, message: str, log_path: Optional[str] = None):
+        details = f"ログファイル: {log_path}" if log_path else None
+        super().__init__(message, details, "ログファイルの形式を確認してください")
+        self.log_path = log_path
+
+
+class InteractiveSessionError(AIError):
+    """対話セッション関連のエラー"""
+
+    def __init__(self, message: str, session_id: Optional[str] = None):
+        details = f"セッションID: {session_id}" if session_id else None
+        super().__init__(message, details, "対話セッションを再開してください")
+        self.session_id = session_id
