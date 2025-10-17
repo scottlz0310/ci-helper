@@ -5,6 +5,8 @@
 """
 
 import os
+from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -701,3 +703,265 @@ class TestSecretsCommand:
         assert "missing_secrets" in validation
         assert "available_secrets" in validation
         assert "recommendations" in validation
+
+    @patch("ci_helper.core.security.console")
+    def test_secrets_command_cli_integration(self, mock_console):
+        """secrets コマンドのCLI統合テスト"""
+        from click.testing import CliRunner
+
+        from ci_helper.cli import cli
+
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            Path("ci-helper.toml").write_text("[ci-helper]\nverbose = false")
+
+            result = runner.invoke(cli, ["secrets"])
+
+            # コマンドが正常に実行されることを確認
+            assert result.exit_code == 0
+
+    def test_secret_detector_edge_cases(self):
+        """SecretDetector のエッジケースのテスト"""
+        detector = SecretDetector()
+
+        # 空のコンテンツ
+        secrets = detector.detect_secrets("")
+        assert len(secrets) == 0
+
+        # 非常に長い行
+        long_content = "api_key = " + "x" * 10000
+        secrets = detector.detect_secrets(long_content)
+        assert len(secrets) >= 1
+
+        # 特殊文字を含むシークレット
+        special_content = 'token = "abc!@#$%^&*()_+-=[]{}|;:,.<>?"'
+        secrets = detector.detect_secrets(special_content)
+        assert len(secrets) >= 1
+
+    def test_environment_secret_manager_edge_cases(self):
+        """EnvironmentSecretManager のエッジケースのテスト"""
+        manager = EnvironmentSecretManager()
+
+        # 空のシークレットリストでの検証
+        result = manager.validate_secrets([])
+        assert result["valid"] is True
+        assert len(result["missing_secrets"]) == 0
+
+        # 存在しない環境変数の安全性チェック
+        assert manager._is_safe_env_var("NONEXISTENT_VAR_12345") is False
+
+        # 非常に長い環境変数名
+        long_var_name = "A" * 1000
+        assert manager._is_safe_env_var(long_var_name) is False
+
+    def test_security_validator_edge_cases(self):
+        """SecurityValidator のエッジケースのテスト"""
+        validator = SecurityValidator()
+
+        # 空のログコンテンツ
+        result = validator.validate_log_content("")
+        assert result["has_secrets"] is False
+        assert result["secret_count"] == 0
+
+        # 空の設定ファイル辞書
+        result = validator.validate_config_security({})
+        assert result["overall_valid"] is True
+        assert result["critical_issues"] == 0
+
+        # 非常に大きなログコンテンツ
+        large_content = "normal log line\n" * 10000
+        result = validator.validate_log_content(large_content)
+        assert result["has_secrets"] is False
+
+    def test_secret_patterns_comprehensive(self):
+        """包括的なシークレットパターンテスト"""
+        detector = SecretDetector()
+
+        # 様々なAPIキーパターン
+        api_key_patterns = [
+            'api_key="sk-proj-1234567890abcdefghijklmnopqrstuvwxyz"',
+            'apikey: "test_1234567890123456789012345678901234567890"',
+            'API_KEY = "AKIA1234567890123456"',
+            'key="very_long_api_key_that_should_be_detected_1234567890"',
+        ]
+
+        for pattern in api_key_patterns:
+            secrets = detector.detect_secrets(pattern)
+            assert len(secrets) >= 1, f"Failed to detect secret in: {pattern}"
+
+        # 様々なトークンパターン
+        token_patterns = [
+            'token="ghp_1234567890abcdefghijklmnopqrstuvwxyz"',
+            'access_token: "gho_1234567890abcdefghijklmnopqrstuvwxyz"',
+            'auth_token = "ghu_1234567890abcdefghijklmnopqrstuvwxyz"',
+            'bearer_token="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test"',
+        ]
+
+        for pattern in token_patterns:
+            secrets = detector.detect_secrets(pattern)
+            assert len(secrets) >= 1, f"Failed to detect token in: {pattern}"
+
+    def test_sanitization_comprehensive(self):
+        """包括的なサニタイゼーションテスト"""
+        detector = SecretDetector()
+
+        # 複数のシークレットが混在するコンテンツ
+        mixed_content = """
+        Configuration file:
+        api_key = "sk-1234567890abcdefghijklmnopqrstuvwxyz"
+        github_token = "ghp_abcdefghijklmnopqrstuvwxyz1234567890"
+        database_url = "postgresql://user:password@localhost:5432/db"
+        jwt_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.test"
+        normal_config = "this should remain unchanged"
+        """
+
+        sanitized = detector.sanitize_content(mixed_content)
+
+        # 全てのシークレットが除去されている
+        assert "sk-1234567890abcdefghijklmnopqrstuvwxyz" not in sanitized
+        assert "ghp_abcdefghijklmnopqrstuvwxyz1234567890" not in sanitized
+        assert "postgresql://user:password@localhost:5432/db" not in sanitized
+        assert "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9" not in sanitized
+
+        # 通常のテキストは保持されている
+        assert "normal_config" in sanitized
+        assert "this should remain unchanged" in sanitized
+
+        # 置換文字列が含まれている
+        assert "[REDACTED]" in sanitized
+
+    def test_config_validation_comprehensive(self):
+        """包括的な設定ファイル検証テスト"""
+        detector = SecretDetector()
+
+        # 様々な設定ファイル形式
+        toml_config = """
+        [database]
+        url = "postgresql://user:secret123@localhost/db"
+
+        [api]
+        key = "sk-1234567890abcdefghijklmnopqrstuvwxyz"
+        """
+
+        yaml_config = """
+        database:
+          url: "mysql://admin:password123@db.example.com/prod"
+        api:
+          token: "ghp_1234567890abcdefghijklmnopqrstuvwxyz"
+        """
+
+        json_config = """
+        {
+          "secrets": {
+            "api_key": "test_api_key_1234567890123456789012345678",
+            "token": "access_token_abcdefghijklmnopqrstuvwxyz"
+          }
+        }
+        """
+
+        # 各形式でシークレットが検出される
+        for config_content in [toml_config, yaml_config, json_config]:
+            with pytest.raises(SecurityError):
+                detector.validate_config_file(config_content, "config_file")
+
+    def test_environment_variable_safety_comprehensive(self):
+        """包括的な環境変数安全性テスト"""
+        manager = EnvironmentSecretManager()
+
+        # 安全な環境変数の包括的リスト
+        safe_variables = [
+            "PATH",
+            "HOME",
+            "USER",
+            "SHELL",
+            "LANG",
+            "LC_ALL",
+            "TERM",
+            "DISPLAY",
+            "PWD",
+            "OLDPWD",
+            "TMPDIR",
+            "CI",
+            "GITHUB_ACTIONS",
+            "GITHUB_WORKSPACE",
+            "GITHUB_REF",
+            "NODE_VERSION",
+            "PYTHON_VERSION",
+            "JAVA_VERSION",
+            "CI_HELPER_LOG_LEVEL",
+            "CI_HELPER_VERBOSE",
+            "CI_HELPER_DEBUG",
+        ]
+
+        for var in safe_variables:
+            assert manager._is_safe_env_var(var) is True, f"Variable {var} should be safe"
+
+        # 危険な環境変数の包括的リスト
+        unsafe_variables = [
+            "API_KEY",
+            "SECRET_KEY",
+            "ACCESS_TOKEN",
+            "AUTH_TOKEN",
+            "PASSWORD",
+            "PASSWD",
+            "SECRET",
+            "PRIVATE_KEY",
+            "DATABASE_PASSWORD",
+            "DB_PASS",
+            "MYSQL_PASSWORD",
+            "POSTGRES_PASSWORD",
+            "REDIS_PASSWORD",
+            "JWT_SECRET",
+            "ENCRYPTION_KEY",
+            "SIGNING_KEY",
+            "WEBHOOK_SECRET",
+        ]
+
+        for var in unsafe_variables:
+            assert manager._is_safe_env_var(var) is False, f"Variable {var} should be unsafe"
+
+    def test_security_recommendations_comprehensive(self):
+        """包括的なセキュリティ推奨事項テスト"""
+        validator = SecurityValidator()
+
+        # 様々なタイプのシークレット検出時の推奨事項
+        secret_types = [
+            {"type": "api_key", "value": "sk_test"},
+            {"type": "github_token", "value": "ghp_test"},
+            {"type": "aws_key", "value": "AKIA_test"},
+            {"type": "database_url", "value": "postgres://test"},
+            {"type": "jwt", "value": "eyJ_test"},
+            {"type": "private_key", "value": "-----BEGIN"},
+        ]
+
+        recommendations = validator._get_log_security_recommendations(secret_types)
+
+        # 各シークレットタイプに対する適切な推奨事項が含まれている
+        assert len(recommendations) > 0
+        recommendations_text = " ".join(recommendations)
+
+        assert "環境変数" in recommendations_text
+        assert "API" in recommendations_text or "キー" in recommendations_text
+
+    def test_performance_with_large_content(self):
+        """大きなコンテンツでのパフォーマンステスト"""
+        detector = SecretDetector()
+
+        # 大きなコンテンツ（実際のログファイルサイズを想定）
+        large_content = []
+        for i in range(1000):
+            if i == 500:  # 中間にシークレットを挿入
+                large_content.append('api_key = "sk-1234567890abcdefghijklmnopqrstuvwxyz"')
+            else:
+                large_content.append(f"[INFO] Log line {i}: Normal application log message")
+
+        content = "\n".join(large_content)
+
+        # 検出が正常に動作することを確認
+        secrets = detector.detect_secrets(content)
+        assert len(secrets) >= 1
+
+        # サニタイゼーションが正常に動作することを確認
+        sanitized = detector.sanitize_content(content)
+        assert "sk-1234567890abcdefghijklmnopqrstuvwxyz" not in sanitized
+        assert "[REDACTED]" in sanitized
