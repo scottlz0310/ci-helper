@@ -7,13 +7,12 @@ AI機能で発生する様々なエラーを適切に分類し、処理するた
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 
 class AIError(Exception):
     """AI統合の基底例外クラス"""
 
-    def __init__(self, message: str, details: Optional[str] = None, suggestion: Optional[str] = None):
+    def __init__(self, message: str, details: str | None = None, suggestion: str | None = None):
         super().__init__(message)
         self.message = message
         self.details = details
@@ -23,7 +22,7 @@ class AIError(Exception):
 class ProviderError(AIError):
     """プロバイダー固有のエラー"""
 
-    def __init__(self, provider: str, message: str, details: Optional[str] = None):
+    def __init__(self, provider: str, message: str, details: str | None = None):
         super().__init__(message, details)
         self.provider = provider
 
@@ -43,7 +42,7 @@ class APIKeyError(AIError):
 class RateLimitError(AIError):
     """レート制限エラー"""
 
-    def __init__(self, provider: str, reset_time: Optional[datetime] = None, retry_after: Optional[int] = None):
+    def __init__(self, provider: str, reset_time: datetime | None = None, retry_after: int | None = None):
         message = f"{provider}のレート制限に達しました"
         details = None
         suggestion = "しばらく待ってから再試行してください"
@@ -88,7 +87,7 @@ class NetworkError(AIError):
 class ConfigurationError(AIError):
     """設定関連のエラー"""
 
-    def __init__(self, message: str, config_key: Optional[str] = None):
+    def __init__(self, message: str, config_key: str | None = None):
         details = f"設定キー: {config_key}" if config_key else None
         super().__init__(message, details, "設定ファイルまたは環境変数を確認してください")
         self.config_key = config_key
@@ -97,7 +96,7 @@ class ConfigurationError(AIError):
 class CacheError(AIError):
     """キャッシュ関連のエラー"""
 
-    def __init__(self, message: str, cache_path: Optional[str] = None):
+    def __init__(self, message: str, cache_path: str | None = None):
         details = f"キャッシュパス: {cache_path}" if cache_path else None
         super().__init__(message, details, "キャッシュディレクトリの権限を確認してください")
         self.cache_path = cache_path
@@ -106,7 +105,7 @@ class CacheError(AIError):
 class SecurityError(AIError):
     """セキュリティ関連のエラー"""
 
-    def __init__(self, message: str, security_issue: Optional[str] = None):
+    def __init__(self, message: str, security_issue: str | None = None):
         super().__init__(
             message,
             security_issue,
@@ -118,7 +117,7 @@ class SecurityError(AIError):
 class AnalysisError(AIError):
     """分析処理関連のエラー"""
 
-    def __init__(self, message: str, log_path: Optional[str] = None):
+    def __init__(self, message: str, log_path: str | None = None):
         details = f"ログファイル: {log_path}" if log_path else None
         super().__init__(message, details, "ログファイルの形式を確認してください")
         self.log_path = log_path
@@ -127,7 +126,7 @@ class AnalysisError(AIError):
 class InteractiveSessionError(AIError):
     """対話セッション関連のエラー"""
 
-    def __init__(self, message: str, session_id: Optional[str] = None):
+    def __init__(self, message: str, session_id: str | None = None):
         details = f"セッションID: {session_id}" if session_id else None
         super().__init__(message, details, "対話セッションを再開してください")
         self.session_id = session_id

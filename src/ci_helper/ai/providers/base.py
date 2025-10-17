@@ -8,9 +8,9 @@ AIプロバイダーの基底クラス
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import AsyncIterator, Dict, List, Optional
+from collections.abc import AsyncIterator
 
-from ..exceptions import AIError, ProviderError
+from ..exceptions import ProviderError
 from ..models import AnalysisResult, AnalyzeOptions, ProviderConfig, TokenUsage
 
 
@@ -56,9 +56,7 @@ class AIProvider(ABC):
         """
 
     @abstractmethod
-    async def stream_analyze(
-        self, prompt: str, context: str, options: AnalyzeOptions
-    ) -> AsyncIterator[str]:
+    async def stream_analyze(self, prompt: str, context: str, options: AnalyzeOptions) -> AsyncIterator[str]:
         """ストリーミング分析を実行
 
         Args:
@@ -76,7 +74,7 @@ class AIProvider(ABC):
         """
 
     @abstractmethod
-    def estimate_cost(self, input_tokens: int, output_tokens: int, model: Optional[str] = None) -> float:
+    def estimate_cost(self, input_tokens: int, output_tokens: int, model: str | None = None) -> float:
         """コストを推定
 
         Args:
@@ -89,7 +87,7 @@ class AIProvider(ABC):
         """
 
     @abstractmethod
-    def count_tokens(self, text: str, model: Optional[str] = None) -> int:
+    def count_tokens(self, text: str, model: str | None = None) -> int:
         """テキストのトークン数をカウント
 
         Args:
@@ -101,7 +99,7 @@ class AIProvider(ABC):
         """
 
     @abstractmethod
-    def get_available_models(self) -> List[str]:
+    def get_available_models(self) -> list[str]:
         """利用可能なモデル一覧を取得
 
         Returns:
@@ -119,7 +117,7 @@ class AIProvider(ABC):
             ProviderError: 接続検証に失敗した場合
         """
 
-    def get_model(self, model: Optional[str] = None) -> str:
+    def get_model(self, model: str | None = None) -> str:
         """使用するモデルを取得
 
         Args:
@@ -143,7 +141,7 @@ class AIProvider(ABC):
         """
         return model in self.config.available_models
 
-    async def health_check(self) -> Dict[str, any]:
+    async def health_check(self) -> dict[str, any]:
         """ヘルスチェックを実行
 
         Returns:
@@ -165,7 +163,7 @@ class AIProvider(ABC):
                 "error": str(e),
             }
 
-    def create_token_usage(self, input_tokens: int, output_tokens: int, model: Optional[str] = None) -> TokenUsage:
+    def create_token_usage(self, input_tokens: int, output_tokens: int, model: str | None = None) -> TokenUsage:
         """TokenUsageオブジェクトを作成
 
         Args:
@@ -216,7 +214,7 @@ class AIProvider(ABC):
 class ProviderFactory:
     """AIプロバイダーのファクトリークラス"""
 
-    _providers: Dict[str, type[AIProvider]] = {}
+    _providers: dict[str, type[AIProvider]] = {}
 
     @classmethod
     def register_provider(cls, name: str, provider_class: type[AIProvider]) -> None:
@@ -254,7 +252,7 @@ class ProviderFactory:
         return provider_class(config)
 
     @classmethod
-    def get_available_providers(cls) -> List[str]:
+    def get_available_providers(cls) -> list[str]:
         """利用可能なプロバイダー一覧を取得
 
         Returns:
@@ -280,11 +278,11 @@ def create_provider_config(
     name: str,
     api_key: str,
     default_model: str,
-    available_models: Optional[List[str]] = None,
-    base_url: Optional[str] = None,
+    available_models: list[str] | None = None,
+    base_url: str | None = None,
     timeout_seconds: int = 30,
     max_retries: int = 3,
-    rate_limit_per_minute: Optional[int] = None,
+    rate_limit_per_minute: int | None = None,
     cost_per_input_token: float = 0.0,
     cost_per_output_token: float = 0.0,
 ) -> ProviderConfig:

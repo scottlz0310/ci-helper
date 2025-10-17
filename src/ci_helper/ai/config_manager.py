@@ -7,11 +7,7 @@ AI統合機能の設定管理を行うヘルパークラスです。
 
 from __future__ import annotations
 
-import os
-from typing import Dict, List, Optional
-
 from ..utils.config import Config
-from .exceptions import ConfigurationError
 from .models import AIConfig, ProviderConfig
 from .providers.base import create_provider_config
 
@@ -60,7 +56,7 @@ class AIConfigManager:
             security_checks_enabled=self.config.get_ai_config("security_checks_enabled", True),
         )
 
-    def _create_provider_config(self, provider_name: str) -> Optional[ProviderConfig]:
+    def _create_provider_config(self, provider_name: str) -> ProviderConfig | None:
         """プロバイダー設定を作成
 
         Args:
@@ -86,7 +82,7 @@ class AIConfigManager:
             cost_per_output_token=full_config.get("cost_per_output_token", 0.0),
         )
 
-    def get_available_providers(self) -> List[str]:
+    def get_available_providers(self) -> list[str]:
         """利用可能なプロバイダー一覧を取得
 
         Returns:
@@ -109,7 +105,7 @@ class AIConfigManager:
         """
         return self.config.create_ai_provider_config(provider_name) is not None
 
-    def get_provider_config(self, provider_name: str) -> Optional[ProviderConfig]:
+    def get_provider_config(self, provider_name: str) -> ProviderConfig | None:
         """指定されたプロバイダーの設定を取得
 
         Args:
@@ -120,7 +116,7 @@ class AIConfigManager:
         """
         return self._create_provider_config(provider_name)
 
-    def validate_provider_setup(self, provider_name: str) -> Dict[str, any]:
+    def validate_provider_setup(self, provider_name: str) -> dict[str, any]:
         """プロバイダーのセットアップを検証
 
         Args:
@@ -142,7 +138,9 @@ class AIConfigManager:
         provider_config = self.config.get_ai_provider_config(provider_name)
         if not provider_config:
             result["issues"].append(f"プロバイダー '{provider_name}' の設定が見つかりません")
-            result["recommendations"].append(f"ci-helper.toml に [ai.providers.{provider_name}] セクションを追加してください")
+            result["recommendations"].append(
+                f"ci-helper.toml に [ai.providers.{provider_name}] セクションを追加してください"
+            )
             return result
 
         result["configured"] = True
@@ -154,7 +152,7 @@ class AIConfigManager:
                 result["api_key_set"] = True
             else:
                 env_key = self._get_api_key_env_name(provider_name)
-                result["issues"].append(f"APIキーが設定されていません")
+                result["issues"].append("APIキーが設定されていません")
                 result["recommendations"].append(f"環境変数 {env_key} を設定してください")
 
         # 設定の妥当性確認
@@ -162,12 +160,12 @@ class AIConfigManager:
             # デフォルトモデルの確認
             default_model = provider_config.get("default_model")
             available_models = provider_config.get("available_models", [])
-            
+
             if not default_model:
                 result["issues"].append("デフォルトモデルが設定されていません")
             elif default_model not in available_models:
                 result["issues"].append(f"デフォルトモデル '{default_model}' が利用可能モデルに含まれていません")
-            
+
             if not available_models:
                 result["issues"].append("利用可能モデルが設定されていません")
 
@@ -193,7 +191,7 @@ class AIConfigManager:
         }
         return env_mappings.get(provider_name, f"{provider_name.upper()}_API_KEY")
 
-    def get_setup_recommendations(self) -> List[str]:
+    def get_setup_recommendations(self) -> list[str]:
         """AI設定のセットアップ推奨事項を取得
 
         Returns:
@@ -208,26 +206,30 @@ class AIConfigManager:
         # 各プロバイダーのAPIキー設定方法を追加
         for provider_name in ["openai", "anthropic"]:
             env_key = self._get_api_key_env_name(provider_name)
-            recommendations.extend([
-                f"   # {provider_name.title()}",
-                f"   export {env_key}=your_api_key_here",
-            ])
+            recommendations.extend(
+                [
+                    f"   # {provider_name.title()}",
+                    f"   export {env_key}=your_api_key_here",
+                ]
+            )
 
-        recommendations.extend([
-            "",
-            "2. 設定ファイル (ci-helper.toml):",
-            "   [ai]",
-            "   default_provider = \"openai\"",
-            "   cache_enabled = true",
-            "",
-            "   [ai.providers.openai]",
-            "   default_model = \"gpt-4o\"",
-            "",
-            "3. 使用方法:",
-            "   ci-run analyze                    # 最新のログを分析",
-            "   ci-run analyze --provider openai  # プロバイダー指定",
-            "   ci-run analyze --interactive      # 対話モード",
-        ])
+        recommendations.extend(
+            [
+                "",
+                "2. 設定ファイル (ci-helper.toml):",
+                "   [ai]",
+                '   default_provider = "openai"',
+                "   cache_enabled = true",
+                "",
+                "   [ai.providers.openai]",
+                '   default_model = "gpt-4o"',
+                "",
+                "3. 使用方法:",
+                "   ci-run analyze                    # 最新のログを分析",
+                "   ci-run analyze --provider openai  # プロバイダー指定",
+                "   ci-run analyze --interactive      # 対話モード",
+            ]
+        )
 
         return recommendations
 

@@ -37,35 +37,35 @@ graph TB
     CLI[CLI Entry Point] --> AnalyzeCmd[Analyze Command]
     AnalyzeCmd --> AIIntegration[AI Integration]
     AIIntegration --> ProviderFactory[Provider Factory]
-    
+
     subgraph "AI Providers"
         OpenAI[OpenAI Provider]
         Anthropic[Anthropic Provider]
         Local[Local LLM Provider]
     end
-    
+
     ProviderFactory --> OpenAI
     ProviderFactory --> Anthropic
     ProviderFactory --> Local
-    
+
     subgraph "Support Services"
         PromptMgr[Prompt Manager]
         Cache[Response Cache]
         CostTracker[Cost Tracker]
         Security[Security Manager]
     end
-    
+
     AIIntegration --> PromptMgr
     AIIntegration --> Cache
     AIIntegration --> CostTracker
     AIIntegration --> Security
-    
+
     subgraph "External APIs"
         OpenAIAPI[OpenAI API]
         AnthropicAPI[Anthropic API]
         OllamaAPI[Ollama API]
     end
-    
+
     OpenAI --> OpenAIAPI
     Anthropic --> AnthropicAPI
     Local --> OllamaAPI
@@ -104,10 +104,10 @@ class AIIntegration:
 
     async def analyze_log(self, log_content: str, options: AnalyzeOptions) -> AnalysisResult:
         """ログを分析してAI結果を返す"""
-        
+
     async def interactive_session(self, initial_log: str) -> None:
         """対話的なAIセッションを開始"""
-        
+
     def get_usage_stats(self) -> UsageStats:
         """使用統計を取得"""
 ```
@@ -121,19 +121,19 @@ from typing import AsyncIterator, Optional
 class AIProvider(ABC):
     def __init__(self, config: ProviderConfig):
         self.config = config
-        
+
     @abstractmethod
     async def analyze(self, prompt: str, context: str) -> AnalysisResult:
         """分析を実行"""
-        
+
     @abstractmethod
     async def stream_analyze(self, prompt: str, context: str) -> AsyncIterator[str]:
         """ストリーミング分析を実行"""
-        
+
     @abstractmethod
     def estimate_cost(self, input_tokens: int, output_tokens: int) -> float:
         """コストを推定"""
-        
+
     @abstractmethod
     def get_available_models(self) -> List[str]:
         """利用可能なモデル一覧を取得"""
@@ -149,13 +149,13 @@ class OpenAIProvider(AIProvider):
     def __init__(self, config: ProviderConfig):
         super().__init__(config)
         self.client = openai.AsyncOpenAI(api_key=config.api_key)
-        
+
     async def analyze(self, prompt: str, context: str) -> AnalysisResult:
         """OpenAI APIを使用して分析"""
-        
+
     async def stream_analyze(self, prompt: str, context: str) -> AsyncIterator[str]:
         """ストリーミング分析"""
-        
+
     def estimate_cost(self, input_tokens: int, output_tokens: int) -> float:
         """OpenAIの料金体系に基づくコスト計算"""
 ```
@@ -166,16 +166,16 @@ class OpenAIProvider(AIProvider):
 class PromptManager:
     def __init__(self, config_path: Optional[str] = None):
         self.templates = self._load_templates(config_path)
-        
+
     def get_analysis_prompt(self, error_type: ErrorType, context: str) -> str:
         """エラータイプに応じた分析プロンプトを生成"""
-        
+
     def get_fix_prompt(self, analysis: AnalysisResult) -> str:
         """修正提案用プロンプトを生成"""
-        
+
     def get_interactive_prompt(self, conversation_history: List[str]) -> str:
         """対話用プロンプトを生成"""
-        
+
     def add_custom_prompt(self, name: str, template: str) -> None:
         """カスタムプロンプトを追加"""
 ```
@@ -192,16 +192,16 @@ class ResponseCache:
     def __init__(self, cache_dir: Path, max_size_mb: int = 100):
         self.cache_dir = cache_dir
         self.max_size_mb = max_size_mb
-        
+
     def get_cache_key(self, prompt: str, context: str, model: str) -> str:
         """キャッシュキーを生成"""
-        
+
     async def get(self, cache_key: str) -> Optional[AnalysisResult]:
         """キャッシュから結果を取得"""
-        
+
     async def set(self, cache_key: str, result: AnalysisResult) -> None:
         """結果をキャッシュに保存"""
-        
+
     def cleanup_old_entries(self) -> None:
         """古いキャッシュエントリを削除"""
 ```
@@ -213,18 +213,18 @@ class CostTracker:
     def __init__(self, storage_path: Path):
         self.storage_path = storage_path
         self.usage_data = self._load_usage_data()
-        
-    def record_usage(self, provider: str, model: str, 
+
+    def record_usage(self, provider: str, model: str,
                     input_tokens: int, output_tokens: int, cost: float) -> None:
         """使用量を記録"""
-        
+
     def get_monthly_usage(self, year: int, month: int) -> UsageStats:
         """月間使用統計を取得"""
-        
+
     def check_limits(self, provider: str) -> LimitStatus:
         """使用制限をチェック"""
-        
-    def estimate_request_cost(self, provider: str, model: str, 
+
+    def estimate_request_cost(self, provider: str, model: str,
                             input_tokens: int) -> float:
         """リクエストコストを推定"""
 ```
@@ -243,7 +243,7 @@ class AnalysisResult:
     confidence_score: float         # 信頼度スコア
     analysis_time: float           # 分析時間
     tokens_used: TokenUsage        # 使用トークン数
-    
+
 @dataclass
 class RootCause:
     category: str                  # エラーカテゴリ
@@ -251,7 +251,7 @@ class RootCause:
     file_path: Optional[str]       # 関連ファイル
     line_number: Optional[int]     # 行番号
     severity: Severity             # 重要度
-    
+
 @dataclass
 class FixSuggestion:
     title: str                     # 修正タイトル
@@ -272,7 +272,7 @@ class AIConfig:
     cache_ttl_hours: int
     cost_limits: Dict[str, float]
     prompt_templates: Dict[str, str]
-    
+
 @dataclass
 class ProviderConfig:
     api_key: str
@@ -294,16 +294,16 @@ class SecurityManager:
             r'sk-[a-zA-Z0-9]{48}',      # OpenAI
             r'sk-ant-[a-zA-Z0-9-]{95}', # Anthropic
         ]
-        
+
     def validate_api_key(self, provider: str, api_key: str) -> bool:
         """APIキーの形式を検証"""
-        
+
     def mask_secrets_in_log(self, log_content: str) -> str:
         """ログ内のシークレットをマスク"""
-        
+
     def secure_api_call(self, provider: AIProvider, request_data: dict) -> dict:
         """セキュアなAPI呼び出し"""
-        
+
     def check_config_security(self, config_path: Path) -> List[SecurityIssue]:
         """設定ファイルのセキュリティチェック"""
 ```
@@ -317,10 +317,10 @@ class EnvironmentManager:
         'anthropic': ['ANTHROPIC_API_KEY'],
         'local': ['OLLAMA_BASE_URL']  # オプション
     }
-    
+
     def get_provider_config(self, provider: str) -> Optional[ProviderConfig]:
         """環境変数からプロバイダー設定を取得"""
-        
+
     def validate_environment(self, provider: str) -> ValidationResult:
         """環境変数の検証"""
 ```
@@ -387,7 +387,7 @@ class AsyncAIIntegration:
         """複数ログの並列分析"""
         tasks = [self.analyze_log(log) for log in logs]
         return await asyncio.gather(*tasks)
-        
+
     async def stream_with_progress(self, prompt: str, context: str) -> AsyncIterator[str]:
         """プログレス表示付きストリーミング"""
         async for chunk in self.provider.stream_analyze(prompt, context):
@@ -407,13 +407,13 @@ class AsyncAIIntegration:
 class TokenOptimizer:
     def __init__(self, max_tokens: int):
         self.max_tokens = max_tokens
-        
+
     def optimize_input(self, log_content: str) -> str:
         """入力ログを最適化"""
         # 1. 重複行の削除
         # 2. 重要度の低い情報の除去
         # 3. 構造化された要約の生成
-        
+
     def estimate_output_tokens(self, input_tokens: int) -> int:
         """出力トークン数を推定"""
 ```
@@ -477,16 +477,16 @@ class TestOpenAIProvider:
     @pytest.mark.asyncio
     async def test_analyze_success(self, mock_openai_client):
         """正常な分析のテスト"""
-        
+
     @pytest.mark.asyncio
     async def test_analyze_rate_limit(self, mock_openai_client):
         """レート制限のテスト"""
-        
+
 # tests/unit/ai/test_cache.py
 class TestResponseCache:
     def test_cache_key_generation(self):
         """キャッシュキー生成のテスト"""
-        
+
     def test_cache_expiration(self):
         """キャッシュ有効期限のテスト"""
 ```
@@ -499,7 +499,7 @@ class TestAIIntegration:
     @pytest.mark.asyncio
     async def test_end_to_end_analysis(self, real_api_key):
         """実際のAPIを使用したE2Eテスト"""
-        
+
     def test_fallback_behavior(self):
         """API失敗時のフォールバック動作"""
 ```
@@ -529,10 +529,10 @@ MOCK_OPENAI_RESPONSE = {
 class AIPlugin:
     def register_provider(self, name: str, provider_class: Type[AIProvider]) -> None:
         """新しいプロバイダーを登録"""
-        
+
     def register_prompt_template(self, name: str, template: str) -> None:
         """新しいプロンプトテンプレートを登録"""
-        
+
     def register_analyzer(self, error_type: str, analyzer: Callable) -> None:
         """カスタム分析器を登録"""
 ```

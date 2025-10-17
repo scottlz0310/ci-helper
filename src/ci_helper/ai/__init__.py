@@ -12,7 +12,11 @@ __version__ = "1.0.0"
 # 主要クラスのエクスポート
 # プロバイダーを自動登録
 from . import provider_registry
+from .cache import ResponseCache
+from .cache_manager import CacheManager
 from .config_manager import AIConfigManager
+from .cost_manager import CostManager
+from .cost_tracker import CostTracker
 from .exceptions import (
     AIError,
     APIKeyError,
@@ -33,7 +37,6 @@ from .providers.openai import OpenAIProvider
 
 # 後で実装される
 # from .integration import AIIntegration
-# from .cache import ResponseCache
 # from .cost_tracker import CostTracker
 
 __all__ = [
@@ -48,6 +51,12 @@ __all__ = [
     "AIConfigManager",
     # プロンプト管理
     "PromptManager",
+    # キャッシュ管理
+    "ResponseCache",
+    "CacheManager",
+    # コスト管理
+    "CostTracker",
+    "CostManager",
     # データモデル
     "AnalysisResult",
     "AnalyzeOptions",
@@ -66,6 +75,4 @@ __all__ = [
     "ConfigurationError",
     # 後で追加される
     # "AIIntegration",
-    # "ResponseCache",
-    # "CostTracker",
 ]

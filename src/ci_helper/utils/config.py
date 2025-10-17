@@ -62,14 +62,14 @@ class Config:
                 "timeout_seconds": 30,
                 "max_retries": 3,
                 "cost_per_input_token": 0.0025 / 1000,  # $2.50 per 1M tokens
-                "cost_per_output_token": 0.01 / 1000,   # $10.00 per 1M tokens
+                "cost_per_output_token": 0.01 / 1000,  # $10.00 per 1M tokens
             },
             "anthropic": {
                 "default_model": "claude-3-5-sonnet-20241022",
                 "available_models": ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022"],
                 "timeout_seconds": 30,
                 "max_retries": 3,
-                "cost_per_input_token": 0.003 / 1000,   # $3.00 per 1M tokens
+                "cost_per_input_token": 0.003 / 1000,  # $3.00 per 1M tokens
                 "cost_per_output_token": 0.015 / 1000,  # $15.00 per 1M tokens
             },
             "local": {
@@ -177,18 +177,24 @@ class Config:
                 # ai セクションがある場合は更新
                 if "ai" in project_config:
                     ai_section = project_config["ai"]
-                    
+
                     # トップレベル設定を更新
-                    for key in ["default_provider", "cache_enabled", "cache_ttl_hours", 
-                               "cache_max_size_mb", "interactive_timeout", "streaming_enabled", 
-                               "security_checks_enabled"]:
+                    for key in [
+                        "default_provider",
+                        "cache_enabled",
+                        "cache_ttl_hours",
+                        "cache_max_size_mb",
+                        "interactive_timeout",
+                        "streaming_enabled",
+                        "security_checks_enabled",
+                    ]:
                         if key in ai_section:
                             ai_config[key] = ai_section[key]
-                    
+
                     # cost_limits を更新
                     if "cost_limits" in ai_section:
                         ai_config["cost_limits"].update(ai_section["cost_limits"])
-                    
+
                     # providers を更新
                     if "providers" in ai_section:
                         for provider_name, provider_config in ai_section["providers"].items():
@@ -196,7 +202,7 @@ class Config:
                                 ai_config["providers"][provider_name].update(provider_config)
                             else:
                                 ai_config["providers"][provider_name] = provider_config
-                    
+
                     # prompt_templates を更新
                     if "prompt_templates" in ai_section:
                         ai_config["prompt_templates"].update(ai_section["prompt_templates"])
@@ -504,7 +510,7 @@ class Config:
         # デフォルトプロバイダーの存在確認
         default_provider = self.get_default_ai_provider()
         available_providers = self.get_available_ai_providers()
-        
+
         if default_provider not in available_providers:
             raise ConfigurationError(
                 f"デフォルトAIプロバイダー '{default_provider}' が設定されていません",
@@ -529,7 +535,7 @@ class Config:
             # デフォルトモデルが利用可能モデルに含まれているかチェック
             default_model = provider_config.get("default_model")
             available_models = provider_config.get("available_models", [])
-            
+
             if default_model not in available_models:
                 raise ConfigurationError(
                     f"プロバイダー '{provider_name}' のデフォルトモデル '{default_model}' が利用可能モデルに含まれていません",
@@ -582,7 +588,7 @@ class Config:
 
         # APIキーを取得
         api_key = self.get_ai_provider_api_key(provider_name)
-        
+
         # ローカルLLM以外でAPIキーが必要
         if provider_name != "local" and not api_key:
             return None
