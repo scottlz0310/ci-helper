@@ -246,7 +246,7 @@ class PromptManager:
         try:
             # 簡単な実装 - 実際にはTOMLやYAMLパーサーを使用
             with open(config_path, encoding="utf-8") as f:
-                content = f.read()
+                f.read()
                 # 基本的なテンプレート抽出（実装を簡略化）
                 # 実際にはより堅牢なパーサーが必要
                 pass

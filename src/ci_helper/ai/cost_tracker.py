@@ -221,7 +221,6 @@ class CostTracker:
         """
         # 月間制限をチェック
         current_date = datetime.now()
-        monthly_stats = self.get_monthly_usage(current_date.year, current_date.month)
 
         # プロバイダー別の使用量を取得
         provider_cost = 0.0
@@ -368,7 +367,7 @@ class CostTracker:
             "record_count": len(recent_records),
         }
 
-    async def export_usage_data(self, export_path: Path, format: str = "json") -> None:
+    async def export_usage_data(self, export_path: Path, export_format: str = "json") -> None:
         """使用データをエクスポート
 
         Args:

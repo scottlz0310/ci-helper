@@ -326,7 +326,7 @@ class CostManager:
         sorted_items = sorted(breakdown.items(), key=lambda x: x[1], reverse=True)
         return sorted_items[:limit]
 
-    async def export_cost_report(self, export_path: Path, format: str = "json") -> None:
+    async def export_cost_report(self, export_path: Path, export_format: str = "json") -> None:
         """コストレポートをエクスポート
 
         Args:
@@ -343,7 +343,7 @@ class CostManager:
             "limits": {provider: self.check_usage_limits(provider) for provider in self.cost_limits.keys()},
         }
 
-        if format.lower() == "json":
+        if export_format.lower() == "json":
             import json
 
             import aiofiles
@@ -351,7 +351,7 @@ class CostManager:
             async with aiofiles.open(export_path, "w", encoding="utf-8") as f:
                 await f.write(json.dumps(report, indent=2, ensure_ascii=False))
         else:
-            raise ConfigurationError(f"サポートされていないエクスポート形式: {format}")
+            raise ConfigurationError(f"サポートされていないエクスポート形式: {export_format}")
 
     def set_cost_limit(self, provider: str, limit: float) -> None:
         """コスト制限を設定
