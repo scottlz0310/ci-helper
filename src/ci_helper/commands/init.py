@@ -5,7 +5,6 @@ init コマンド実装
 """
 
 from pathlib import Path
-from typing import Any
 
 import click
 from rich.console import Console
@@ -15,6 +14,25 @@ from ..config.templates import ACTRC_TEMPLATE, CI_HELPER_TOML_TEMPLATE, ENV_EXAM
 from ..core.exceptions import ConfigurationError
 
 console = Console()
+
+
+SAMPLE_WORKFLOW_TEMPLATE = """name: CI Helper Sample
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run sample task
+        run: echo \"ci-helper sample workflow\"
+"""
 
 
 @click.command()
@@ -75,6 +93,9 @@ def init(force: bool) -> None:
 
         # 実際の設定ファイルを作成
         _create_actual_config_files(project_root, force)
+
+        # サンプルワークフローを用意
+        _ensure_sample_workflows(project_root)
 
         # .gitignore への追加提案
         _handle_gitignore_update(project_root)
@@ -137,6 +158,31 @@ def _create_actual_config_files(project_root: Path, _force: bool) -> None:
     # .env の作成（環境変数）
     env_content = _generate_env_content()
     _write_config_file(project_root / ".env", env_content, "環境変数ファイル")
+
+
+def _ensure_sample_workflows(project_root: Path) -> None:
+    """サンプルワークフローを作成"""
+    workflows_dir = project_root / ".github" / "workflows"
+    try:
+        workflows_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        console.print(f"[red]✗[/red] ワークフローディレクトリの作成に失敗しました: {e}")
+        return
+
+    existing_workflows = list(workflows_dir.glob("*.yml")) + list(workflows_dir.glob("*.yaml"))
+    if existing_workflows:
+        console.print(
+            f"[dim]✓ {workflows_dir.relative_to(project_root)}/ に既存のワークフローが見つかりました ({len(existing_workflows)} 件)[/dim]"
+        )
+        return
+
+    sample_workflow_path = workflows_dir / "ci-helper-sample.yml"
+    try:
+        sample_workflow_path.write_text(SAMPLE_WORKFLOW_TEMPLATE.strip() + "\n", encoding="utf-8")
+        relative_path = sample_workflow_path.relative_to(project_root)
+        console.print(f"[green]✓[/green] {relative_path} を作成しました (サンプルワークフロー)")
+    except OSError as e:
+        console.print(f"[red]✗[/red] サンプルワークフローの作成に失敗しました: {e}")
 
 
 def _generate_actrc_content(system_info: dict[str, str]) -> str:
@@ -204,7 +250,7 @@ def _generate_env_content() -> str:
     import os
 
     # 既存の環境変数をチェック
-    github_token_exists = Any(key in os.environ for key in ["GITHUB_TOKEN", "GITHUB_PERSONAL_ACCESS_TOKEN", "GH_TOKEN"])
+    github_token_exists = any(key in os.environ for key in ["GITHUB_TOKEN", "GITHUB_PERSONAL_ACCESS_TOKEN", "GH_TOKEN"])
 
     if github_token_exists:
         github_token_comment = "# GitHub token is already set in system environment variables"

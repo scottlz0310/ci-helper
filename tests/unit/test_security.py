@@ -329,8 +329,8 @@ class TestEnvironmentSecretManager:
 
         assert result["valid"] is False
         assert len(result["recommendations"]) > 0
-        assert Any("export MISSING_KEY=" in rec for rec in result["recommendations"])
-        assert Any(".env ファイル" in rec for rec in result["recommendations"])
+        assert any("export MISSING_KEY=" in rec for rec in result["recommendations"])
+        assert any(".env ファイル" in rec for rec in result["recommendations"])
 
     def test_prepare_act_environment(self):
         """act実行用環境変数準備のテスト"""
@@ -533,9 +533,9 @@ class TestSecurityValidator:
         recommendations = self.validator._get_log_security_recommendations(detected_secrets)
 
         assert len(recommendations) > 0
-        assert Any("GitHub Token" in rec for rec in recommendations)
-        assert Any("AWS 認証情報" in rec for rec in recommendations)
-        assert Any("環境変数" in rec for rec in recommendations)
+        assert any("GitHub Token" in rec for rec in recommendations)
+        assert any("AWS 認証情報" in rec for rec in recommendations)
+        assert any("環境変数" in rec for rec in recommendations)
 
     def test_get_log_security_recommendations_safe(self):
         """安全なログの推奨事項生成テスト"""
@@ -562,8 +562,8 @@ class TestSecurityValidator:
         recommendations = self.validator._get_config_security_recommendations(issues)
 
         assert len(recommendations) > 0
-        assert Any("環境変数" in rec for rec in recommendations)
-        assert Any(".env ファイル" in rec for rec in recommendations)
+        assert any("環境変数" in rec for rec in recommendations)
+        assert any(".env ファイル" in rec for rec in recommendations)
 
     def test_get_config_security_recommendations_safe(self):
         """安全な設定の推奨事項生成テスト"""

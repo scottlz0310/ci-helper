@@ -9,14 +9,14 @@ from __future__ import annotations
 import subprocess
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
 from ..core.exceptions import ExecutionError, SecurityError
 from ..core.models import ExecutionResult, JobResult, StepResult, WorkflowResult
-from ..core.security import EnvironmentSecretManager, SecurityValidator
+from ..core.security import EnvironmentSecretManager, SecretSummary, SecretValidationResult, SecurityValidator
 from ..utils.config import Config
 
 
@@ -59,6 +59,9 @@ class CIRunner:
             ExecutionError: 実行に失敗した場合
         """
         start_time = time.time()
+
+        if not dry_run:
+            self._check_lock_file()
 
         # ワークフローファイルを検出
         workflow_files = self._discover_workflows(workflows)
@@ -322,7 +325,7 @@ class CIRunner:
 
         return checks
 
-    def validate_security(self, required_secrets: list[str] | None = None) -> dict[str, Any]:
+    def validate_security(self, required_secrets: list[str] | None = None) -> SecretValidationResult:
         """セキュリティ設定を検証
 
         Args:
@@ -333,7 +336,7 @@ class CIRunner:
         """
         return self.secret_manager.validate_secrets(required_secrets)
 
-    def get_secret_summary(self) -> dict[str, Any]:
+    def get_secret_summary(self) -> SecretSummary:
         """現在のシークレット設定状況を取得
 
         Returns:

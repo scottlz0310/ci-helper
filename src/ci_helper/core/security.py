@@ -8,12 +8,45 @@ from __future__ import annotations
 
 import os
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 
 if TYPE_CHECKING:
     pass
 
 from ..core.exceptions import SecurityError
+
+
+class SecretStatus(TypedDict):
+    """個々のシークレット状態を表す辞書構造"""
+
+    key: str
+    description: str
+    configured: bool
+
+
+class SecretValidationResult(TypedDict):
+    """シークレット検証の結果構造"""
+
+    valid: bool
+    missing_secrets: list[SecretStatus]
+    available_secrets: list[SecretStatus]
+    recommendations: list[str]
+
+
+class SecretSummaryEntry(TypedDict):
+    """サマリー中のシークレット項目"""
+
+    description: str
+    configured: bool
+
+
+class SecretSummary(TypedDict):
+    """シークレット設定サマリー"""
+
+    required_secrets: dict[str, SecretSummaryEntry]
+    optional_secrets: dict[str, SecretSummaryEntry]
+    total_configured: int
+    total_missing: int
 
 
 class SecretDetector:
@@ -320,7 +353,7 @@ class EnvironmentSecretManager:
 
         return value
 
-    def validate_secrets(self, required_keys: list[str] | None = None) -> dict[str, Any]:
+    def validate_secrets(self, required_keys: list[str] | None = None) -> SecretValidationResult:
         """必要なシークレットが設定されているかチェック
 
         Args:
@@ -332,7 +365,7 @@ class EnvironmentSecretManager:
         if required_keys is None:
             required_keys = list(self.required_secrets.keys())
 
-        validation_result = {
+        validation_result: SecretValidationResult = {
             "valid": True,
             "missing_secrets": [],
             "available_secrets": [],
@@ -374,7 +407,7 @@ class EnvironmentSecretManager:
         Returns:
             act実行用の環境変数辞書
         """
-        env_vars = {}
+        env_vars: dict[str, str] = {}
 
         # 現在の環境変数をコピー（シークレット以外）
         for key, value in os.environ.items():
@@ -384,15 +417,21 @@ class EnvironmentSecretManager:
 
         # 必要なシークレットを追加
         for key in self.required_secrets:
-            value = os.getenv(key)
-            if value:
-                env_vars[key] = value
+            secret_value = os.getenv(key)
+            if secret_value is None:
+                continue
+            if secret_value == "":
+                continue
+            env_vars[key] = secret_value
 
         # オプションの設定を追加
         for key in self.optional_secrets:
-            value = os.getenv(key)
-            if value:
-                env_vars[key] = value
+            optional_value = os.getenv(key)
+            if optional_value is None:
+                continue
+            if optional_value == "":
+                continue
+            env_vars[key] = optional_value
 
         # 追加の変数をマージ
         if additional_vars:
@@ -448,13 +487,13 @@ class EnvironmentSecretManager:
 
         return True
 
-    def get_secret_summary(self) -> dict[str, Any]:
+    def get_secret_summary(self) -> SecretSummary:
         """現在のシークレット設定状況のサマリーを取得
 
         Returns:
             シークレット設定状況の辞書
         """
-        summary = {
+        summary: SecretSummary = {
             "required_secrets": {},
             "optional_secrets": {},
             "total_configured": 0,
@@ -502,13 +541,15 @@ class SecurityValidator:
             検証結果の辞書
         """
         detected_secrets = self.secret_detector.detect_secrets(log_content)
+        sanitized_content = self.secret_detector.sanitize_content(log_content)
+        log_recommendations = self._get_log_security_recommendations(detected_secrets)
 
         return {
             "has_secrets": len(detected_secrets) > 0,
             "secret_count": len(detected_secrets),
             "detected_secrets": detected_secrets,
-            "sanitized_content": self.secret_detector.sanitize_content(log_content),
-            "recommendations": self._get_log_security_recommendations(detected_secrets),
+            "sanitized_content": sanitized_content,
+            "recommendations": log_recommendations,
         }
 
     def validate_config_security(self, config_files: dict[str, str]) -> dict[str, Any]:
@@ -527,7 +568,7 @@ class SecurityValidator:
             try:
                 issues = self.secret_detector.validate_config_file(content, file_path)
                 file_results[file_path] = {
-                    "valid": len([i for i in issues if i["severity"] == "critical"]) == 0,
+                    "valid": not any(issue["severity"] == "critical" for issue in issues),
                     "issues": issues,
                 }
                 all_issues.extend(issues)
@@ -538,13 +579,18 @@ class SecurityValidator:
                     "issues": [],
                 }
 
+        overall_valid = all(result["valid"] for result in file_results.values())
+        critical_issues = sum(1 for issue in all_issues if issue["severity"] == "critical")
+        warning_issues = sum(1 for issue in all_issues if issue["severity"] == "warning")
+        config_recommendations = self._get_config_security_recommendations(all_issues)
+
         return {
-            "overall_valid": all(result["valid"] for result in file_results.values()),
+            "overall_valid": overall_valid,
             "total_issues": len(all_issues),
-            "critical_issues": len([i for i in all_issues if i["severity"] == "critical"]),
-            "warning_issues": len([i for i in all_issues if i["severity"] == "warning"]),
+            "critical_issues": critical_issues,
+            "warning_issues": warning_issues,
             "file_results": file_results,
-            "recommendations": self._get_config_security_recommendations(all_issues),
+            "recommendations": config_recommendations,
         }
 
     def _get_log_security_recommendations(self, detected_secrets: list[dict[str, Any]]) -> list[str]:

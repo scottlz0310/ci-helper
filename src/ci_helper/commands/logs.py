@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 from ..core.error_handler import ErrorHandler
 from ..core.exceptions import CIHelperError
 from ..core.log_manager import LogManager
+from ..core.models import ExecutionResult, LogComparisonResult
 from ..utils.config import Config
 
 console = Console()
@@ -181,7 +182,7 @@ def _display_logs_table(logs_list: list[dict[str, Any]], workflow_filter: str | 
 
     table = Table(title=title)
     table.add_column("実行日時", style="cyan")
-    table.add_column("ログファイル", style="blue")
+    table.add_column("ログファイル", style="blue", overflow="ignore", no_wrap=True)
     table.add_column("ステータス", justify="center")
     table.add_column("実行時間", justify="right")
     table.add_column("失敗数", justify="right")
@@ -265,7 +266,7 @@ def _show_log_diff(log_manager: LogManager, log_filename: str, output_format: st
         console.print(f"[red]差分表示中にエラーが発生しました: {e}[/red]")
 
 
-def _display_initial_execution(execution, output_format: str) -> None:
+def _display_initial_execution(execution: ExecutionResult, output_format: str) -> None:
     """初回実行の情報を表示"""
     if output_format == "json":
         import json
@@ -317,7 +318,7 @@ def _display_initial_execution(execution, output_format: str) -> None:
         console.print(table)
 
 
-def _display_diff_table(comparison, verbose: bool) -> None:
+def _display_diff_table(comparison: LogComparisonResult, verbose: bool) -> None:
     """テーブル形式で差分を表示"""
     from ..core.log_comparator import LogComparator
 

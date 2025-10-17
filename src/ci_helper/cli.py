@@ -76,6 +76,8 @@ def cli(ctx: click.Context, verbose: bool, config_file: Path | None) -> None:
         project_root = Path.cwd()
         if config_file:
             project_root = config_file.parent
+        else:
+            project_root = _find_project_root(project_root)
 
         config = Config(project_root)
         config.validate()
@@ -107,6 +109,22 @@ cli.add_command(logs)
 cli.add_command(secrets)
 cli.add_command(clean)
 cli.add_command(cache)
+
+
+def _find_project_root(start_path: Path) -> Path:
+    """プロジェクトルートを探索"""
+    search_paths = [start_path, *start_path.parents]
+
+    for path in search_paths:
+        workflows_dir = path / ".github" / "workflows"
+        if workflows_dir.exists() and workflows_dir.is_dir():
+            return path
+
+    for path in search_paths:
+        if (path / "ci-helper.toml").exists():
+            return path
+
+    return start_path
 
 
 def main() -> None:

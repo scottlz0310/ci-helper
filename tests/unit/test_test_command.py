@@ -159,53 +159,57 @@ class TestShowDiffWithPrevious:
     @patch("ci_helper.commands.test.console")
     def test_show_diff_success(self, mock_console, mock_log_manager):
         """差分表示成功のテスト"""
+        import tempfile
         from pathlib import Path
 
-        mock_config = Mock()
-        mock_config.get_path.return_value = Path("/tmp/test_logs")
-        mock_current_result = Mock()
-        mock_current_result.timestamp = "2024-01-01T12:00:00"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_config = Mock()
+            mock_config.get_path.return_value = Path(temp_dir) / "test_logs"
+            mock_current_result = Mock()
+            mock_current_result.timestamp = "2024-01-01T12:00:00"
 
-        mock_previous_result = Mock()
-        mock_manager_instance = Mock()
-        mock_manager_instance.get_previous_execution.return_value = mock_previous_result
-        mock_log_manager.return_value = mock_manager_instance
+            mock_previous_result = Mock()
+            mock_manager_instance = Mock()
+            mock_manager_instance.get_previous_execution.return_value = mock_previous_result
+            mock_log_manager.return_value = mock_manager_instance
 
-        with patch("ci_helper.core.log_comparator.LogComparator") as mock_comparator:
-            mock_comparator_instance = Mock()
-            mock_comparison = Mock()
-            mock_comparator_instance.compare_executions.return_value = mock_comparison
-            mock_comparator.return_value = mock_comparator_instance
+            with patch("ci_helper.core.log_comparator.LogComparator") as mock_comparator:
+                mock_comparator_instance = Mock()
+                mock_comparison = Mock()
+                mock_comparator_instance.compare_executions.return_value = mock_comparison
+                mock_comparator.return_value = mock_comparator_instance
 
-            with patch("ci_helper.commands.test._display_diff_summary") as mock_display:
-                _show_diff_with_previous(mock_config, mock_current_result, verbose=False)
+                with patch("ci_helper.commands.test._display_diff_summary") as mock_display:
+                    _show_diff_with_previous(mock_config, mock_current_result, verbose=False)
 
-                mock_log_manager.assert_called_once_with(mock_config)
-                mock_manager_instance.get_previous_execution.assert_called_once_with("2024-01-01T12:00:00")
-                mock_comparator_instance.compare_executions.assert_called_once_with(
-                    mock_current_result, mock_previous_result
-                )
-                mock_display.assert_called_once_with(mock_comparison, False)
+                    mock_log_manager.assert_called_once_with(mock_config)
+                    mock_manager_instance.get_previous_execution.assert_called_once_with("2024-01-01T12:00:00")
+                    mock_comparator_instance.compare_executions.assert_called_once_with(
+                        mock_current_result, mock_previous_result
+                    )
+                    mock_display.assert_called_once_with(mock_comparison, False)
 
     @patch("ci_helper.core.log_manager.LogManager")
     @patch("ci_helper.commands.test.console")
     def test_show_diff_no_previous(self, mock_console, mock_log_manager):
         """前回実行が存在しない場合のテスト"""
+        import tempfile
         from pathlib import Path
 
-        mock_config = Mock()
-        mock_config.get_path.return_value = Path("/tmp/test_logs")
-        mock_current_result = Mock()
-        mock_current_result.timestamp = "2024-01-01T12:00:00"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_config = Mock()
+            mock_config.get_path.return_value = Path(temp_dir) / "test_logs"
+            mock_current_result = Mock()
+            mock_current_result.timestamp = "2024-01-01T12:00:00"
 
-        mock_manager_instance = Mock()
-        mock_manager_instance.get_previous_execution.return_value = None
-        mock_log_manager.return_value = mock_manager_instance
+            mock_manager_instance = Mock()
+            mock_manager_instance.get_previous_execution.return_value = None
+            mock_log_manager.return_value = mock_manager_instance
 
-        _show_diff_with_previous(mock_config, mock_current_result, verbose=False)
+            _show_diff_with_previous(mock_config, mock_current_result, verbose=False)
 
-        # 警告メッセージが表示されることを確認
-        mock_console.print.assert_called()
+            # 警告メッセージが表示されることを確認
+            mock_console.print.assert_called()
         call_args = mock_console.print.call_args[0][0]
         assert "見つかりません" in call_args
 
@@ -213,16 +217,18 @@ class TestShowDiffWithPrevious:
     @patch("ci_helper.commands.test.console")
     def test_show_diff_error(self, mock_console, mock_log_manager):
         """差分計算でエラーが発生する場合のテスト"""
+        import tempfile
         from pathlib import Path
 
-        mock_config = Mock()
-        mock_config.get_path.return_value = Path("/tmp/test_logs")
-        mock_current_result = Mock()
-        mock_current_result.timestamp = "2024-01-01T12:00:00"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_config = Mock()
+            mock_config.get_path.return_value = Path(temp_dir) / "test_logs"
+            mock_current_result = Mock()
+            mock_current_result.timestamp = "2024-01-01T12:00:00"
 
-        mock_manager_instance = Mock()
-        mock_manager_instance.get_previous_execution.side_effect = Exception("Database error")
-        mock_log_manager.return_value = mock_manager_instance
+            mock_manager_instance = Mock()
+            mock_manager_instance.get_previous_execution.side_effect = Exception("Database error")
+            mock_log_manager.return_value = mock_manager_instance
 
         _show_diff_with_previous(mock_config, mock_current_result, verbose=True)
 
@@ -233,20 +239,22 @@ class TestShowDiffWithPrevious:
     @patch("ci_helper.commands.test.console")
     def test_show_diff_verbose_mode(self, mock_console, mock_log_manager):
         """詳細モードでの差分表示テスト"""
+        import tempfile
         from pathlib import Path
 
-        mock_config = Mock()
-        mock_config.get_path.return_value = Path("/tmp/test_logs")
-        mock_current_result = Mock()
-        mock_current_result.timestamp = "2024-01-01T12:00:00"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mock_config = Mock()
+            mock_config.get_path.return_value = Path(temp_dir) / "test_logs"
+            mock_current_result = Mock()
+            mock_current_result.timestamp = "2024-01-01T12:00:00"
 
-        mock_manager_instance = Mock()
-        mock_manager_instance.get_previous_execution.side_effect = Exception("Test error")
-        mock_log_manager.return_value = mock_manager_instance
+            mock_manager_instance = Mock()
+            mock_manager_instance.get_previous_execution.side_effect = Exception("Test error")
+            mock_log_manager.return_value = mock_manager_instance
 
-        _show_diff_with_previous(mock_config, mock_current_result, verbose=True)
+            _show_diff_with_previous(mock_config, mock_current_result, verbose=True)
 
-        # 詳細エラーメッセージが表示されることを確認
+            # 詳細エラーメッセージが表示されることを確認
         mock_console.print.assert_called()
 
 

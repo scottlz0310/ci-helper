@@ -9,22 +9,35 @@ from __future__ import annotations
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import TypedDict
 
 import click
 from rich.console import Console
 from rich.table import Table
 
 from ..core.exceptions import DependencyError
+from ..utils.config import Config
 from ..utils.recovery_guide import RecoveryGuide
 
 console = Console()
 
 
+class DoctorCheckResult(TypedDict, total=False):
+    """環境診断チェック結果"""
+
+    name: str
+    passed: bool
+    message: str
+    suggestion: str | None
+    details: str | None
+    missing_required: list[str]
+    missing_optional: list[str]
+
+
 # Public wrapper functions for testing
 def check_docker_daemon() -> bool:
     """Docker デーモンの実行状態をチェック（テスト用パブリック関数）"""
-    result = _check_docker_daemon(verbose=False)
+    result: DoctorCheckResult = _check_docker_daemon(verbose=False)
     return result["passed"]
 
 
@@ -59,14 +72,14 @@ def doctor(ctx: click.Context, verbose: bool, guide: str | None) -> None:
         RecoveryGuide.display_recovery_guide(guide)
         return
 
-    config = ctx.obj["config"]
+    config: Config = ctx.obj["config"]
     global_verbose = ctx.obj.get("verbose", False)
     show_verbose = verbose or global_verbose
 
     console.print("[bold blue]🔍 環境診断を開始します...[/bold blue]\n")
 
     # 診断結果を格納
-    checks = []
+    checks: list[DoctorCheckResult] = []
     all_passed = True
 
     # 1. act コマンドのチェック
@@ -82,15 +95,15 @@ def doctor(ctx: click.Context, verbose: bool, guide: str | None) -> None:
         all_passed = False
 
     # 3. GitHub Workflows ディレクトリのチェック
-    workflows_result = _check_workflows_directory(show_verbose)
+    workflows_result = _check_workflows_directory(config, show_verbose)
     checks.append(workflows_result)
     if not workflows_result["passed"]:
         all_passed = False
 
     # 4. 設定ファイルのチェック
-    config_result = _check_configuration_files(config, show_verbose)
+    config_result = _check_configuration_files(config, show_verbose, strict=False)
     checks.append(config_result)
-    if not config_result["passed"]:
+    if config_result.get("missing_required"):
         all_passed = False
 
     # 5. 必要なディレクトリのチェック
@@ -134,7 +147,7 @@ def doctor(ctx: click.Context, verbose: bool, guide: str | None) -> None:
         )
 
 
-def _check_act_command(verbose: bool) -> dict[str, Any]:
+def _check_act_command(verbose: bool) -> DoctorCheckResult:
     """act コマンドのインストール状態をチェック"""
     check_name = "act コマンド"
 
@@ -181,7 +194,7 @@ def _check_act_command(verbose: bool) -> dict[str, Any]:
         }
 
 
-def _check_docker_daemon(verbose: bool) -> dict[str, Any]:
+def _check_docker_daemon(verbose: bool) -> DoctorCheckResult:
     """Docker デーモンの実行状態をチェック"""
     check_name = "Docker デーモン"
 
@@ -240,11 +253,12 @@ def _check_docker_daemon(verbose: bool) -> dict[str, Any]:
         }
 
 
-def _check_workflows_directory(verbose: bool) -> dict[str, Any]:
+def _check_workflows_directory(config: Config | None = None, verbose: bool = False) -> DoctorCheckResult:
     """GitHub Workflows ディレクトリの存在をチェック"""
     check_name = ".github/workflows ディレクトリ"
 
-    workflows_dir = Path.cwd() / ".github" / "workflows"
+    base_dir = config.project_root if config is not None else Path.cwd()
+    workflows_dir = base_dir / ".github" / "workflows"
 
     if not workflows_dir.exists():
         return {
@@ -277,7 +291,7 @@ def _check_workflows_directory(verbose: bool) -> dict[str, Any]:
     }
 
 
-def _check_configuration_files(config, verbose: bool) -> dict[str, Any]:
+def _check_configuration_files(config: Config, verbose: bool, strict: bool = True) -> DoctorCheckResult:
     """設定ファイルの状態をチェック"""
     check_name = "設定ファイル"
 
@@ -312,16 +326,32 @@ def _check_configuration_files(config, verbose: bool) -> dict[str, Any]:
     if missing_files:
         message_parts.append(f"不足: {len(missing_files)} 個")
 
+    missing_required = [name for name in missing_files if name == "ci-helper.toml"]
+    missing_optional = [name for name in missing_files if name != "ci-helper.toml"]
+
+    if strict:
+        passed = len(missing_required) == 0 and len(missing_optional) == 0
+    else:
+        passed = len(missing_required) == 0
+
+    suggestion = None
+    if missing_required:
+        suggestion = "ci-run init を実行して不足している設定ファイルを生成してください"
+    elif missing_optional:
+        suggestion = "必要に応じて ci-run init を実行してテンプレートを生成してください"
+
     return {
         "name": check_name,
-        "passed": len(missing_files) == 0,
-        "message": ", ".join(message_parts),
-        "suggestion": "ci-run init を実行して不足している設定ファイルを生成してください" if missing_files else None,
+        "passed": passed,
+        "message": ", ".join(message_parts) if message_parts else "設定ファイルを確認しました",
+        "suggestion": suggestion,
         "details": f"存在: {existing_files}, 不足: {missing_files}" if verbose else None,
+        "missing_required": missing_required,
+        "missing_optional": missing_optional,
     }
 
 
-def _check_required_directories(config, verbose: bool) -> dict[str, Any]:
+def _check_required_directories(config: Config, verbose: bool) -> DoctorCheckResult:
     """必要なディレクトリの状態をチェック"""
     check_name = "作業ディレクトリ"
 
@@ -371,7 +401,7 @@ def _get_act_install_instructions() -> str:
         return "GitHub Releases からダウンロード: https://github.com/nektos/act"
 
 
-def _check_disk_space(verbose: bool) -> dict[str, Any]:
+def _check_disk_space(verbose: bool) -> DoctorCheckResult:
     """ディスク容量をチェック"""
     check_name = "ディスク容量"
 
@@ -415,7 +445,7 @@ def _check_disk_space(verbose: bool) -> dict[str, Any]:
         }
 
 
-def _display_results(checks: list[dict[str, Any]], verbose: bool) -> None:
+def _display_results(checks: list[DoctorCheckResult], verbose: bool) -> None:
     """診断結果を表形式で表示"""
     table = Table(title="環境診断結果")
     table.add_column("項目", style="bold")
@@ -447,7 +477,7 @@ def _display_results(checks: list[dict[str, Any]], verbose: bool) -> None:
                 console.print(f"{i}. [bold]{check['name']}[/bold]: {check['suggestion']}")
 
 
-def _check_security_configuration(config, verbose: bool) -> dict[str, Any]:
+def _check_security_configuration(config: Config, verbose: bool) -> DoctorCheckResult:
     """セキュリティ設定をチェック"""
     check_name = "セキュリティ設定"
 

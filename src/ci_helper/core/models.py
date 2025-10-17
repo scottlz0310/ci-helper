@@ -101,7 +101,7 @@ class ExecutionResult:
     @property
     def all_failures(self) -> Sequence[Failure]:
         """全ての失敗のリストを取得"""
-        all_failures = []
+        all_failures: list[Failure] = []
         for workflow in self.workflows:
             for job in workflow.jobs:
                 all_failures.extend(job.failures)

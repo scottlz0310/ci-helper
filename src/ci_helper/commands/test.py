@@ -6,6 +6,8 @@ CI/CDワークフローをローカルで実行し、結果を分析・フォー
 
 from __future__ import annotations
 
+import os
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -16,7 +18,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 if TYPE_CHECKING:
-    pass
+    from ..core.models import ExecutionResult, LogComparisonResult
 
 from ..core.ai_formatter import AIFormatter
 from ..core.ci_runner import CIRunner
@@ -112,13 +114,13 @@ def test(
             _analyze_existing_log(log_file, output_format, verbose)
             return
 
-        # 依存関係チェック（ドライランでない場合）
-        if not dry_run:
-            _check_dependencies(verbose)
-
-        # CI実行
         ci_runner = CIRunner(config)
 
+        if not dry_run:
+            ci_runner._check_lock_file()
+            _check_dependencies(config.project_root, verbose)
+
+        # CI実行
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -158,16 +160,30 @@ def test(
         ctx.exit(1)
 
 
-def _check_dependencies(verbose: bool) -> None:
+@contextmanager
+def _temporary_cwd(path: Path) -> None:
+    """一時的にカレントディレクトリを変更"""
+    original_cwd = Path.cwd()
+    try:
+        os.chdir(path)
+        yield
+    finally:
+        os.chdir(original_cwd)
+
+
+def _check_dependencies(project_root: Path | None = None, verbose: bool = False) -> None:
     """依存関係をチェック"""
     if verbose:
         console.print("[dim]依存関係をチェック中...[/dim]")
 
+    base_dir = project_root or Path.cwd()
+
     try:
         DependencyChecker.check_act_command()
         DependencyChecker.check_docker_daemon()
-        DependencyChecker.check_workflows_directory()
         DependencyChecker.check_disk_space()
+        with _temporary_cwd(base_dir):
+            DependencyChecker.check_workflows_directory()
 
         if verbose:
             console.print("[green]✓[/green] 全ての依存関係が満たされています")
@@ -226,7 +242,7 @@ def _analyze_existing_log(log_file: Path, output_format: str, verbose: bool) -> 
         ) from e
 
 
-def _show_diff_with_previous(config: Config, current_result, verbose: bool) -> None:
+def _show_diff_with_previous(config: Config, current_result: ExecutionResult, verbose: bool) -> None:
     """前回実行との差分を表示"""
     log_manager = LogManager(config)
 
@@ -257,7 +273,7 @@ def _show_diff_with_previous(config: Config, current_result, verbose: bool) -> N
             console.print("[yellow]差分表示をスキップします。[/yellow]")
 
 
-def _display_diff_summary(comparison, verbose: bool) -> None:
+def _display_diff_summary(comparison: LogComparisonResult, verbose: bool) -> None:
     """差分サマリーを表示"""
     from ..core.log_comparator import LogComparator
 
@@ -333,7 +349,13 @@ def _display_diff_summary(comparison, verbose: bool) -> None:
             console.print("\n[dim]詳細な差分表示: ci-run logs -d <ログファイル名>[/dim]")
 
 
-def _display_results(execution_result, output_format: str, verbose: bool, dry_run: bool, sanitize: bool = True) -> None:
+def _display_results(
+    execution_result: ExecutionResult,
+    output_format: str,
+    verbose: bool,
+    dry_run: bool,
+    sanitize: bool = True,
+) -> None:
     """実行結果を表示"""
     if output_format == "json":
         _display_json_results(execution_result, verbose, dry_run, sanitize)
@@ -343,7 +365,9 @@ def _display_results(execution_result, output_format: str, verbose: bool, dry_ru
         _display_table_results(execution_result, verbose, dry_run)
 
 
-def _display_json_results(execution_result, verbose: bool, dry_run: bool, sanitize: bool = True) -> None:
+def _display_json_results(
+    execution_result: ExecutionResult, verbose: bool, dry_run: bool, sanitize: bool = True
+) -> None:
     """JSON形式で結果を表示（AI最適化）"""
     formatter = AIFormatter(sanitize_secrets=sanitize)
 
@@ -375,7 +399,9 @@ def _display_json_results(execution_result, verbose: bool, dry_run: bool, saniti
     console.print(json_output)
 
 
-def _display_markdown_results(execution_result, verbose: bool, dry_run: bool, sanitize: bool = True) -> None:
+def _display_markdown_results(
+    execution_result: ExecutionResult, verbose: bool, dry_run: bool, sanitize: bool = True
+) -> None:
     """Markdown形式で結果を表示（AI最適化）"""
     formatter = AIFormatter(sanitize_secrets=sanitize)
 
@@ -418,7 +444,7 @@ def _display_markdown_results(execution_result, verbose: bool, dry_run: bool, sa
     console.print(markdown_output)
 
 
-def _display_table_results(execution_result, verbose: bool, dry_run: bool) -> None:
+def _display_table_results(execution_result: ExecutionResult, verbose: bool, dry_run: bool) -> None:
     """テーブル形式で結果を表示"""
     # 概要テーブル
     summary_table = Table(title=f"CI {'ドライラン' if dry_run else '実行'}結果")

@@ -7,18 +7,24 @@ CI実行結果をAI消費用のMarkdownおよびJSON形式でフォーマット�
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     pass
 
-try:
-    import tiktoken
-except ImportError:
-    tiktoken = None
-
 from ..core.models import AnalysisMetrics, ExecutionResult, Failure, FailureType, JobResult, WorkflowResult
 from ..core.security import SecurityValidator
+
+_tiktoken: Any | None
+try:
+    import tiktoken as _tiktoken_module
+except ImportError:
+    _tiktoken = None
+else:
+    _tiktoken = _tiktoken_module
+
+tiktoken: Any | None = _tiktoken
 
 
 class AIFormatter:
@@ -82,11 +88,12 @@ class AIFormatter:
         """Markdownヘッダーを生成"""
         status_icon = "✅" if execution_result.success else "❌"
         status_text = "成功" if execution_result.success else "失敗"
+        timestamp_text = self._format_timestamp_for_display(execution_result.timestamp)
 
         return f"""# CI実行結果 {status_icon}
 
 **ステータス**: {status_text}
-**実行時刻**: {execution_result.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
+**実行時刻**: {timestamp_text}
 **総実行時間**: {execution_result.total_duration:.2f}秒
 **ワークフロー数**: {len(execution_result.workflows)}"""
 
@@ -114,7 +121,7 @@ class AIFormatter:
         sections = ["## 🚨 失敗詳細"]
 
         # 失敗タイプ別の集計
-        failure_counts = {}
+        failure_counts: dict[FailureType, int] = {}
         for failure in execution_result.all_failures:
             failure_counts[failure.type] = failure_counts.get(failure.type, 0) + 1
 
@@ -247,7 +254,7 @@ class AIFormatter:
         json_data = {
             "execution_summary": {
                 "success": execution_result.success,
-                "timestamp": execution_result.timestamp.isoformat(),
+                "timestamp": self._format_timestamp_iso(execution_result.timestamp),
                 "total_duration": execution_result.total_duration,
                 "total_workflows": len(execution_result.workflows),
                 "total_failures": execution_result.total_failures,
@@ -293,7 +300,7 @@ class AIFormatter:
             "steps": [self._step_to_dict(step) for step in job.steps],
         }
 
-    def _step_to_dict(self, step) -> dict[str, Any]:
+    def _step_to_dict(self, step: Any) -> dict[str, Any]:
         """ステップをdict形式に変換"""
         return {
             "name": step.name,
@@ -313,6 +320,34 @@ class AIFormatter:
             "context_after": list(failure.context_after),
             "stack_trace": failure.stack_trace,
         }
+
+    @staticmethod
+    def _to_datetime(value: Any) -> datetime | None:
+        """timestampフィールドをdatetimeに変換"""
+        if isinstance(value, datetime):
+            return value
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value)
+            except ValueError:
+                return None
+        return None
+
+    @classmethod
+    def _format_timestamp_for_display(cls, value: Any) -> str:
+        """表示用のタイムスタンプ文字列を生成"""
+        dt = cls._to_datetime(value)
+        if dt is not None:
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+        return str(value)
+
+    @classmethod
+    def _format_timestamp_iso(cls, value: Any) -> str:
+        """ISO形式のタイムスタンプ文字列を生成"""
+        dt = cls._to_datetime(value)
+        if dt is not None:
+            return dt.isoformat()
+        return str(value)
 
     def count_tokens(self, content: str, model: str = "gpt-4") -> int:
         """コンテンツのトークン数をカウント
@@ -447,14 +482,14 @@ class AIFormatter:
             suggestions.append("失敗数が多いため、最も重要な失敗のみに絞り込む")
 
         # コンテキスト行が多い場合
-        has_long_context = Any(
+        has_long_context = any(
             len(failure.context_before) + len(failure.context_after) > 6 for failure in execution_result.all_failures
         )
         if has_long_context:
             suggestions.append("エラーのコンテキスト行数を削減する")
 
         # スタックトレースが多い場合
-        has_stack_traces = Any(failure.stack_trace for failure in execution_result.all_failures)
+        has_stack_traces = any(failure.stack_trace for failure in execution_result.all_failures)
         if has_stack_traces:
             suggestions.append("スタックトレースを要約または除外する")
 

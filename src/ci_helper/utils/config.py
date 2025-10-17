@@ -93,7 +93,7 @@ class Config:
 
     def _load_env_config(self) -> dict[str, Any]:
         """環境変数から設定を読み込み"""
-        env_config = {}
+        env_config: dict[str, Any] = {}
 
         # CI_HELPER_* 環境変数をチェック
         for key, default_value in self.DEFAULT_CONFIG.items():
@@ -111,7 +111,7 @@ class Config:
                         raise ConfigurationError(
                             f"環境変数 {env_key} の値が無効です: {env_value}", "整数値を指定してください"
                         ) from e
-                else:
+                elif isinstance(default_value, str):
                     env_config[key] = env_value
 
         return env_config

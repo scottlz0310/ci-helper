@@ -7,12 +7,13 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     pass
 
-from ..core.models import ExecutionResult, Failure, LogComparisonResult
+from ..core.models import ExecutionResult, Failure, LogComparisonResult, WorkflowResult
 
 
 class LogComparator:
@@ -104,7 +105,7 @@ class LogComparator:
         previous = comparison.previous_execution
 
         # 基本統計
-        summary = {
+        summary: dict[str, Any] = {
             "comparison_type": "initial" if previous is None else "comparison",
             "current_status": "success" if current.success else "failure",
             "previous_status": "success" if previous and previous.success else "failure" if previous else None,
@@ -114,7 +115,7 @@ class LogComparator:
 
         # エラー数の変化
         current_error_count = len(comparison.current_execution.all_failures)
-        previous_error_count = len(comparison.previous_execution.all_failures) if previous else 0
+        previous_error_count = len(previous.all_failures) if previous else 0
 
         summary["error_counts"] = {
             "current": current_error_count,
@@ -157,12 +158,12 @@ class LogComparator:
         Returns:
             ワークフロー別の変化情報
         """
-        current_workflows = {w.name: w for w in comparison.current_execution.workflows}
-        previous_workflows = {}
+        current_workflows: dict[str, WorkflowResult] = {w.name: w for w in comparison.current_execution.workflows}
+        previous_workflows: dict[str, WorkflowResult] = {}
         if comparison.previous_execution:
             previous_workflows = {w.name: w for w in comparison.previous_execution.workflows}
 
-        workflow_changes = {}
+        workflow_changes: dict[str, dict[str, Any]] = {}
 
         # 全ワークフローを分析
         all_workflow_names = set(current_workflows.keys()) | set(previous_workflows.keys())
@@ -171,7 +172,7 @@ class LogComparator:
             current_workflow = current_workflows.get(workflow_name)
             previous_workflow = previous_workflows.get(workflow_name)
 
-            change_info = {
+            change_info: dict[str, Any] = {
                 "status": "unchanged",
                 "current_success": current_workflow.success if current_workflow else None,
                 "previous_success": previous_workflow.success if previous_workflow else None,
@@ -203,26 +204,24 @@ class LogComparator:
         Returns:
             失敗タイプ別の分析情報
         """
-        from collections import defaultdict
-
         # 現在の失敗タイプを集計
-        current_types = defaultdict(int)
+        current_types: defaultdict[str, int] = defaultdict(int)
         for failure in comparison.current_execution.all_failures:
             current_types[failure.type.value] += 1
 
         # 前回の失敗タイプを集計
-        previous_types = defaultdict(int)
+        previous_types: defaultdict[str, int] = defaultdict(int)
         if comparison.previous_execution:
             for failure in comparison.previous_execution.all_failures:
                 previous_types[failure.type.value] += 1
 
         # 新規エラーのタイプを集計
-        new_error_types = defaultdict(int)
+        new_error_types: defaultdict[str, int] = defaultdict(int)
         for failure in comparison.new_errors:
             new_error_types[failure.type.value] += 1
 
         # 解決済みエラーのタイプを集計
-        resolved_error_types = defaultdict(int)
+        resolved_error_types: defaultdict[str, int] = defaultdict(int)
         for failure in comparison.resolved_errors:
             resolved_error_types[failure.type.value] += 1
 

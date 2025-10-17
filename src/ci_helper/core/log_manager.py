@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     pass
@@ -95,7 +95,7 @@ class LogManager:
             command_args: 実行時のコマンド引数
         """
         # 既存のインデックスを読み込み
-        index_data = self._load_log_index()
+        index_data: dict[str, Any] = self._load_log_index()
 
         # 新しいエントリを追加
         log_entry = {
@@ -117,7 +117,12 @@ class LogManager:
             "file_size": log_path.stat().st_size,
         }
 
-        index_data["logs"].append(log_entry)
+        logs_value = index_data.setdefault("logs", [])
+        if not isinstance(logs_value, list):
+            logs_value = []
+            index_data["logs"] = logs_value
+        logs_list = cast(list[dict[str, Any]], logs_value)
+        logs_list.append(log_entry)
 
         # 最新の実行情報を更新
         index_data["last_execution"] = log_entry
@@ -142,7 +147,8 @@ class LogManager:
 
         try:
             with open(self.index_file, encoding="utf-8") as f:
-                return json.load(f)
+                loaded = json.load(f)
+                return cast(dict[str, Any], loaded)
         except (json.JSONDecodeError, OSError):
             # 破損したインデックスファイルの場合は新規作成
             return {
@@ -161,8 +167,16 @@ class LogManager:
         Returns:
             ログエントリのリスト（新しい順）
         """
-        index_data = self._load_log_index()
-        logs = index_data.get("logs", [])
+        index_data: dict[str, Any] = self._load_log_index()
+        logs_value = index_data.get("logs", [])
+        logs: list[dict[str, Any]] = []
+
+        if isinstance(logs_value, list):
+            logs = cast(list[dict[str, Any]], logs_value)
+
+        # インデックスにログがない場合はディレクトリを直接スキャン
+        if not logs:
+            logs = self._load_logs_from_directory()
 
         # タイムスタンプで降順ソート（新しい順）
         logs.sort(key=lambda x: x["timestamp"], reverse=True)
@@ -207,8 +221,50 @@ class LogManager:
         Returns:
             最新のログエントリ（存在しない場合はNone）
         """
-        index_data = self._load_log_index()
-        return index_data.get("last_execution")
+        index_data: dict[str, Any] = self._load_log_index()
+        last_execution = index_data.get("last_execution")
+        if isinstance(last_execution, dict):
+            return cast(dict[str, Any], last_execution)
+        return None
+
+    def _load_logs_from_directory(self) -> list[dict[str, Any]]:
+        """ログディレクトリからインデックスなしでログを収集"""
+        if not self.log_dir.exists():
+            return []
+
+        log_entries: list[dict[str, Any]] = []
+        for log_path in self.log_dir.glob("*.log"):
+            if not log_path.is_file():
+                continue
+
+            timestamp = self._extract_timestamp_from_filename(log_path)
+            log_entries.append(
+                {
+                    "timestamp": timestamp,
+                    "log_file": log_path.name,
+                    "success": False,
+                    "total_duration": 0.0,
+                    "total_failures": 0,
+                    "workflows": [],
+                }
+            )
+
+        return log_entries
+
+    def _extract_timestamp_from_filename(self, log_path: Path) -> str:
+        """ログファイル名からタイムスタンプを抽出"""
+        stem = log_path.stem
+        if stem.startswith("act_"):
+            raw_timestamp = stem[4:]
+            for fmt in ("%Y%m%d_%H%M%S", "%Y%m%d%H%M%S"):
+                try:
+                    parsed = datetime.strptime(raw_timestamp, fmt)
+                    return parsed.isoformat()
+                except ValueError:
+                    continue
+
+        # ファイル名から取得できない場合は更新日時を使用
+        return datetime.fromtimestamp(log_path.stat().st_mtime).isoformat()
 
     def cleanup_old_logs(self, max_count: int | None = None, max_size_mb: int | None = None) -> int:
         """古いログファイルをクリーンアップ
@@ -316,7 +372,7 @@ class LogManager:
 
         for log in logs:
             workflows = log.get("workflows", [])
-            if Any(w["name"] == workflow_name for w in workflows):
+            if any(w["name"] == workflow_name for w in workflows):
                 matching_logs.append(log)
 
         return matching_logs

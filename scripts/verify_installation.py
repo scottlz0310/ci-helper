@@ -33,10 +33,10 @@ def check_file_exists(file_path: str, description: str) -> bool:
         return False
 
 
-def main():
+def main() -> int:
     """メイン検証プロセス"""
 
-    checks = []
+    checks: list[bool] = []
 
     # 基本コマンドの確認
     checks.append(run_command(["ci-run", "--version"], "ci-run バージョン確認"))
@@ -49,25 +49,27 @@ def main():
         checks.append(run_command(["ci-run", cmd, "--help"], f"ci-run {cmd} ヘルプ表示"))
 
     # 依存関係の確認
-    dependencies = [
+    dependencies: list[tuple[list[str], str]] = [
         (["python3", "--version"], "Python バージョン確認"),
         (["uv", "--version"], "uv バージョン確認"),
     ]
 
-    for cmd, desc in dependencies:
-        checks.append(run_command(cmd, desc))
+    for dependency in dependencies:
+        cmd, desc = dependency  # type: ignore[assignment]
+        checks.append(run_command(cmd, desc))  # type: ignore[arg-type]
 
     # オプション: act と Docker の確認（失敗しても続行）
-    optional_deps = [
+    optional_deps: list[tuple[list[str], str]] = [
         (["act", "--version"], "act バージョン確認（オプション）"),
         (["docker", "--version"], "Docker バージョン確認（オプション）"),
     ]
 
-    for cmd, desc in optional_deps:
-        run_command(cmd, desc)  # 結果は checks に含めない
+    for optional_dep in optional_deps:
+        cmd, desc = optional_dep  # type: ignore[assignment]
+        run_command(cmd, desc)  # type: ignore[arg-type]  # 結果は checks に含めない
 
     # 重要なファイルの確認
-    important_files = [
+    important_files: list[tuple[str, str]] = [
         ("README.md", "README ファイル"),
         ("LICENSE", "ライセンス ファイル"),
         ("pyproject.toml", "プロジェクト設定ファイル"),

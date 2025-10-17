@@ -11,6 +11,7 @@ from rich.console import Console
 from rich.table import Table
 
 from ..core.security import EnvironmentSecretManager
+from ..utils.config import Config
 
 console = Console()
 
@@ -99,7 +100,7 @@ def _display_secret_status() -> None:
         console.print("\n[yellow]💡 AI機能を使用する場合は、必要な環境変数を設定してください[/yellow]")
 
 
-def _validate_config_security(config) -> None:
+def _validate_config_security(config: Config) -> None:
     """設定ファイルのセキュリティを検証"""
     console.print("[bold blue]🔍 設定ファイルのセキュリティ検証[/bold blue]\n")
 

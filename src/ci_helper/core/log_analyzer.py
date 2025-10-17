@@ -7,7 +7,7 @@ actの実行ログを解析し、ワークフローとジョブごとに失敗�
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     pass
@@ -388,7 +388,7 @@ class LogAnalyzer:
             # 失敗のメッセージがセクション内に含まれているかチェック
             if failure.message in section:
                 # 既に含まれていない場合のみ追加
-                if not Any(
+                if not any(
                     f.message == failure.message
                     and f.file_path == failure.file_path
                     and f.line_number == failure.line_number
@@ -516,7 +516,7 @@ class LogAnalyzer:
         Returns:
             全失敗のリスト
         """
-        all_failures = []
+        all_failures: list[Failure] = []
         for workflow in execution_result.workflows:
             for job in workflow.jobs:
                 all_failures.extend(job.failures)

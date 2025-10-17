@@ -48,7 +48,8 @@ from ..utils.config import Config
     is_flag=True,
     help="詳細な出力を表示",
 )
-def clean(logs_only: bool, clean_all: bool, dry_run: bool, force: bool, verbose: bool) -> None:
+@click.pass_context
+def clean(ctx: click.Context, logs_only: bool, clean_all: bool, dry_run: bool, force: bool, verbose: bool) -> None:
     """キャッシュとログファイルをクリーンアップ
 
     デフォルトでは、設定に基づいて古いログとキャッシュファイルを自動削除します。
@@ -57,7 +58,7 @@ def clean(logs_only: bool, clean_all: bool, dry_run: bool, force: bool, verbose:
 
     try:
         # 設定を読み込み
-        config = Config()
+        config: Config = ctx.obj.get("config") if ctx.obj else Config()
         cache_manager = CacheManager(config)
 
         # 相互排他的なオプションのチェック
@@ -194,7 +195,7 @@ def _clean_logs_only(console: Console, cache_manager: CacheManager, dry_run: boo
     else:
         console.print("\n[bold blue]ログファイルを削除中...[/bold blue]")
 
-    return cache_manager.cleanup_logs_only(dry_run=dry_run)
+    return cache_manager.cleanup_logs_only(dry_run=dry_run, remove_all=True)
 
 
 def _clean_default(console: Console, cache_manager: CacheManager, dry_run: bool, force: bool) -> dict[str, Any]:

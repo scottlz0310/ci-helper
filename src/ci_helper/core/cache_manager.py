@@ -108,7 +108,7 @@ class CacheManager:
             "newest_file": datetime.fromtimestamp(max(file_times)),
         }
 
-    def cleanup_logs_only(self, dry_run: bool = False) -> dict[str, Any]:
+    def cleanup_logs_only(self, dry_run: bool = False, remove_all: bool = False) -> dict[str, Any]:
         """ログファイルのみをクリーンアップ
 
         Args:
@@ -117,6 +117,37 @@ class CacheManager:
         Returns:
             クリーンアップ結果
         """
+        if remove_all:
+            files = [f for f in self.log_dir.glob("*.log") if f.is_file()]
+            errors: list[str] = []
+            freed_size = 0
+
+            if dry_run:
+                freed_size = sum(f.stat().st_size for f in files)
+                return {
+                    "deleted_files": len(files),
+                    "freed_size_mb": round(freed_size / (1024 * 1024), 2),
+                    "errors": errors,
+                    "files_to_delete": [str(f) for f in files],
+                }
+
+            deleted_files = 0
+            for file_path in files:
+                try:
+                    file_size = file_path.stat().st_size
+                    file_path.unlink()
+                    deleted_files += 1
+                    freed_size += file_size
+                except Exception as e:
+                    errors.append(f"ファイル削除エラー {file_path}: {e}")
+
+            return {
+                "deleted_files": deleted_files,
+                "freed_size_mb": round(freed_size / (1024 * 1024), 2),
+                "errors": errors,
+                "files_to_delete": [],
+            }
+
         max_count = self.config.get("max_log_files", 50)
         max_size_mb = self.config.get("max_log_size_mb", 100)
         max_age_days = self.config.get("max_log_age_days", 30)
@@ -359,7 +390,7 @@ class CacheManager:
         if not confirm:
             raise ExecutionError("キャッシュの完全リセットには確認が必要です", "confirm=True を指定してください")
 
-        results = {
+        results: dict[str, Any] = {
             "deleted_directories": [],
             "errors": [],
             "total_freed_mb": 0.0,

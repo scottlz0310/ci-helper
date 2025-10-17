@@ -569,7 +569,7 @@ class TestResetAllCache:
 
         # エラーが記録される
         assert len(result["errors"]) > 0
-        assert Any("Permission denied" in error for error in result["errors"])
+        assert any("Permission denied" in error for error in result["errors"])
 
 
 class TestCleanupRecommendations:
@@ -607,7 +607,7 @@ class TestCleanupRecommendations:
         assert log_recommendation["priority"] == "high"
         assert "制限サイズを超過" in log_recommendation["message"]
 
-    def test_get_cleanup_recommendations_too_mAny_log_files(self, temp_dir: Path):
+    def test_get_cleanup_recommendations_too_many_log_files(self, temp_dir: Path):
         """ログファイル数過多時の推奨事項テスト"""
         config = Config(project_root=temp_dir, validate_security=False)
         config._config["max_log_files"] = 2
@@ -708,7 +708,7 @@ class TestCacheIntegrityValidation:
 
         assert result["is_valid"] is False
         assert len(result["issues"]) > 0
-        assert Any("logsディレクトリが存在しません" in issue for issue in result["issues"])
+        assert any("logsディレクトリが存在しません" in issue for issue in result["issues"])
 
     def test_validate_cache_integrity_permission_issues(self, temp_dir: Path):
         """権限問題がある場合の整合性検証テスト"""
@@ -720,7 +720,7 @@ class TestCacheIntegrityValidation:
             result = cache_manager.validate_cache_integrity()
 
         assert result["is_valid"] is False
-        assert Any("書き込み権限がありません" in issue for issue in result["issues"])
+        assert any("書き込み権限がありません" in issue for issue in result["issues"])
 
     def test_validate_cache_integrity_corrupted_index(self, temp_dir: Path):
         """破損したキャッシュインデックスファイルの整合性検証テスト"""
@@ -733,7 +733,7 @@ class TestCacheIntegrityValidation:
         result = cache_manager.validate_cache_integrity()
 
         assert result["is_valid"] is False
-        assert Any("キャッシュインデックスファイルが破損" in issue for issue in result["issues"])
+        assert any("キャッシュインデックスファイルが破損" in issue for issue in result["issues"])
 
 
 class TestCleanupDirectoryMethod:

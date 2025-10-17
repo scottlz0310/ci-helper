@@ -565,7 +565,7 @@ class TestCompressionSuggestions:
         """各テストメソッドの前に実行される初期化"""
         self.formatter = AIFormatter()
 
-    def test_suggest_compression_mAny_failures(self):
+    def test_suggest_compression_many_failures(self):
         """多数の失敗がある場合の圧縮提案テスト"""
         # 15個の失敗を作成
         failures = [Failure(type=FailureType.ERROR, message=f"Error {i}") for i in range(15)]
@@ -576,7 +576,7 @@ class TestCompressionSuggestions:
 
         suggestions = self.formatter.suggest_compression_options(execution_result)
 
-        assert Any("最も重要な失敗のみに絞り込む" in s for s in suggestions)
+        assert any("最も重要な失敗のみに絞り込む" in s for s in suggestions)
 
     def test_suggest_compression_long_context(self):
         """長いコンテキストがある場合の圧縮提案テスト"""
@@ -593,7 +593,7 @@ class TestCompressionSuggestions:
 
         suggestions = self.formatter.suggest_compression_options(execution_result)
 
-        assert Any("コンテキスト行数を削減" in s for s in suggestions)
+        assert any("コンテキスト行数を削減" in s for s in suggestions)
 
     def test_suggest_compression_stack_traces(self):
         """スタックトレースがある場合の圧縮提案テスト"""
@@ -605,9 +605,9 @@ class TestCompressionSuggestions:
 
         suggestions = self.formatter.suggest_compression_options(execution_result)
 
-        assert Any("スタックトレースを要約" in s for s in suggestions)
+        assert any("スタックトレースを要約" in s for s in suggestions)
 
-    def test_suggest_compression_mAny_workflows(self):
+    def test_suggest_compression_many_workflows(self):
         """多数のワークフローがある場合の圧縮提案テスト"""
         # 7個のワークフローを作成
         workflows = []
@@ -620,9 +620,9 @@ class TestCompressionSuggestions:
 
         suggestions = self.formatter.suggest_compression_options(execution_result)
 
-        assert Any("失敗したワークフローのみに絞り込む" in s for s in suggestions)
+        assert any("失敗したワークフローのみに絞り込む" in s for s in suggestions)
 
-    def test_suggest_compression_mAny_jobs(self):
+    def test_suggest_compression_many_jobs(self):
         """多数のジョブがある場合の圧縮提案テスト"""
         # 15個のジョブを作成
         jobs = [JobResult(name=f"job{i}", success=True) for i in range(15)]
@@ -631,7 +631,7 @@ class TestCompressionSuggestions:
 
         suggestions = self.formatter.suggest_compression_options(execution_result)
 
-        assert Any("失敗したジョブのみに絞り込む" in s for s in suggestions)
+        assert any("失敗したジョブのみに絞り込む" in s for s in suggestions)
 
     def test_suggest_compression_default_suggestions(self):
         """デフォルトの圧縮提案テスト"""
@@ -643,9 +643,9 @@ class TestCompressionSuggestions:
         suggestions = self.formatter.suggest_compression_options(execution_result)
 
         # デフォルトの提案が含まれることを確認
-        assert Any("JSON形式を使用" in s for s in suggestions)
-        assert Any("成功したワークフローの詳細を除外" in s for s in suggestions)
-        assert Any("メトリクス情報のみに絞り込む" in s for s in suggestions)
+        assert any("JSON形式を使用" in s for s in suggestions)
+        assert any("成功したワークフローの詳細を除外" in s for s in suggestions)
+        assert any("メトリクス情報のみに絞り込む" in s for s in suggestions)
 
 
 class TestSecurityFeatures:

@@ -241,8 +241,8 @@ class TestDependencyChecker:
             workflow_files = DependencyChecker.check_workflows_directory()
 
         assert len(workflow_files) == 2
-        assert Any(f.name == "test.yml" for f in workflow_files)
-        assert Any(f.name == "build.yaml" for f in workflow_files)
+        assert any(f.name == "test.yml" for f in workflow_files)
+        assert any(f.name == "build.yaml" for f in workflow_files)
 
     def test_check_workflows_directory_not_exists(self, temp_dir: Path):
         """ワークフローディレクトリが存在しない場合のテスト"""

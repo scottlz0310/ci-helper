@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import signal
 import subprocess
+import sys
 import threading
 import time
-from collections.abc import Callable
-from typing import Any
+from collections.abc import Callable, Mapping
+from types import FrameType
+from typing import Any, cast
 
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -26,7 +28,7 @@ class GracefulShutdownHandler:
 
     def __init__(self) -> None:
         self.shutdown_requested = False
-        self.active_processes: list[subprocess.Popen] = []
+        self.active_processes: list[subprocess.Popen[Any]] = []
         self._setup_signal_handlers()
 
     def _setup_signal_handlers(self) -> None:
@@ -34,7 +36,7 @@ class GracefulShutdownHandler:
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
 
-    def _signal_handler(self, signum: int, frame: Any) -> None:
+    def _signal_handler(self, signum: int, frame: FrameType | None) -> None:
         """シグナル受信時の処理"""
         if not self.shutdown_requested:
             self.shutdown_requested = True
@@ -43,13 +45,13 @@ class GracefulShutdownHandler:
         else:
             console.print("\n[red]強制終了します。[/red]")
             self._kill_processes()
-            exit(1)
+            sys.exit(1)
 
-    def register_process(self, process: subprocess.Popen) -> None:
+    def register_process(self, process: subprocess.Popen[Any]) -> None:
         """プロセスを登録"""
         self.active_processes.append(process)
 
-    def unregister_process(self, process: subprocess.Popen) -> None:
+    def unregister_process(self, process: subprocess.Popen[Any]) -> None:
         """プロセスの登録を解除"""
         if process in self.active_processes:
             self.active_processes.remove(process)
@@ -85,27 +87,26 @@ class TimeoutManager:
 
     @staticmethod
     def run_with_timeout(
-        func: Callable,
+        func: Callable[..., Any],
         timeout_seconds: int,
-        args: tuple = (),
-        kwargs: dict | None = None,
-        on_timeout: Callable | None = None,
+        args: tuple[Any, ...] = (),
+        kwargs: dict[str, Any] | None = None,
+        on_timeout: Callable[[], None] | None = None,
     ) -> Any:
         """タイムアウト付きで関数を実行"""
         if kwargs is None:
             kwargs = {}
 
-        result = [None]
-        exception = [None]
+        result: list[Any] = [None]
+        exception: list[BaseException | None] = [None]
 
-        def target():
+        def target() -> None:
             try:
                 result[0] = func(*args, **kwargs)
             except Exception as e:
                 exception[0] = e
 
-        thread = threading.Thread(target=target)
-        thread.daemon = True
+        thread = threading.Thread(target=target, daemon=True)
         thread.start()
         thread.join(timeout=timeout_seconds)
 
@@ -117,7 +118,7 @@ class TimeoutManager:
                 func.__name__ if hasattr(func, "__name__") else str(func), timeout_seconds
             )
 
-        if exception[0]:
+        if exception[0] is not None:
             raise exception[0]
 
         return result[0]
@@ -127,9 +128,9 @@ class TimeoutManager:
         command: list[str],
         timeout_seconds: int,
         cwd: str | None = None,
-        env: dict | None = None,
+        env: Mapping[str, str] | None = None,
         show_progress: bool = True,
-    ) -> subprocess.CompletedProcess:
+    ) -> subprocess.CompletedProcess[Any]:
         """タイムアウト付きでプロセスを実行"""
 
         shutdown_handler = GracefulShutdownHandler()
@@ -196,7 +197,7 @@ class PartialResultHandler:
     """部分的な結果の処理"""
 
     @staticmethod
-    def save_partial_results(results: dict, output_file: str, error_message: str) -> None:
+    def save_partial_results(results: Mapping[str, Any], output_file: str, error_message: str) -> None:
         """部分的な結果を保存"""
         import json
         from pathlib import Path
@@ -205,7 +206,12 @@ class PartialResultHandler:
             output_path = Path(output_file)
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
-            partial_data = {"status": "partial", "error": error_message, "timestamp": time.time(), "results": results}
+            partial_data = {
+                "status": "partial",
+                "error": error_message,
+                "timestamp": time.time(),
+                "results": dict(results),
+            }
 
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(partial_data, f, indent=2, ensure_ascii=False)
@@ -216,7 +222,7 @@ class PartialResultHandler:
             console.print(f"[red]部分的な結果の保存に失敗しました: {e}[/red]")
 
     @staticmethod
-    def load_partial_results(input_file: str) -> dict | None:
+    def load_partial_results(input_file: str) -> dict[str, Any] | None:
         """部分的な結果を読み込み"""
         import json
         from pathlib import Path
@@ -227,7 +233,12 @@ class PartialResultHandler:
                 return None
 
             with open(input_path, encoding="utf-8") as f:
-                data = json.load(f)
+                loaded = json.load(f)
+
+            if not isinstance(loaded, dict):
+                return None
+
+            data = cast(dict[str, Any], loaded)
 
             if data.get("status") == "partial":
                 return data
