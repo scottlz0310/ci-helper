@@ -44,11 +44,10 @@ class TestResponseCache:
             related_errors=[],
             confidence_score=0.8,
             analysis_time=1.5,
-            tokens_used=TokenUsage(input_tokens=100, output_tokens=50),
+            tokens_used=TokenUsage(input_tokens=100, output_tokens=50, total_tokens=150, estimated_cost=0.002),
             status=AnalysisStatus.COMPLETED,
             provider="openai",
             model="gpt-4o",
-            cost=0.002,
         )
 
     def test_cache_initialization(self, response_cache, cache_dir):
@@ -60,9 +59,9 @@ class TestResponseCache:
 
     def test_generate_cache_key(self, response_cache):
         """キャッシュキー生成のテスト"""
-        key1 = response_cache.generate_cache_key("prompt1", "context1", "gpt-4o")
-        key2 = response_cache.generate_cache_key("prompt1", "context1", "gpt-4o")
-        key3 = response_cache.generate_cache_key("prompt2", "context1", "gpt-4o")
+        key1 = response_cache.get_cache_key("prompt1", "context1", "gpt-4o")
+        key2 = response_cache.get_cache_key("prompt1", "context1", "gpt-4o")
+        key3 = response_cache.get_cache_key("prompt2", "context1", "gpt-4o")
 
         # 同じ内容なら同じキー
         assert key1 == key2
@@ -183,7 +182,7 @@ class TestResponseCache:
         cache_file.write_text(json.dumps(cache_data, ensure_ascii=False), encoding="utf-8")
 
         # クリーンアップ実行
-        cleaned_count = await response_cache.cleanup_expired_entries()
+        cleaned_count = await response_cache.cleanup_expired()
 
         assert cleaned_count == 1
         assert not cache_file.exists()
@@ -202,11 +201,10 @@ class TestResponseCache:
             related_errors=[],
             confidence_score=0.8,
             analysis_time=1.5,
-            tokens_used=TokenUsage(input_tokens=100, output_tokens=50),
+            tokens_used=TokenUsage(input_tokens=100, output_tokens=50, total_tokens=150, estimated_cost=0.002),
             status=AnalysisStatus.COMPLETED,
             provider="openai",
             model="gpt-4o",
-            cost=0.002,
         )
 
         # サイズ制限を超える場合の動作確認
@@ -232,11 +230,10 @@ class TestCacheManager:
             related_errors=[],
             confidence_score=0.9,
             analysis_time=2.0,
-            tokens_used=TokenUsage(input_tokens=200, output_tokens=100),
+            tokens_used=TokenUsage(input_tokens=200, output_tokens=100, total_tokens=300, estimated_cost=0.005),
             status=AnalysisStatus.COMPLETED,
             provider="anthropic",
             model="claude-3-5-sonnet-20241022",
-            cost=0.005,
         )
 
     def test_cache_manager_initialization(self, cache_manager):
@@ -255,6 +252,7 @@ class TestCacheManager:
             prompt="テストプロンプト",
             context="テストコンテキスト",
             model="claude-3-5-sonnet-20241022",
+            provider="anthropic",
             compute_func=mock_compute_function,
         )
 
@@ -264,8 +262,8 @@ class TestCacheManager:
     async def test_get_or_set_cache_hit(self, cache_manager, sample_analysis_result):
         """キャッシュヒット時の動作テスト"""
         # 最初にキャッシュに保存
-        cache_key = cache_manager.cache.generate_cache_key(
-            "テストプロンプト", "テストコンテキスト", "claude-3-5-sonnet-20241022"
+        cache_key = cache_manager.cache.get_cache_key(
+            "テストプロンプト", "テストコンテキスト", "claude-3-5-sonnet-20241022", "anthropic"
         )
         await cache_manager.cache.set(cache_key, sample_analysis_result)
 
@@ -277,6 +275,7 @@ class TestCacheManager:
             prompt="テストプロンプト",
             context="テストコンテキスト",
             model="claude-3-5-sonnet-20241022",
+            provider="anthropic",
             compute_func=mock_compute_function,
         )
 
@@ -293,11 +292,10 @@ class TestCacheManager:
             related_errors=[],
             confidence_score=0.8,
             analysis_time=1.0,
-            tokens_used=TokenUsage(input_tokens=100, output_tokens=50),
+            tokens_used=TokenUsage(input_tokens=100, output_tokens=50, total_tokens=150, estimated_cost=0.002),
             status=AnalysisStatus.COMPLETED,
             provider="openai",
             model="gpt-4o",
-            cost=0.002,
         )
 
         anthropic_result = AnalysisResult(
@@ -307,11 +305,10 @@ class TestCacheManager:
             related_errors=[],
             confidence_score=0.9,
             analysis_time=2.0,
-            tokens_used=TokenUsage(input_tokens=200, output_tokens=100),
+            tokens_used=TokenUsage(input_tokens=200, output_tokens=100, total_tokens=300, estimated_cost=0.005),
             status=AnalysisStatus.COMPLETED,
             provider="anthropic",
             model="claude-3-5-sonnet-20241022",
-            cost=0.005,
         )
 
         # キャッシュに保存
@@ -325,14 +322,15 @@ class TestCacheManager:
         assert await cache_manager.cache.get("openai_key") is None
         assert await cache_manager.cache.get("anthropic_key") is not None
 
-    def test_get_cache_summary(self, cache_manager):
+    @pytest.mark.asyncio
+    async def test_get_cache_summary(self, cache_manager):
         """キャッシュサマリー取得のテスト"""
-        summary = cache_manager.get_cache_summary()
+        summary = await cache_manager.get_cache_stats()
 
         assert "total_entries" in summary
         assert "total_size_mb" in summary
-        assert "providers" in summary
-        assert isinstance(summary["providers"], dict)
+        assert "provider_breakdown" in summary
+        assert isinstance(summary["provider_breakdown"], dict)
 
     @pytest.mark.asyncio
     async def test_cleanup_cache(self, cache_manager):
@@ -345,7 +343,7 @@ class TestCacheManager:
         # クリーンアップ実行
         result = await cache_manager.cleanup_cache()
 
-        assert "cleaned_entries" in result
-        assert "freed_space_mb" in result
-        assert isinstance(result["cleaned_entries"], int)
-        assert isinstance(result["freed_space_mb"], float)
+        assert "removed_entries" in result
+        assert "success" in result
+        assert isinstance(result["removed_entries"], int)
+        assert isinstance(result["success"], bool)

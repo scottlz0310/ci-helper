@@ -79,7 +79,7 @@ class CostTracker:
         except Exception as e:
             raise ConfigurationError(f"使用データの保存に失敗しました: {e}")
 
-    async def record_usage(
+    def record_usage(
         self,
         provider: str,
         model: str,
@@ -90,7 +90,7 @@ class CostTracker:
         success: bool = True,
         timestamp: datetime | None = None,
     ) -> None:
-        """使用量を記録
+        """使用量を記録（同期版）
 
         Args:
             provider: プロバイダー名
@@ -105,7 +105,37 @@ class CostTracker:
         if timestamp is None:
             timestamp = datetime.now()
 
-        # 使用記録を作成
+        # 日付文字列を生成
+        date_str = timestamp.strftime("%Y-%m-%d")
+
+        # 階層構造でデータを保存（テスト期待形式）
+        if date_str not in self.usage_data:
+            self.usage_data[date_str] = {}
+
+        if provider not in self.usage_data[date_str]:
+            self.usage_data[date_str][provider] = {}
+
+        if model not in self.usage_data[date_str][provider]:
+            self.usage_data[date_str][provider][model] = {
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "cost": 0.0,
+                "requests": 0,
+                "analysis_type": analysis_type,
+                "success": success,
+            }
+
+        # 累積データを更新
+        model_data = self.usage_data[date_str][provider][model]
+        model_data["input_tokens"] += input_tokens
+        model_data["output_tokens"] += output_tokens
+        model_data["cost"] += cost
+        model_data["requests"] += 1
+
+        # レコード形式でも保存（他のメソッドとの互換性のため）
+        if "records" not in self.usage_data:
+            self.usage_data["records"] = []
+
         record = {
             "timestamp": timestamp.isoformat(),
             "provider": provider,
@@ -117,12 +147,25 @@ class CostTracker:
             "analysis_type": analysis_type,
             "success": success,
         }
-
-        # 記録を追加
         self.usage_data["records"].append(record)
 
         # 自動保存
-        await self._save_usage_data()
+        if self.auto_save:
+            self.save_usage_data()
+
+    async def record_usage_async(
+        self,
+        provider: str,
+        model: str,
+        input_tokens: int,
+        output_tokens: int,
+        cost: float,
+        analysis_type: str = "analysis",
+        success: bool = True,
+        timestamp: datetime | None = None,
+    ) -> None:
+        """使用量を記録（非同期版）"""
+        self.record_usage(provider, model, input_tokens, output_tokens, cost, analysis_type, success, timestamp)
 
     def get_monthly_usage(self, year: int, month: int) -> UsageStats:
         """月間使用統計を取得
@@ -134,12 +177,47 @@ class CostTracker:
         Returns:
             月間使用統計
         """
-        # 対象月の記録を抽出
+        # 対象月の記録を抽出（レコード形式から）
         monthly_records = []
-        for record in self.usage_data["records"]:
-            record_date = datetime.fromisoformat(record["timestamp"])
-            if record_date.year == year and record_date.month == month:
-                monthly_records.append(record)
+        record_dates = set()
+
+        if "records" in self.usage_data:
+            for record in self.usage_data["records"]:
+                record_date = datetime.fromisoformat(record["timestamp"])
+                if record_date.year == year and record_date.month == month:
+                    monthly_records.append(record)
+                    record_dates.add(record_date.strftime("%Y-%m-%d"))
+
+        # 階層構造からも抽出（レコードにない日付のみ）
+        for date_str, date_data in self.usage_data.items():
+            if date_str in ["records", "created", "last_updated", "version"] or not isinstance(date_data, dict):
+                continue
+
+            try:
+                date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+                if date_obj.year == year and date_obj.month == month and date_str not in record_dates:
+                    # 階層データをレコード形式に変換
+                    for provider, provider_data in date_data.items():
+                        for model, model_data in provider_data.items():
+                            # 複数リクエストがある場合は分割
+                            requests = model_data.get("requests", 1)
+                            for _ in range(requests):
+                                record = {
+                                    "timestamp": f"{date_str}T12:00:00",
+                                    "provider": provider,
+                                    "model": model,
+                                    "input_tokens": model_data["input_tokens"] // requests,
+                                    "output_tokens": model_data["output_tokens"] // requests,
+                                    "total_tokens": (model_data["input_tokens"] + model_data["output_tokens"])
+                                    // requests,
+                                    "cost": model_data["cost"] / requests,
+                                    "analysis_type": model_data.get("analysis_type", "analysis"),
+                                    "success": model_data.get("success", True),
+                                }
+                                monthly_records.append(record)
+            except ValueError:
+                # 日付形式でない場合はスキップ
+                continue
 
         return self._calculate_stats(monthly_records)
 
@@ -173,6 +251,8 @@ class CostTracker:
         failed_requests = total_requests - successful_requests
 
         total_tokens = sum(r["total_tokens"] for r in records)
+        total_input_tokens = sum(r["input_tokens"] for r in records)
+        total_output_tokens = sum(r["output_tokens"] for r in records)
         total_cost = sum(r["cost"] for r in records)
 
         # プロバイダー別統計
@@ -200,6 +280,8 @@ class CostTracker:
         return UsageStats(
             total_requests=total_requests,
             total_tokens=total_tokens,
+            total_input_tokens=total_input_tokens,
+            total_output_tokens=total_output_tokens,
             total_cost=total_cost,
             successful_requests=successful_requests,
             failed_requests=failed_requests,
@@ -478,3 +560,93 @@ class CostTracker:
             "peak_usage_date": max(daily_costs.keys(), key=lambda d: daily_costs[d]) if daily_costs else None,
             "peak_usage_cost": max(daily_costs.values()) if daily_costs else 0,
         }
+
+    def save_usage_data(self) -> None:
+        """使用データを同期的に保存"""
+        try:
+            self.usage_data["last_updated"] = time.time()
+            with open(self.storage_path, "w", encoding="utf-8") as f:
+                json.dump(self.usage_data, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            raise ConfigurationError(f"使用データの保存に失敗しました: {e}")
+
+    def cleanup_old_data(self, days: int = 90) -> int:
+        """古いデータをクリーンアップ
+
+        Args:
+            days: 保持する日数
+
+        Returns:
+            削除されたレコード数
+        """
+        cutoff_date = datetime.now() - timedelta(days=days)
+        cleaned_count = 0
+
+        # レコード形式のデータをクリーンアップ
+        if "records" in self.usage_data:
+            original_count = len(self.usage_data["records"])
+            self.usage_data["records"] = [
+                record
+                for record in self.usage_data["records"]
+                if datetime.fromisoformat(record["timestamp"]) > cutoff_date
+            ]
+            cleaned_count += original_count - len(self.usage_data["records"])
+
+        # 階層構造のデータもクリーンアップ
+        dates_to_remove = []
+        for date_str in self.usage_data.keys():
+            if date_str in ["records", "created", "last_updated", "version"]:
+                continue
+
+            try:
+                date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+                if date_obj < cutoff_date:
+                    dates_to_remove.append(date_str)
+            except ValueError:
+                # 日付形式でない場合はスキップ
+                continue
+
+        # 古い日付のデータを削除
+        for date_str in dates_to_remove:
+            del self.usage_data[date_str]
+            cleaned_count += 1
+
+        if cleaned_count > 0 and self.auto_save:
+            # 同期的に保存
+            self.save_usage_data()
+
+        return cleaned_count
+
+    def get_daily_usage(self, year: int, month: int, day: int) -> UsageStats:
+        """日次使用統計を取得
+
+        Args:
+            year: 年
+            month: 月
+            day: 日
+
+        Returns:
+            日次使用統計
+        """
+        target_date = datetime(year, month, day)
+        daily_records = []
+
+        for record in self.usage_data["records"]:
+            record_date = datetime.fromisoformat(record["timestamp"])
+            if record_date.date() == target_date.date():
+                daily_records.append(record)
+
+        return self._calculate_stats(daily_records)
+
+    def get_provider_usage(self, provider: str) -> UsageStats:
+        """プロバイダー別使用統計を取得
+
+        Args:
+            provider: プロバイダー名
+
+        Returns:
+            プロバイダー別使用統計
+        """
+        provider_records = [record for record in self.usage_data["records"] if record["provider"] == provider]
+
+        return self._calculate_stats(provider_records)

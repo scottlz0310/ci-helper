@@ -59,7 +59,7 @@ class CostManager:
             analysis_type: 分析タイプ
             success: 成功したかどうか
         """
-        await self.tracker.record_usage(
+        await self.tracker.record_usage_async(
             provider=provider,
             model=model,
             input_tokens=input_tokens,
@@ -371,3 +371,105 @@ class CostManager:
             コスト制限の辞書
         """
         return self.cost_limits.copy()
+
+    def record_usage(
+        self,
+        provider: str,
+        model: str,
+        input_tokens: int,
+        output_tokens: int,
+        cost: float,
+        analysis_type: str = "analysis",
+        success: bool = True,
+    ) -> None:
+        """使用量を記録（同期版）
+
+        Args:
+            provider: プロバイダー名
+            model: モデル名
+            input_tokens: 入力トークン数
+            output_tokens: 出力トークン数
+            cost: コスト（USD）
+            analysis_type: 分析タイプ
+            success: 成功したかどうか
+        """
+        # 同期的に記録
+        self.tracker.record_usage(
+            provider=provider,
+            model=model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost=cost,
+            analysis_type=analysis_type,
+            success=success,
+        )
+
+    def check_limits(self, provider: str) -> LimitStatus:
+        """使用制限をチェック
+
+        Args:
+            provider: プロバイダー名
+
+        Returns:
+            制限ステータス
+        """
+        return self.tracker.check_limits(provider)
+
+    def get_cost_optimization_suggestions(self) -> list[str]:
+        """コスト最適化の推奨事項を取得
+
+        Returns:
+            推奨事項のリスト
+        """
+        return self.get_cost_recommendations()
+
+    def validate_request_cost(self, estimate: CostEstimate) -> None:
+        """リクエストコストを検証し、制限を超過している場合は例外を発生
+
+        Args:
+            estimate: コスト推定結果
+
+        Raises:
+            CostLimitError: コスト制限を超過している場合
+        """
+        from .exceptions import CostLimitError
+
+        provider = estimate.provider
+        if provider in self.cost_limits:
+            limit = self.cost_limits[provider]
+            from datetime import datetime
+
+            now = datetime.now()
+            current_usage = self.tracker.get_monthly_usage(now.year, now.month).total_cost
+
+            if current_usage + estimate.estimated_cost > limit:
+                raise CostLimitError(
+                    f"リクエストコスト({estimate.estimated_cost:.4f})が制限を超過します。"
+                    f"現在の使用量: {current_usage:.4f}, 制限: {limit:.4f}"
+                )
+
+    def _calculate_warning_level(self, current_usage: float, limit: float) -> str:
+        """警告レベルを計算
+
+        Args:
+            current_usage: 現在の使用量
+            limit: 制限値
+
+        Returns:
+            警告レベル
+        """
+        from .models import WarningLevel
+
+        if limit == float("inf") or limit <= 0:
+            return WarningLevel.NONE
+
+        usage_ratio = current_usage / limit
+
+        if usage_ratio >= 1.0:
+            return WarningLevel.CRITICAL
+        elif usage_ratio >= 0.9:
+            return WarningLevel.CRITICAL
+        elif usage_ratio >= self.warning_threshold:
+            return WarningLevel.WARNING
+        else:
+            return WarningLevel.NONE

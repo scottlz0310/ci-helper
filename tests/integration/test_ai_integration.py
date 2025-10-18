@@ -45,57 +45,62 @@ TimeoutError: Database connection timed out after 30 seconds
 """
 
     @pytest.fixture
-    def mock_ai_config(self):
+    def mock_ai_config(self, temp_dir):
         """モックAI設定"""
-        return {
-            "default_provider": "openai",
-            "providers": {
-                "openai": {
-                    "api_key": "sk-test-key-123",
-                    "default_model": "gpt-4o",
-                    "available_models": ["gpt-4o", "gpt-4o-mini"],
-                }
-            },
-            "cache_enabled": True,
-            "cost_limits": {"monthly_usd": 50.0},
-        }
+        from src.ci_helper.ai.models import AIConfig, ProviderConfig
+
+        provider_config = ProviderConfig(
+            name="openai",
+            api_key="sk-test-key-123",
+            default_model="gpt-4o",
+            available_models=["gpt-4o", "gpt-4o-mini"],
+        )
+
+        return AIConfig(
+            default_provider="openai",
+            providers={"openai": provider_config},
+            cache_enabled=True,
+            cost_limits={"monthly_usd": 50.0},
+            cache_dir=str(temp_dir / "cache"),
+        )
 
     @pytest.fixture
     def sample_analysis_result(self):
         """サンプル分析結果"""
+        from ci_helper.ai.models import FixSuggestion, Priority, RootCause, Severity
+
         return AnalysisResult(
             summary="複数のエラーが検出されました",
             root_causes=[
-                {
-                    "category": "dependency",
-                    "description": "package.jsonが見つかりません",
-                    "file_path": "package.json",
-                    "severity": "HIGH",
-                },
-                {
-                    "category": "test",
-                    "description": "認証テストが失敗しています",
-                    "file_path": "test_user_authentication.py",
-                    "line_number": 42,
-                    "severity": "MEDIUM",
-                },
+                RootCause(
+                    category="dependency",
+                    description="package.jsonが見つかりません",
+                    file_path="package.json",
+                    severity=Severity.HIGH,
+                ),
+                RootCause(
+                    category="test",
+                    description="認証テストが失敗しています",
+                    file_path="test_user_authentication.py",
+                    line_number=42,
+                    severity=Severity.MEDIUM,
+                ),
             ],
             fix_suggestions=[
-                {
-                    "title": "package.jsonの作成",
-                    "description": "プロジェクトルートにpackage.jsonを作成してください",
-                    "priority": "HIGH",
-                    "estimated_effort": "5分",
-                    "confidence": 0.9,
-                }
+                FixSuggestion(
+                    title="package.jsonの作成",
+                    description="プロジェクトルートにpackage.jsonを作成してください",
+                    priority=Priority.HIGH,
+                    estimated_effort="5分",
+                    confidence=0.9,
+                )
             ],
             related_errors=["ENOENT", "AssertionError", "TimeoutError"],
             confidence_score=0.85,
             analysis_time=2.5,
-            tokens_used=TokenUsage(input_tokens=500, output_tokens=300),
+            tokens_used=TokenUsage(input_tokens=500, output_tokens=300, total_tokens=800, estimated_cost=0.01),
             provider="openai",
             model="gpt-4o",
-            cost=0.008,
         )
 
     @pytest.mark.asyncio
@@ -116,7 +121,22 @@ TimeoutError: Database connection timed out after 30 seconds
                 mock_client = Mock()
                 mock_response = Mock()
                 mock_response.choices = [Mock()]
-                mock_response.choices[0].message.content = json.dumps(sample_analysis_result.model_dump())
+                from dataclasses import asdict
+
+                # Convert enums to strings for JSON serialization
+                def convert_enums(obj):
+                    if hasattr(obj, "value"):
+                        return obj.value
+                    elif isinstance(obj, dict):
+                        return {k: convert_enums(v) for k, v in obj.items()}
+                    elif isinstance(obj, list):
+                        return [convert_enums(item) for item in obj]
+                    else:
+                        return obj
+
+                result_dict = asdict(sample_analysis_result)
+                serializable_dict = convert_enums(result_dict)
+                mock_response.choices[0].message.content = json.dumps(serializable_dict)
                 mock_response.usage.prompt_tokens = 500
                 mock_response.usage.completion_tokens = 300
                 mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
@@ -130,7 +150,7 @@ TimeoutError: Database connection timed out after 30 seconds
                     provider="openai",
                     model="gpt-4o",
                     use_cache=False,
-                    stream=False,
+                    streaming=False,
                 )
 
                 result = await ai_integration.analyze_log(sample_log_content, options)
@@ -146,11 +166,15 @@ TimeoutError: Database connection timed out after 30 seconds
     async def test_multiple_providers_comparison(self, mock_ai_config, sample_log_content):
         """複数プロバイダーでの動作比較テスト"""
         # OpenAIとAnthropicの設定を追加
-        mock_ai_config["providers"]["anthropic"] = {
-            "api_key": "sk-ant-test-key-123",
-            "default_model": "claude-3-5-sonnet-20241022",
-            "available_models": ["claude-3-5-sonnet-20241022"],
-        }
+        from src.ci_helper.ai.models import ProviderConfig
+
+        anthropic_config = ProviderConfig(
+            name="anthropic",
+            api_key="sk-ant-test-key-123",
+            default_model="claude-3-5-sonnet-20241022",
+            available_models=["claude-3-5-sonnet-20241022"],
+        )
+        mock_ai_config.providers["anthropic"] = anthropic_config
 
         providers_to_test = ["openai", "anthropic"]
         results = {}
@@ -191,9 +215,9 @@ TimeoutError: Database connection timed out after 30 seconds
 
                     options = AnalyzeOptions(
                         provider=provider,
-                        model=mock_ai_config["providers"][provider]["default_model"],
+                        model=mock_ai_config.providers[provider].default_model,
                         use_cache=False,
-                        stream=False,
+                        streaming=False,
                     )
 
                     result = await ai_integration.analyze_log(sample_log_content, options)
@@ -234,7 +258,7 @@ TimeoutError: Database connection timed out after 30 seconds
                     provider="openai",
                     model="gpt-4o",
                     use_cache=False,
-                    stream=True,
+                    streaming=True,
                 )
 
                 chunks = []
@@ -322,7 +346,7 @@ class TestAIErrorScenarios:
 
             with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
                 mock_client = Mock()
-                mock_client.chat.completions.create = AsyncMock(side_effect=RateLimitError("Rate limit exceeded", 60))
+                mock_client.chat.completions.create = AsyncMock(side_effect=RateLimitError("openai", retry_after=60))
                 mock_openai.return_value = mock_client
 
                 ai_integration = AIIntegration(mock_ai_config)
@@ -332,7 +356,7 @@ class TestAIErrorScenarios:
                     provider="openai",
                     model="gpt-4o",
                     use_cache=False,
-                    stream=False,
+                    streaming=False,
                 )
 
                 with pytest.raises(RateLimitError):
@@ -352,7 +376,7 @@ class TestAIErrorScenarios:
 
             # OpenAIが利用不可、Anthropicは利用可能
             with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
-                mock_openai.side_effect = ProviderError("OpenAI unavailable")
+                mock_openai.side_effect = ProviderError("openai", "OpenAI unavailable")
 
                 with patch("src.ci_helper.ai.providers.anthropic.AsyncAnthropic") as mock_anthropic:
                     mock_client = Mock()
@@ -371,7 +395,7 @@ class TestAIErrorScenarios:
                         provider="openai",  # 最初はOpenAIを指定
                         model="gpt-4o",
                         use_cache=False,
-                        stream=False,
+                        streaming=False,
                     )
 
                     # フォールバック処理が実装されている場合のテスト
@@ -432,7 +456,7 @@ AssertionError: Expected 200, got 404
                     provider="openai",
                     model="gpt-4o",
                     use_cache=False,
-                    stream=False,
+                    streaming=False,
                 )
 
                 import time
@@ -475,7 +499,7 @@ AssertionError: Expected 200, got 404
                     provider="openai",
                     model="gpt-4o",
                     use_cache=False,
-                    stream=False,
+                    streaming=False,
                 )
 
                 # 並行実行

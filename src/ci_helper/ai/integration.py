@@ -19,8 +19,10 @@ from .config_manager import AIConfigManager
 from .cost_manager import CostManager
 from .error_handler import AIErrorHandler
 from .exceptions import AIError, ConfigurationError, ProviderError
+from .fallback_handler import FallbackHandler
 from .fix_applier import FixApplier
 from .fix_generator import FixSuggestionGenerator
+from .interactive_session import InteractiveSessionManager
 from .models import AIConfig, AnalysisResult, AnalysisStatus, AnalyzeOptions, InteractiveSession
 from .prompts import PromptManager
 from .providers.base import AIProvider, ProviderFactory
@@ -34,22 +36,95 @@ class AIIntegration:
     複数のAIプロバイダーを統合し、ログ分析、修正提案、対話モードを提供します。
     """
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config | dict | AIConfig):
         """AI統合を初期化
 
         Args:
-            config: メイン設定オブジェクト
+            config: 設定オブジェクト（Config、dict、またはAIConfig）
         """
-        self.config = config
-        self.ai_config_manager = AIConfigManager(config)
-        self.ai_config: AIConfig | None = None
+        # 設定オブジェクトの型に応じて処理
+        if isinstance(config, dict):
+            # 辞書の場合はAIConfigオブジェクトに変換
+
+            ai_section = config.get("ai", {})
+            providers_data = ai_section.get("providers", {})
+
+            providers = {}
+            for name, provider_data in providers_data.items():
+                providers[name] = ProviderConfig(
+                    name=name,
+                    api_key=provider_data.get("api_key", ""),
+                    base_url=provider_data.get("base_url"),
+                    default_model=provider_data.get("default_model", ""),
+                    available_models=provider_data.get("available_models", []),
+                    timeout_seconds=provider_data.get("timeout_seconds", 30),
+                    max_retries=provider_data.get("max_retries", 3),
+                )
+
+            self.ai_config = AIConfig(
+                default_provider=ai_section.get("default_provider", "openai"),
+                providers=providers,
+                cache_enabled=ai_section.get("cache_enabled", True),
+                cache_ttl_hours=ai_section.get("cache_ttl_hours", 24),
+                cache_max_size_mb=ai_section.get("cache_max_size_mb", 100),
+                cost_limits=ai_section.get("cost_limits", {}),
+                prompt_templates=ai_section.get("prompts", {}),
+                interactive_timeout=ai_section.get("interactive_timeout", 300),
+            )
+
+            # 仮のConfigオブジェクトを作成
+            from pathlib import Path
+
+            from ci_helper.utils.config import Config
+
+            self.config = Config(project_root=Path.cwd())
+
+        elif isinstance(config, AIConfig):
+            # AIConfigオブジェクトの場合
+            self.ai_config = config
+            # 仮のConfigオブジェクトを作成
+            from pathlib import Path
+
+            from ci_helper.utils.config import Config
+
+            self.config = Config(project_root=Path.cwd())
+
+        else:
+            # Configオブジェクトの場合
+            self.config = config
+            # AI設定を取得または作成
+            try:
+                self.ai_config_manager = AIConfigManager(self.config)
+                self.ai_config = self.ai_config_manager.get_ai_config()
+            except Exception:
+                # AI設定が存在しない場合はデフォルト設定を作成
+                self.ai_config = AIConfig(
+                    default_provider="openai",
+                    providers={},
+                    cache_enabled=True,
+                    cache_ttl_hours=24,
+                    cache_max_size_mb=100,
+                    cost_limits={},
+                    prompt_templates={},
+                    interactive_timeout=300,
+                )
+
+        # 他のコンポーネントを初期化
+        if hasattr(self, "config"):
+            self.ai_config_manager = AIConfigManager(self.config)
+            self.error_handler = AIErrorHandler(self.config)
+            self.fallback_handler = FallbackHandler(self.config)
+        else:
+            # テスト用の最小限の初期化
+            self.ai_config_manager = None
+            self.error_handler = None
+            self.fallback_handler = None
+
         self.prompt_manager: PromptManager | None = None
         self.cache_manager: CacheManager | None = None
         self.cost_manager: CostManager | None = None
         self.fix_generator: FixSuggestionGenerator | None = None
         self.fix_applier: FixApplier | None = None
-        self.error_handler = AIErrorHandler(config)
-        self.fallback_handler = FallbackHandler(config)
         self.providers: dict[str, AIProvider] = {}
         self.active_sessions: dict[str, InteractiveSession] = {}
         self._initialized = False
@@ -69,8 +144,9 @@ class AIIntegration:
         logger.info("AI統合システムを初期化中...")
 
         try:
-            # AI設定を読み込み
-            self.ai_config = self.ai_config_manager.get_ai_config()
+            # AI設定を読み込み（まだ設定されていない場合のみ）
+            if self.ai_config is None and self.ai_config_manager is not None:
+                self.ai_config = self.ai_config_manager.get_ai_config()
 
             # プロンプト管理を初期化
             self.prompt_manager = PromptManager()

@@ -44,6 +44,11 @@ class CacheManager:
                 ttl_hours=ttl_hours,
             )
 
+    @property
+    def cache(self) -> ResponseCache | None:
+        """キャッシュインスタンスを取得"""
+        return self._cache
+
     async def get_cached_result(
         self,
         prompt: str,
@@ -286,3 +291,44 @@ class CacheManager:
 
         except Exception:
             return ["キャッシュ統計の取得に失敗しました"]
+
+    async def get_or_set(
+        self,
+        prompt: str,
+        context: str,
+        model: str,
+        provider: str,
+        compute_func,
+    ) -> AnalysisResult:
+        """キャッシュから取得するか、計算して保存
+
+        Args:
+            prompt: プロンプト
+            context: コンテキスト
+            model: モデル名
+            provider: プロバイダー名
+            compute_func: 計算関数
+
+        Returns:
+            分析結果
+        """
+        # キャッシュから取得を試行
+        cached_result = await self.get_cached_result(prompt, context, model, provider)
+        if cached_result is not None:
+            return cached_result
+
+        # キャッシュにない場合は計算
+        result = await compute_func()
+
+        # 結果をキャッシュに保存
+        await self.cache_result(prompt, context, model, provider, result)
+
+        return result
+
+    async def invalidate_by_provider(self, provider: str) -> None:
+        """プロバイダー別キャッシュ無効化（エイリアス）
+
+        Args:
+            provider: プロバイダー名
+        """
+        await self.invalidate_cache_by_provider(provider)

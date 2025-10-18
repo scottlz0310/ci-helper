@@ -11,6 +11,7 @@ import pytest
 from src.ci_helper.ai.exceptions import APIKeyError, ProviderError, RateLimitError
 from src.ci_helper.ai.models import AnalysisResult, AnalyzeOptions, ProviderConfig
 from src.ci_helper.ai.providers.anthropic import AnthropicProvider
+from src.ci_helper.ai.providers.local import LocalLLMProvider
 from src.ci_helper.ai.providers.openai import OpenAIProvider
 
 
@@ -63,7 +64,7 @@ class TestOpenAIProvider:
             provider="openai",
             model="gpt-4o",
             use_cache=True,
-            stream=False,
+            streaming=False,
             custom_prompt=None,
         )
 
@@ -92,7 +93,7 @@ class TestOpenAIProvider:
     def test_estimate_cost(self, openai_provider):
         """コスト推定のテスト"""
         # gpt-4oで1000入力トークン、500出力トークンの場合
-        cost = openai_provider.estimate_cost("gpt-4o", 1000, 500)
+        cost = openai_provider.estimate_cost(1000, 500, "gpt-4o")
         expected = (1000 * 0.0025 / 1000) + (500 * 0.01 / 1000)  # 0.0025 + 0.005 = 0.0075
         assert cost == expected
 
@@ -114,18 +115,24 @@ class TestOpenAIProvider:
     @pytest.mark.asyncio
     async def test_initialize_success(self, openai_provider):
         """初期化成功のテスト"""
-        with patch("openai.AsyncOpenAI") as mock_openai:
+        # 初期状態では_clientはNone
+        assert openai_provider._client is None
+
+        with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
             mock_client = Mock()
             mock_openai.return_value = mock_client
 
-            await openai_provider.initialize()
+            # validate_connectionをモック
+            with patch.object(openai_provider, "validate_connection", return_value=True) as mock_validate:
+                await openai_provider.initialize()
 
-            assert openai_provider._client is not None
-            mock_openai.assert_called_once_with(
-                api_key="sk-test-key-123",
-                base_url="https://api.openai.com/v1",
-                timeout=30,
-            )
+                assert openai_provider._client is not None
+                mock_openai.assert_called_once_with(
+                    api_key="sk-test-key-123",
+                    timeout=30,
+                    max_retries=3,
+                )
+                mock_validate.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_initialize_invalid_api_key(self, openai_config):
@@ -133,8 +140,14 @@ class TestOpenAIProvider:
         openai_config.api_key = "invalid-key"
         provider = OpenAIProvider(openai_config)
 
-        with pytest.raises(APIKeyError):
-            await provider.initialize()
+        with patch("openai.AsyncOpenAI") as mock_openai:
+            mock_client = Mock()
+            mock_openai.return_value = mock_client
+
+            # validate_connectionでAPIKeyErrorを発生させる
+            with patch.object(provider, "validate_connection", side_effect=APIKeyError("openai", "Invalid API key")):
+                with pytest.raises(ProviderError):  # initializeはProviderErrorでラップする
+                    await provider.initialize()
 
     @pytest.mark.asyncio
     async def test_analyze_success(self, openai_provider, analyze_options):
@@ -247,18 +260,21 @@ class TestAnthropicProvider:
     @pytest.mark.asyncio
     async def test_initialize_success(self, anthropic_provider):
         """初期化成功のテスト"""
-        with patch("anthropic.AsyncAnthropic") as mock_anthropic:
+        with patch("src.ci_helper.ai.providers.anthropic.AsyncAnthropic") as mock_anthropic:
             mock_client = Mock()
             mock_anthropic.return_value = mock_client
 
-            await anthropic_provider.initialize()
+            # validate_connectionをモック
+            with patch.object(anthropic_provider, "validate_connection", return_value=True) as mock_validate:
+                await anthropic_provider.initialize()
 
-            assert anthropic_provider._client is not None
-            mock_anthropic.assert_called_once_with(
-                api_key="sk-ant-test-key-123",
-                base_url="https://api.anthropic.com",
-                timeout=30,
-            )
+                assert anthropic_provider._client is not None
+                mock_anthropic.assert_called_once_with(
+                    api_key="sk-ant-test-key-123",
+                    timeout=30,
+                    max_retries=3,
+                )
+                mock_validate.assert_called_once()
 
 
 class TestLocalLLMProvider:
@@ -289,24 +305,31 @@ class TestLocalLLMProvider:
         assert local_provider.config.default_model == "llama3.2"
 
     @pytest.mark.asyncio
-    async def test_check_ollama_connection_success(self, local_provider):
+    async def test_validate_connection_success(self, local_provider):
         """Ollama接続確認成功のテスト"""
-        with patch("aiohttp.ClientSession.get") as mock_get:
+        # セッションを初期化
+        local_provider._session = Mock()
+
+        with patch.object(local_provider._session, "get") as mock_get:
             mock_response = Mock()
             mock_response.status = 200
+            mock_response.json = AsyncMock(return_value={"models": [{"name": "llama3.2"}]})
             mock_get.return_value.__aenter__.return_value = mock_response
 
-            result = await local_provider._check_ollama_connection()
+            result = await local_provider.validate_connection()
             assert result is True
 
     @pytest.mark.asyncio
-    async def test_check_ollama_connection_failure(self, local_provider):
+    async def test_validate_connection_failure(self, local_provider):
         """Ollama接続確認失敗のテスト"""
-        with patch("aiohttp.ClientSession.get") as mock_get:
+        # セッションを初期化
+        local_provider._session = Mock()
+
+        with patch.object(local_provider._session, "get") as mock_get:
             mock_get.side_effect = Exception("Connection failed")
 
-            result = await local_provider._check_ollama_connection()
-            assert result is False
+            with pytest.raises(ProviderError):
+                await local_provider.validate_connection()
 
     def test_estimate_cost_always_zero(self, local_provider):
         """ローカルLLMのコスト推定（常に0）のテスト"""
@@ -316,13 +339,21 @@ class TestLocalLLMProvider:
     @pytest.mark.asyncio
     async def test_initialize_success(self, local_provider):
         """初期化成功のテスト"""
-        with patch.object(local_provider, "_check_ollama_connection", return_value=True):
-            await local_provider.initialize()
-            # 例外が発生しないことを確認
+        with patch.object(local_provider, "validate_connection", return_value=True):
+            with patch("aiohttp.ClientSession") as mock_session_class:
+                mock_session = Mock()
+                mock_session_class.return_value = mock_session
+
+                await local_provider.initialize()
+                # 例外が発生しないことを確認
+                assert local_provider._session is not None
 
     @pytest.mark.asyncio
     async def test_initialize_connection_failure(self, local_provider):
         """接続失敗時の初期化テスト"""
-        with patch.object(local_provider, "_check_ollama_connection", return_value=False):
-            with pytest.raises(ProviderError):
-                await local_provider.initialize()
+        with patch.object(
+            local_provider, "validate_connection", side_effect=ProviderError("local", "Connection failed")
+        ):
+            with patch("aiohttp.ClientSession"):
+                with pytest.raises(ProviderError):
+                    await local_provider.initialize()

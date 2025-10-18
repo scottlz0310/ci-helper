@@ -7,18 +7,20 @@ AI統合のエラーシナリオテスト
 import asyncio
 from unittest.mock import AsyncMock, Mock, patch
 
+import aiohttp
 import pytest
 
 from src.ci_helper.ai.exceptions import (
-    APIKeyError,
     CacheError,
+    ConfigurationError,
     CostLimitError,
     NetworkError,
     ProviderError,
     TokenLimitError,
 )
 from src.ci_helper.ai.integration import AIIntegration
-from src.ci_helper.ai.models import AnalyzeOptions
+from src.ci_helper.ai.models import AIConfig, AnalyzeOptions, ProviderConfig
+from src.ci_helper.utils.config import Config
 
 
 class TestNetworkErrorScenarios:
@@ -50,14 +52,15 @@ class TestNetworkErrorScenarios:
                 mock_client.chat.completions.create = AsyncMock(side_effect=TimeoutError("Request timeout"))
                 mock_openai.return_value = mock_client
 
-                ai_integration = AIIntegration(mock_ai_config)
+                config = Config()
+                ai_integration = AIIntegration(config)
                 await ai_integration.initialize()
 
                 options = AnalyzeOptions(
                     provider="openai",
                     model="gpt-4o",
                     use_cache=False,
-                    stream=False,
+                    streaming=False,
                 )
 
                 with pytest.raises(NetworkError):
@@ -66,7 +69,6 @@ class TestNetworkErrorScenarios:
     @pytest.mark.asyncio
     async def test_connection_error(self, mock_ai_config):
         """接続エラーのテスト"""
-        import aiohttp
 
         with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
@@ -78,14 +80,15 @@ class TestNetworkErrorScenarios:
                 )
                 mock_openai.return_value = mock_client
 
-                ai_integration = AIIntegration(mock_ai_config)
+                config = Config()
+                ai_integration = AIIntegration(config)
                 await ai_integration.initialize()
 
                 options = AnalyzeOptions(
                     provider="openai",
                     model="gpt-4o",
                     use_cache=False,
-                    stream=False,
+                    streaming=False,
                 )
 
                 with pytest.raises(NetworkError):
@@ -103,30 +106,31 @@ class TestNetworkErrorScenarios:
                 # 最初の2回は失敗、3回目は成功
                 call_count = 0
 
-                async def mock_create(*args, **kwargs):
+                async def mock_create(*_args, **_kwargs):
                     nonlocal call_count
                     call_count += 1
                     if call_count <= 2:
                         raise NetworkError("Temporary network error")
-                    else:
-                        mock_response = Mock()
-                        mock_response.choices = [Mock()]
-                        mock_response.choices[0].message.content = "成功した分析結果"
-                        mock_response.usage.prompt_tokens = 100
-                        mock_response.usage.completion_tokens = 50
-                        return mock_response
+
+                    mock_response = Mock()
+                    mock_response.choices = [Mock()]
+                    mock_response.choices[0].message.content = "成功した分析結果"
+                    mock_response.usage.prompt_tokens = 100
+                    mock_response.usage.completion_tokens = 50
+                    return mock_response
 
                 mock_client.chat.completions.create = mock_create
                 mock_openai.return_value = mock_client
 
-                ai_integration = AIIntegration(mock_ai_config)
+                config = Config()
+                ai_integration = AIIntegration(config)
                 await ai_integration.initialize()
 
                 options = AnalyzeOptions(
                     provider="openai",
                     model="gpt-4o",
                     use_cache=False,
-                    stream=False,
+                    streaming=False,
                 )
 
                 # リトライにより最終的に成功することを確認
@@ -141,61 +145,81 @@ class TestConfigurationErrorScenarios:
     @pytest.mark.asyncio
     async def test_missing_api_key(self):
         """APIキー未設定エラーのテスト"""
-        config_without_key = {
-            "default_provider": "openai",
-            "providers": {
-                "openai": {
-                    "api_key": "",  # 空のAPIキー
-                    "default_model": "gpt-4o",
-                }
-            },
-        }
+        # 空のAPIキーを持つプロバイダー設定
+        openai_config = ProviderConfig(
+            name="openai",
+            api_key="",  # 空のAPIキー
+            default_model="gpt-4o",
+            available_models=["gpt-4o", "gpt-4o-mini"],
+            timeout_seconds=30,
+            max_retries=3,
+        )
+
+        ai_config_without_key = AIConfig(
+            default_provider="openai",
+            providers={"openai": openai_config},
+            cache_enabled=True,
+            cache_ttl_hours=24,
+            cache_max_size_mb=100,
+        )
 
         with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
-            mock_config_manager.return_value.get_ai_config.return_value = config_without_key
+            mock_config_manager.return_value.get_ai_config.return_value = ai_config_without_key
 
-            ai_integration = AIIntegration(config_without_key)
+            config = Config()
+            ai_integration = AIIntegration(config)
 
-            with pytest.raises(APIKeyError):
+            with pytest.raises(ConfigurationError):
                 await ai_integration.initialize()
 
     @pytest.mark.asyncio
     async def test_invalid_provider_config(self):
         """無効なプロバイダー設定のテスト"""
-        invalid_config = {
-            "default_provider": "nonexistent",
-            "providers": {},
-        }
+        invalid_ai_config = AIConfig(
+            default_provider="nonexistent",
+            providers={},  # 空のプロバイダー設定
+            cache_enabled=True,
+            cache_ttl_hours=24,
+            cache_max_size_mb=100,
+        )
 
         with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
-            mock_config_manager.return_value.get_ai_config.return_value = invalid_config
+            mock_config_manager.return_value.get_ai_config.return_value = invalid_ai_config
 
-            ai_integration = AIIntegration(invalid_config)
+            config = Config()
+            ai_integration = AIIntegration(config)
 
             with pytest.raises(ProviderError):
                 await ai_integration.initialize()
 
     @pytest.mark.asyncio
-    async def test_invalid_model_selection(self, temp_dir):
+    async def test_invalid_model_selection(self):
         """無効なモデル選択のテスト"""
-        config = {
-            "default_provider": "openai",
-            "providers": {
-                "openai": {
-                    "api_key": "sk-test-key-123",
-                    "default_model": "gpt-4o",
-                    "available_models": ["gpt-4o", "gpt-4o-mini"],
-                }
-            },
-        }
+        openai_config = ProviderConfig(
+            name="openai",
+            api_key="sk-test-key-123",
+            default_model="gpt-4o",
+            available_models=["gpt-4o", "gpt-4o-mini"],
+            timeout_seconds=30,
+            max_retries=3,
+        )
+
+        ai_config = AIConfig(
+            default_provider="openai",
+            providers={"openai": openai_config},
+            cache_enabled=True,
+            cache_ttl_hours=24,
+            cache_max_size_mb=100,
+        )
 
         with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
-            mock_config_manager.return_value.get_ai_config.return_value = config
+            mock_config_manager.return_value.get_ai_config.return_value = ai_config
 
             with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
                 mock_client = Mock()
                 mock_openai.return_value = mock_client
 
+                config = Config()
                 ai_integration = AIIntegration(config)
                 await ai_integration.initialize()
 
@@ -204,7 +228,7 @@ class TestConfigurationErrorScenarios:
                     provider="openai",
                     model="invalid-model",
                     use_cache=False,
-                    stream=False,
+                    streaming=False,
                 )
 
                 with pytest.raises(ProviderError):
@@ -240,13 +264,14 @@ class TestTokenAndCostLimitScenarios:
         with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_ai_config.return_value = cost_limited_config
 
-            ai_integration = AIIntegration(cost_limited_config)
+            config = Config()
+            ai_integration = AIIntegration(config)
 
             options = AnalyzeOptions(
                 provider="openai",
                 model="gpt-4o",
                 use_cache=False,
-                stream=False,
+                streaming=False,
             )
 
             # トークン制限チェックが実装されている場合
@@ -261,16 +286,19 @@ class TestTokenAndCostLimitScenarios:
 
             with patch("src.ci_helper.ai.cost_manager.CostManager") as mock_cost_manager_class:
                 mock_cost_manager = Mock()
-                mock_cost_manager.validate_request_cost.side_effect = CostLimitError("Monthly cost limit exceeded")
+                mock_cost_manager.validate_request_cost.side_effect = CostLimitError(
+                    current_cost=2.0, limit=1.0, provider="openai"
+                )
                 mock_cost_manager_class.return_value = mock_cost_manager
 
-                ai_integration = AIIntegration(cost_limited_config)
+                config = Config()
+                ai_integration = AIIntegration(config)
 
                 options = AnalyzeOptions(
                     provider="openai",
                     model="gpt-4o",
                     use_cache=False,
-                    stream=False,
+                    streaming=False,
                 )
 
                 with pytest.raises(CostLimitError):
@@ -295,7 +323,7 @@ class TestCacheErrorScenarios:
         }
 
     @pytest.mark.asyncio
-    async def test_cache_write_error(self, cache_enabled_config, temp_dir):
+    async def test_cache_write_error(self, cache_enabled_config):
         """キャッシュ書き込みエラーのテスト"""
         with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_ai_config.return_value = cache_enabled_config
@@ -316,14 +344,15 @@ class TestCacheErrorScenarios:
                     mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
                     mock_openai.return_value = mock_client
 
-                    ai_integration = AIIntegration(cache_enabled_config)
+                    config = Config()
+                    ai_integration = AIIntegration(config)
                     await ai_integration.initialize()
 
                     options = AnalyzeOptions(
                         provider="openai",
                         model="gpt-4o",
                         use_cache=True,
-                        stream=False,
+                        streaming=False,
                     )
 
                     # キャッシュエラーが発生しても分析は継続される
@@ -331,7 +360,7 @@ class TestCacheErrorScenarios:
                     assert result.summary == "分析結果"
 
     @pytest.mark.asyncio
-    async def test_cache_corruption_recovery(self, cache_enabled_config, temp_dir):
+    async def test_cache_corruption_recovery(self, cache_enabled_config):
         """キャッシュ破損からの復旧テスト"""
         with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_ai_config.return_value = cache_enabled_config
@@ -353,14 +382,15 @@ class TestCacheErrorScenarios:
                     mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
                     mock_openai.return_value = mock_client
 
-                    ai_integration = AIIntegration(cache_enabled_config)
+                    config = Config()
+                    ai_integration = AIIntegration(config)
                     await ai_integration.initialize()
 
                     options = AnalyzeOptions(
                         provider="openai",
                         model="gpt-4o",
                         use_cache=True,
-                        stream=False,
+                        streaming=False,
                     )
 
                     # キャッシュ破損時は新しい分析を実行
@@ -397,12 +427,20 @@ class TestInteractiveSessionErrorScenarios:
                 mock_session_manager.process_input = AsyncMock(side_effect=TimeoutError("Session timeout"))
                 mock_session_class.return_value = mock_session_manager
 
-                ai_integration = AIIntegration(interactive_config)
+                config = Config()
+                ai_integration = AIIntegration(config)
                 await ai_integration.initialize()
+
+                options = AnalyzeOptions(
+                    provider="openai",
+                    model="gpt-4o",
+                    use_cache=False,
+                    streaming=False,
+                )
 
                 # セッションタイムアウトが適切に処理されることを確認
                 with pytest.raises(asyncio.TimeoutError):
-                    await ai_integration.start_interactive_session("initial log")
+                    await ai_integration.start_interactive_session("initial log", options)
 
     @pytest.mark.asyncio
     async def test_session_memory_overflow(self, interactive_config):
@@ -416,9 +454,17 @@ class TestInteractiveSessionErrorScenarios:
                 mock_session_manager.process_input = AsyncMock(side_effect=MemoryError("Session memory overflow"))
                 mock_session_class.return_value = mock_session_manager
 
-                ai_integration = AIIntegration(interactive_config)
+                config = Config()
+                ai_integration = AIIntegration(config)
                 await ai_integration.initialize()
+
+                options = AnalyzeOptions(
+                    provider="openai",
+                    model="gpt-4o",
+                    use_cache=False,
+                    streaming=False,
+                )
 
                 # メモリオーバーフローが適切に処理されることを確認
                 with pytest.raises(MemoryError):
-                    await ai_integration.start_interactive_session("initial log")
+                    await ai_integration.start_interactive_session("initial log", options)

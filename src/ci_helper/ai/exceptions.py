@@ -130,3 +130,17 @@ class InteractiveSessionError(AIError):
         details = f"セッションID: {session_id}" if session_id else None
         super().__init__(message, details, "対話セッションを再開してください")
         self.session_id = session_id
+
+
+class CostLimitError(AIError):
+    """コスト制限エラー"""
+
+    def __init__(self, current_cost: float, limit: float, provider: str):
+        message = f"コスト制限を超過しました: ${current_cost:.4f}/${limit:.2f}"
+        details = f"プロバイダー: {provider}"
+        suggestion = "コスト制限を増やすか、使用量を削減してください"
+
+        super().__init__(message, details, suggestion)
+        self.current_cost = current_cost
+        self.limit = limit
+        self.provider = provider

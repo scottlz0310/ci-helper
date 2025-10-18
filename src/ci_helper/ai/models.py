@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 
@@ -129,6 +130,67 @@ class AnalysisResult:
         """緊急修正の数"""
         return sum(1 for fix in self.fix_suggestions if fix.priority == Priority.URGENT)
 
+    def model_dump(self) -> dict[str, Any]:
+        """モデルを辞書形式でダンプ"""
+        return {
+            "summary": self.summary,
+            "root_causes": [
+                {
+                    "category": cause.category,
+                    "description": cause.description,
+                    "file_path": cause.file_path,
+                    "line_number": cause.line_number,
+                    "severity": cause.severity.value,
+                    "confidence": cause.confidence,
+                }
+                for cause in self.root_causes
+            ],
+            "fix_suggestions": [
+                {
+                    "title": fix.title,
+                    "description": fix.description,
+                    "code_changes": [
+                        {
+                            "file_path": change.file_path,
+                            "line_start": change.line_start,
+                            "line_end": change.line_end,
+                            "old_code": change.old_code,
+                            "new_code": change.new_code,
+                            "description": change.description,
+                        }
+                        for change in fix.code_changes
+                    ],
+                    "priority": fix.priority.value,
+                    "estimated_effort": fix.estimated_effort,
+                    "confidence": fix.confidence,
+                    "references": fix.references,
+                }
+                for fix in self.fix_suggestions
+            ],
+            "related_errors": self.related_errors,
+            "confidence_score": self.confidence_score,
+            "analysis_time": self.analysis_time,
+            "tokens_used": (
+                {
+                    "input_tokens": self.tokens_used.input_tokens,
+                    "output_tokens": self.tokens_used.output_tokens,
+                    "total_tokens": self.tokens_used.total_tokens,
+                    "estimated_cost": self.tokens_used.estimated_cost,
+                }
+                if self.tokens_used
+                else None
+            ),
+            "status": self.status.value,
+            "timestamp": self.timestamp.isoformat(),
+            "provider": self.provider,
+            "model": self.model,
+            "cache_hit": self.cache_hit,
+            "fallback_reason": self.fallback_reason,
+            "retry_available": self.retry_available,
+            "retry_after": self.retry_after,
+            "alternative_providers": self.alternative_providers,
+        }
+
 
 @dataclass
 class ProviderConfig:
@@ -160,6 +222,13 @@ class AIConfig:
     interactive_timeout: int = 300  # 対話タイムアウト（秒）
     streaming_enabled: bool = True  # ストリーミング有効化
     security_checks_enabled: bool = True  # セキュリティチェック有効化
+    cache_dir: str = ".ci-helper/cache"  # キャッシュディレクトリ
+
+    def get_path(self, path_name: str) -> Path:
+        """パスを取得"""
+        if path_name == "cache_dir":
+            return Path(self.cache_dir)
+        return Path("")
 
 
 @dataclass
@@ -176,12 +245,47 @@ class UsageRecord:
     success: bool
 
 
+class WarningLevel(Enum):
+    """警告レベル"""
+
+    NONE = "none"
+    INFO = "info"
+    WARNING = "warning"
+    CRITICAL = "critical"
+
+
+@dataclass
+class CostEstimate:
+    """コスト推定"""
+
+    input_tokens: int
+    estimated_cost: float
+    provider: str
+    model: str
+    output_tokens: int = 0
+    estimated_output_tokens: int = 0  # 推定出力トークン数（エイリアス）
+    confidence: float = 1.0  # 推定の信頼度
+
+    def __post_init__(self):
+        """初期化後の処理"""
+        # estimated_output_tokensが指定されている場合はoutput_tokensに設定
+        if self.estimated_output_tokens > 0 and self.output_tokens == 0:
+            self.output_tokens = self.estimated_output_tokens
+
+    @property
+    def total_tokens(self) -> int:
+        """総トークン数"""
+        return self.input_tokens + self.output_tokens
+
+
 @dataclass
 class UsageStats:
     """使用統計"""
 
     total_requests: int = 0
     total_tokens: int = 0
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
     total_cost: float = 0.0
     successful_requests: int = 0
     failed_requests: int = 0
@@ -224,6 +328,21 @@ class LimitStatus:
     def usage_percentage(self) -> float:
         """使用率（パーセント）"""
         return (self.current_usage / self.limit) * 100 if self.limit > 0 else 0.0
+
+    @property
+    def within_limits(self) -> bool:
+        """制限内かどうか（後方互換性のため）"""
+        return not self.is_over_limit
+
+    @property
+    def warning_level(self) -> WarningLevel:
+        """警告レベル"""
+        if self.is_over_limit:
+            return WarningLevel.CRITICAL
+        elif self.is_near_limit:
+            return WarningLevel.WARNING
+        else:
+            return WarningLevel.NONE
 
 
 @dataclass

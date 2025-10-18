@@ -10,8 +10,9 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from click.testing import CliRunner
 
-from ci_helper.commands.analyze import analyze
-from ci_helper.utils.config import Config
+from src.ci_helper.ai.models import AnalysisResult
+from src.ci_helper.commands.analyze import analyze
+from src.ci_helper.utils.config import Config
 
 
 class TestAnalyzeCommand:
@@ -25,9 +26,32 @@ class TestAnalyzeCommand:
     @pytest.fixture
     def mock_config(self, temp_dir):
         """モック設定"""
+        from src.ci_helper.ai.models import AIConfig, ProviderConfig
+
+        # Create a proper AIConfig object
+        provider_config = ProviderConfig(
+            name="openai",
+            api_key="sk-test-key-123",
+            default_model="gpt-4o",
+            available_models=["gpt-4o", "gpt-4o-mini"],
+        )
+
+        ai_config = AIConfig(
+            default_provider="openai",
+            providers={"openai": provider_config},
+            cache_enabled=True,
+            cost_limits={"monthly_usd": 50.0},
+            cache_dir=str(temp_dir / "cache"),
+        )
+
         config = Mock(spec=Config)
         config.project_root = temp_dir
         config.get_path.return_value = temp_dir / "cache"
+        config.get = Mock(return_value=None)
+        config.get_ai_config = Mock(return_value=ai_config)
+        config.get_available_ai_providers = Mock(return_value=["openai"])
+        config.__getitem__ = Mock(return_value=None)
+        config.__contains__ = Mock(return_value=False)
         return config
 
     @pytest.fixture
@@ -42,6 +66,35 @@ class TestAnalyzeCommand:
         integration.apply_fix = AsyncMock()
         return integration
 
+    @pytest.fixture
+    def mock_console(self):
+        """モックコンソール（Rich Progress対応）"""
+        from rich.console import Console
+
+        # Use a real Console instance instead of a Mock to avoid Rich internal issues
+        return Console(file=Mock(), force_terminal=False, no_color=True)
+
+    def create_mock_analysis_result(self):
+        """分析結果のモックを作成"""
+        mock_result = Mock(spec=AnalysisResult)
+        mock_result.summary = "テスト要約"
+        mock_result.root_causes = []
+        mock_result.fix_suggestions = []
+        mock_result.related_errors = []
+        mock_result.confidence_score = 0.8
+        mock_result.analysis_time = 1.5
+        mock_result.tokens_used = Mock()
+        mock_result.tokens_used.total_tokens = 150
+        mock_result.tokens_used.estimated_cost = 0.002
+        mock_result.tokens_used.to_dict = Mock(return_value={"total_tokens": 150, "estimated_cost": 0.002})
+        from src.ci_helper.ai.models import AnalysisStatus
+
+        mock_result.status = AnalysisStatus.COMPLETED
+        mock_result.provider = "openai"
+        mock_result.model = "gpt-4o"
+        mock_result.to_dict = Mock(return_value={"summary": "テスト要約", "status": "completed"})
+        return mock_result
+
     def test_analyze_help(self, runner):
         """ヘルプ表示のテスト"""
         result = runner.invoke(analyze, ["--help"])
@@ -51,11 +104,11 @@ class TestAnalyzeCommand:
         assert "--provider" in result.output
         assert "--interactive" in result.output
 
-    @patch("ci_helper.commands.analyze.AIIntegration")
-    @patch("ci_helper.commands.analyze._get_latest_log_file")
-    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("src.ci_helper.commands.analyze.AIIntegration")
+    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
+    @patch("src.ci_helper.commands.analyze._read_log_file")
     def test_analyze_basic(
-        self, mock_read_log, mock_get_latest, mock_ai_class, runner, mock_config, mock_ai_integration
+        self, mock_read_log, mock_get_latest, mock_ai_class, runner, mock_config, mock_ai_integration, mock_console
     ):
         """基本的な分析のテスト"""
         # モックの設定
@@ -68,25 +121,33 @@ class TestAnalyzeCommand:
 
         mock_result = Mock(spec=AnalysisResult)
         mock_result.summary = "テスト要約"
-        mock_result.root_cause = "テスト原因"
-        mock_result.recommendations = ["推奨事項1", "推奨事項2"]
-        mock_result.tokens_used = 100
-        mock_result.cost = 0.002
+        mock_result.root_causes = []
         mock_result.fix_suggestions = []
+        mock_result.related_errors = []
+        mock_result.confidence_score = 0.8
+        mock_result.analysis_time = 1.5
+        mock_result.tokens_used = Mock()
+        mock_result.tokens_used.total_tokens = 150
+        mock_result.tokens_used.estimated_cost = 0.002
+        from src.ci_helper.ai.models import AnalysisStatus
+
+        mock_result.status = AnalysisStatus.COMPLETED
+        mock_result.provider = "openai"
+        mock_result.model = "gpt-4o"
         mock_ai_integration.analyze_log.return_value = mock_result
 
         # コンテキストオブジェクトの設定
-        ctx_obj = {"config": mock_config, "console": Mock()}
+        ctx_obj = {"config": mock_config, "console": mock_console}
 
         # コマンド実行
-        result = runner.invoke(analyze, [], obj=ctx_obj)
+        result = runner.invoke(analyze, ["--verbose"], obj=ctx_obj)
 
         # 検証
         assert result.exit_code == 0
         mock_ai_integration.initialize.assert_called_once()
         mock_ai_integration.analyze_log.assert_called_once()
 
-    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("src.ci_helper.commands.analyze.AIIntegration")
     def test_analyze_stats_only(self, mock_ai_class, runner, mock_config):
         """統計表示のみのテスト"""
         # コンテキストオブジェクトの設定
@@ -98,8 +159,8 @@ class TestAnalyzeCommand:
         # AI統合が初期化されないことを確認
         mock_ai_class.assert_not_called()
 
-    @patch("ci_helper.commands.analyze.AIIntegration")
-    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("src.ci_helper.commands.analyze.AIIntegration")
+    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
     def test_analyze_no_log_file(self, mock_get_latest, mock_ai_class, runner, mock_config, mock_ai_integration):
         """ログファイルが見つからない場合のテスト"""
         # モックの設定
@@ -116,11 +177,11 @@ class TestAnalyzeCommand:
         assert result.exit_code == 0
         mock_ai_integration.analyze_log.assert_not_called()
 
-    @patch("ci_helper.commands.analyze.AIIntegration")
-    @patch("ci_helper.commands.analyze._get_latest_log_file")
-    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("src.ci_helper.commands.analyze.AIIntegration")
+    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
+    @patch("src.ci_helper.commands.analyze._read_log_file")
     def test_analyze_with_options(
-        self, mock_read_log, mock_get_latest, mock_ai_class, runner, mock_config, mock_ai_integration
+        self, mock_read_log, mock_get_latest, mock_ai_class, runner, mock_config, mock_ai_integration, mock_console
     ):
         """オプション付き分析のテスト"""
         # モックの設定
@@ -129,19 +190,11 @@ class TestAnalyzeCommand:
         mock_read_log.return_value = "test log content"
 
         # 分析結果のモック
-        from ci_helper.ai.models import AnalysisResult
-
-        mock_result = Mock(spec=AnalysisResult)
-        mock_result.summary = "テスト要約"
-        mock_result.root_cause = "テスト原因"
-        mock_result.recommendations = []
-        mock_result.tokens_used = 100
-        mock_result.cost = 0.002
-        mock_result.fix_suggestions = []
+        mock_result = self.create_mock_analysis_result()
         mock_ai_integration.analyze_log.return_value = mock_result
 
         # コンテキストオブジェクトの設定
-        ctx_obj = {"config": mock_config, "console": Mock()}
+        ctx_obj = {"config": mock_config, "console": mock_console}
 
         # コマンド実行
         result = runner.invoke(
@@ -173,31 +226,23 @@ class TestAnalyzeCommand:
         assert options.output_format == "json"
         assert options.use_cache is False
 
-    def test_analyze_with_specific_log_file(self, runner, temp_dir, mock_config):
+    def test_analyze_with_specific_log_file(self, runner, temp_dir, mock_config, mock_console):
         """特定のログファイル指定のテスト"""
         # テスト用ログファイルを作成
         log_file = temp_dir / "test.log"
         log_file.write_text("test log content")
 
         # コンテキストオブジェクトの設定
-        ctx_obj = {"config": mock_config, "console": Mock()}
+        ctx_obj = {"config": mock_config, "console": mock_console}
 
-        with patch("ci_helper.commands.analyze.AIIntegration") as mock_ai_class:
+        with patch("src.ci_helper.commands.analyze.AIIntegration") as mock_ai_class:
             mock_ai_integration = Mock()
             mock_ai_integration.initialize = AsyncMock()
             mock_ai_integration.analyze_log = AsyncMock()
             mock_ai_class.return_value = mock_ai_integration
 
             # 分析結果のモック
-            from ci_helper.ai.models import AnalysisResult
-
-            mock_result = Mock(spec=AnalysisResult)
-            mock_result.summary = "テスト要約"
-            mock_result.root_cause = "テスト原因"
-            mock_result.recommendations = []
-            mock_result.tokens_used = 100
-            mock_result.cost = 0.002
-            mock_result.fix_suggestions = []
+            mock_result = self.create_mock_analysis_result()
             mock_ai_integration.analyze_log.return_value = mock_result
 
             # コマンド実行
@@ -222,11 +267,16 @@ class TestAnalyzeHelperFunctions:
         config = Mock(spec=Config)
         config.project_root = temp_dir
         config.get_path.return_value = temp_dir / "cache"
+        config.get = Mock(return_value=None)
+        config.get_ai_config = Mock(return_value={})
+        config.get_available_ai_providers = Mock(return_value=[])
+        config.__getitem__ = Mock(return_value=None)
+        config.__contains__ = Mock(return_value=False)
         return config
 
     def test_read_log_file(self, temp_dir):
         """ログファイル読み込みのテスト"""
-        from ci_helper.commands.analyze import _read_log_file
+        from src.ci_helper.commands.analyze import _read_log_file
 
         # テスト用ログファイルを作成
         log_file = temp_dir / "test.log"
@@ -241,8 +291,8 @@ class TestAnalyzeHelperFunctions:
 
     def test_read_log_file_not_found(self):
         """存在しないログファイルの読み込みテスト"""
-        from ci_helper.commands.analyze import _read_log_file
-        from ci_helper.core.exceptions import CIHelperError
+        from src.ci_helper.commands.analyze import _read_log_file
+        from src.ci_helper.core.exceptions import CIHelperError
 
         non_existent_file = Path("non_existent.log")
 
@@ -250,10 +300,10 @@ class TestAnalyzeHelperFunctions:
         with pytest.raises(CIHelperError):
             _read_log_file(non_existent_file)
 
-    @patch("ci_helper.commands.analyze.LogManager")
+    @patch("src.ci_helper.commands.analyze.LogManager")
     def test_get_latest_log_file(self, mock_log_manager_class, mock_config):
         """最新ログファイル取得のテスト"""
-        from ci_helper.commands.analyze import _get_latest_log_file
+        from src.ci_helper.commands.analyze import _get_latest_log_file
 
         # モックログマネージャーの設定
         mock_log_manager = Mock()
@@ -272,10 +322,10 @@ class TestAnalyzeHelperFunctions:
         mock_log_manager_class.assert_called_once_with(mock_config)
         mock_log_manager.list_logs.assert_called_once()
 
-    @patch("ci_helper.commands.analyze.LogManager")
+    @patch("src.ci_helper.commands.analyze.LogManager")
     def test_get_latest_log_file_no_logs(self, mock_log_manager_class, mock_config):
         """ログが存在しない場合のテスト"""
-        from ci_helper.commands.analyze import _get_latest_log_file
+        from src.ci_helper.commands.analyze import _get_latest_log_file
 
         # モックログマネージャーの設定
         mock_log_manager = Mock()
@@ -288,10 +338,10 @@ class TestAnalyzeHelperFunctions:
         # 検証
         assert result is None
 
-    @patch("ci_helper.commands.analyze.LogManager")
+    @patch("src.ci_helper.commands.analyze.LogManager")
     def test_get_latest_log_file_exception(self, mock_log_manager_class, mock_config):
         """ログマネージャーで例外が発生した場合のテスト"""
-        from ci_helper.commands.analyze import _get_latest_log_file
+        from src.ci_helper.commands.analyze import _get_latest_log_file
 
         # モックログマネージャーの設定
         mock_log_manager_class.side_effect = Exception("テストエラー")

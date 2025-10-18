@@ -483,3 +483,42 @@ class ResponseCache:
             provider=data.get("provider", ""),
             model=data.get("model", ""),
         )
+
+    async def invalidate(self, cache_key: str) -> None:
+        """キャッシュエントリを無効化
+
+        Args:
+            cache_key: キャッシュキー
+        """
+        await self._remove_entry(cache_key)
+
+    async def clear_all(self) -> None:
+        """全キャッシュをクリア"""
+        await self.clear()
+
+    def get_cache_stats(self) -> dict[str, any]:
+        """キャッシュ統計を取得（同期版）
+
+        Returns:
+            キャッシュ統計
+        """
+        total_entries = len(self.metadata["entries"])
+        total_size_bytes = self.metadata.get("total_size", 0)
+        total_size_mb = total_size_bytes / (1024 * 1024)
+
+        # 期限切れエントリをカウント
+        current_time = time.time()
+        expired_count = 0
+        for entry in self.metadata["entries"].values():
+            if self._is_expired(entry, current_time):
+                expired_count += 1
+
+        return {
+            "total_entries": total_entries,
+            "expired_entries": expired_count,
+            "valid_entries": total_entries - expired_count,
+            "total_size_mb": total_size_mb,
+            "max_size_mb": self.max_size_mb,
+            "usage_percentage": (total_size_mb / self.max_size_mb) * 100 if self.max_size_mb > 0 else 0,
+            "ttl_hours": self.ttl_hours,
+        }
