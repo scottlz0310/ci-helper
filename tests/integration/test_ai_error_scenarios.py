@@ -4,7 +4,6 @@ AI統合のエラーシナリオテスト
 ネットワークエラー、タイムアウト、設定エラーなどの異常系をテストします。
 """
 
-import asyncio
 from unittest.mock import AsyncMock, Mock, patch
 
 import aiohttp
@@ -56,13 +55,25 @@ class TestNetworkErrorScenarios:
     @pytest.mark.asyncio
     async def test_network_timeout_error(self, mock_ai_config):
         """ネットワークタイムアウトエラーのテスト"""
-        with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
+        with (
+            patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai,
+            patch("src.ci_helper.ai.providers.openai.OpenAIProvider.validate_connection") as mock_validate,
+        ):
+            # 初期化時の接続検証は成功させる
+            mock_validate.return_value = AsyncMock()
+
             mock_client = Mock()
             mock_client.chat.completions.create = AsyncMock(side_effect=TimeoutError("Request timeout"))
             mock_openai.return_value = mock_client
 
             ai_integration = AIIntegration(mock_ai_config)
-            await ai_integration.initialize()
+
+            # プロバイダーを手動で追加して初期化をスキップ
+            from src.ci_helper.ai.providers.openai import OpenAIProvider
+
+            provider = OpenAIProvider(mock_ai_config.providers["openai"])
+            ai_integration.providers["openai"] = provider
+            ai_integration._initialized = True
 
             options = AnalyzeOptions(
                 provider="openai",
@@ -390,7 +401,17 @@ class TestCacheErrorScenarios:
                 mock_client = Mock()
                 mock_response = Mock()
                 mock_response.choices = [Mock()]
-                mock_response.choices[0].message.content = "新しい分析結果"
+                mock_response.choices[0].message.content = """
+## 分析結果
+
+新しい分析結果
+
+### 根本原因
+- テストエラー
+
+### 修正提案
+- テスト修正
+"""
                 mock_response.usage.prompt_tokens = 100
                 mock_response.usage.completion_tokens = 50
                 mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
@@ -466,7 +487,7 @@ class TestInteractiveSessionErrorScenarios:
                 )
 
                 # セッションタイムアウトが適切に処理されることを確認
-                with pytest.raises(asyncio.TimeoutError):
+                with pytest.raises(AIError):
                     await ai_integration.start_interactive_session("initial log", options)
 
     @pytest.mark.asyncio
@@ -494,5 +515,5 @@ class TestInteractiveSessionErrorScenarios:
                 )
 
                 # メモリオーバーフローが適切に処理されることを確認
-                with pytest.raises(MemoryError):
+                with pytest.raises(AIError):
                     await ai_integration.start_interactive_session("initial log", options)

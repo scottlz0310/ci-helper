@@ -115,10 +115,22 @@ class TestAnalyzeCommand:
     @patch("src.ci_helper.commands.analyze.AIIntegration")
     @patch("src.ci_helper.commands.analyze._get_latest_log_file")
     @patch("src.ci_helper.commands.analyze._read_log_file")
+    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
     def test_analyze_basic(
-        self, mock_read_log, mock_get_latest, mock_ai_class, runner, mock_config, mock_ai_integration, mock_console
+        self,
+        mock_validate,
+        mock_read_log,
+        mock_get_latest,
+        mock_ai_class,
+        runner,
+        mock_config,
+        mock_ai_integration,
+        mock_console,
     ):
         """基本的な分析のテスト"""
+        # 環境検証を成功させる
+        mock_validate.return_value = True
+
         # モックの設定
         mock_ai_class.return_value = mock_ai_integration
         mock_get_latest.return_value = Path("test.log")
@@ -169,8 +181,14 @@ class TestAnalyzeCommand:
 
     @patch("src.ci_helper.commands.analyze.AIIntegration")
     @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    def test_analyze_no_log_file(self, mock_get_latest, mock_ai_class, runner, mock_config, mock_ai_integration):
+    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    def test_analyze_no_log_file(
+        self, mock_validate, mock_get_latest, mock_ai_class, runner, mock_config, mock_ai_integration
+    ):
         """ログファイルが見つからない場合のテスト"""
+        # 環境検証を成功させる
+        mock_validate.return_value = True
+
         # モックの設定
         mock_ai_class.return_value = mock_ai_integration
         mock_get_latest.return_value = None
@@ -257,7 +275,13 @@ class TestAnalyzeCommand:
         # コンテキストオブジェクトの設定
         ctx_obj = {"config": mock_config, "console": mock_console}
 
-        with patch("src.ci_helper.commands.analyze.AIIntegration") as mock_ai_class:
+        with (
+            patch("src.ci_helper.commands.analyze.AIIntegration") as mock_ai_class,
+            patch("src.ci_helper.commands.analyze._validate_analysis_environment") as mock_validate,
+        ):
+            # 環境検証を成功させる
+            mock_validate.return_value = True
+
             mock_ai_integration = Mock()
             mock_ai_integration.initialize = AsyncMock()
             mock_ai_integration.analyze_log = AsyncMock()
@@ -278,6 +302,24 @@ class TestAnalyzeCommand:
             call_args = mock_ai_integration.analyze_log.call_args
             log_content = call_args[0][0]  # 1番目の引数がログ内容
             assert log_content == "test log content"
+
+    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("src.ci_helper.commands.analyze._suggest_fallback_options")
+    def test_analyze_validation_failure(self, mock_suggest_fallback, mock_validate, runner, mock_config, mock_console):
+        """環境検証失敗時のテスト"""
+        # 環境検証を失敗させる
+        mock_validate.return_value = False
+
+        # コンテキストオブジェクトの設定
+        ctx_obj = {"config": mock_config, "console": mock_console}
+
+        # コマンド実行
+        result = runner.invoke(analyze, [], obj=ctx_obj)
+
+        # 検証 - 環境検証失敗時はexit_code=1になる
+        assert result.exit_code == 1
+        mock_validate.assert_called_once()
+        mock_suggest_fallback.assert_called_once()
 
 
 class TestAnalyzeHelperFunctions:
