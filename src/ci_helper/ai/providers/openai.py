@@ -10,10 +10,11 @@ from __future__ import annotations
 import time
 from collections.abc import AsyncIterator
 
+import aiohttp
 import openai
 from openai import AsyncOpenAI
 
-from ..exceptions import APIKeyError, ProviderError, RateLimitError, TokenLimitError
+from ..exceptions import APIKeyError, NetworkError, ProviderError, RateLimitError, TokenLimitError
 from ..models import AnalysisResult, AnalyzeOptions, ProviderConfig
 from .base import AIProvider
 
@@ -56,11 +57,14 @@ class OpenAIProvider(AIProvider):
         """プロバイダーを初期化
 
         Raises:
+            ConfigurationError: APIキーが設定されていない場合
             APIKeyError: APIキーが無効な場合
             ProviderError: 初期化に失敗した場合
         """
+        from ..exceptions import ConfigurationError
+
         if not self.config.api_key:
-            raise APIKeyError("openai", "OpenAI APIキーが設定されていません")
+            raise ConfigurationError("OpenAI APIキーが設定されていません", "openai.api_key")
 
         try:
             # OpenAI クライアントを初期化
@@ -73,8 +77,8 @@ class OpenAIProvider(AIProvider):
             # 接続テスト
             await self.validate_connection()
 
-        except (APIKeyError, RateLimitError):
-            # APIキーエラーとレート制限エラーはそのまま再発生
+        except (APIKeyError, RateLimitError, ConfigurationError, ProviderError):
+            # 既知のエラータイプはそのまま再発生
             raise
         except Exception as e:
             raise ProviderError("openai", f"OpenAI プロバイダーの初期化に失敗しました: {e}") from e
@@ -171,6 +175,9 @@ class OpenAIProvider(AIProvider):
 
             return analysis_result
 
+        except RateLimitError:
+            # 既にカスタムRateLimitErrorの場合はそのまま再発生
+            raise
         except openai.AuthenticationError as e:
             raise APIKeyError("openai", f"OpenAI APIキーが無効です: {e}") from e
         except openai.RateLimitError as e:
@@ -179,6 +186,10 @@ class OpenAIProvider(AIProvider):
             if "maximum context length" in str(e).lower():
                 raise TokenLimitError(input_tokens, max_tokens, model) from e
             raise ProviderError("openai", f"OpenAI API リクエストエラー: {e}") from e
+        except TimeoutError as e:
+            raise NetworkError(f"ネットワークタイムアウト: {e}", retry_count=0) from e
+        except (ConnectionError, openai.APIConnectionError, aiohttp.ClientConnectorError) as e:
+            raise NetworkError(f"接続エラー: {e}", retry_count=0) from e
         except Exception as e:
             raise ProviderError("openai", f"OpenAI 分析に失敗しました: {e}") from e
 
@@ -228,6 +239,9 @@ class OpenAIProvider(AIProvider):
                 if chunk.choices and chunk.choices[0].delta.content:
                     yield chunk.choices[0].delta.content
 
+        except RateLimitError:
+            # 既にカスタムRateLimitErrorの場合はそのまま再発生
+            raise
         except openai.AuthenticationError as e:
             raise APIKeyError("openai", f"OpenAI APIキーが無効です: {e}") from e
         except openai.RateLimitError as e:
@@ -236,6 +250,10 @@ class OpenAIProvider(AIProvider):
             if "maximum context length" in str(e).lower():
                 raise TokenLimitError(input_tokens, max_tokens, model) from e
             raise ProviderError("openai", f"OpenAI API リクエストエラー: {e}") from e
+        except TimeoutError as e:
+            raise NetworkError(f"ネットワークタイムアウト: {e}", retry_count=0) from e
+        except (ConnectionError, openai.APIConnectionError, aiohttp.ClientConnectorError) as e:
+            raise NetworkError(f"接続エラー: {e}", retry_count=0) from e
         except Exception as e:
             raise ProviderError("openai", f"OpenAI ストリーミング分析に失敗しました: {e}") from e
 
@@ -303,9 +321,21 @@ class OpenAIProvider(AIProvider):
         Returns:
             パースされた分析結果
         """
-        # 簡単な実装 - 実際にはより詳細なパースが必要
+        import re
+
+        # マークダウン形式のレスポンスから要約を抽出
+        summary = content.strip()
+
+        # ## 分析結果の後の最初のテキストブロックを要約として抽出
+        match = re.search(r'##\s*分析結果\s*\n+(.+?)(?:\n\n|$)', content, re.DOTALL)
+        if match:
+            summary = match.group(1).strip()
+        else:
+            # マッチしない場合は最初の500文字を使用
+            summary = content[:500] + "..." if len(content) > 500 else content.strip()
+
         return AnalysisResult(
-            summary=content[:500] + "..." if len(content) > 500 else content,
+            summary=summary,
             confidence_score=0.8,  # デフォルト値
         )
 

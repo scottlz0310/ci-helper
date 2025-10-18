@@ -184,11 +184,20 @@ TimeoutError: Database connection timed out after 30 seconds
         results = {}
 
         for provider in providers_to_test:
-            with patch(
-                f"src.ci_helper.ai.providers.{provider}.AsyncOpenAI"
+            validate_path = (
+                "src.ci_helper.ai.providers.openai.OpenAIProvider.validate_connection"
                 if provider == "openai"
-                else f"src.ci_helper.ai.providers.{provider}.AsyncAnthropic"
-            ) as mock_client_class:
+                else "src.ci_helper.ai.providers.anthropic.AnthropicProvider.validate_connection"
+            )
+
+            with (
+                patch(validate_path, new_callable=AsyncMock),
+                patch(
+                    f"src.ci_helper.ai.providers.{provider}.AsyncOpenAI"
+                    if provider == "openai"
+                    else f"src.ci_helper.ai.providers.{provider}.AsyncAnthropic"
+                ) as mock_client_class,
+            ):
                 # プロバイダー固有のモックレスポンス
                 mock_client = Mock()
                 mock_response = Mock()
@@ -345,6 +354,25 @@ class TestAIErrorScenarios:
             cache_dir=".ci-helper/cache",
         )
 
+    @pytest.fixture
+    def sample_log_content(self):
+        """サンプルログ内容"""
+        return """
+STEP: Run tests
+npm ERR! code ENOENT
+npm ERR! syscall open
+npm ERR! path /github/workspace/package.json
+npm ERR! errno -2
+npm ERR! enoent ENOENT: no such file or directory, open '/github/workspace/package.json'
+
+FAILURES:
+test_user_authentication.py::test_login_with_invalid_credentials FAILED
+AssertionError: Expected status code 401, got 200
+
+test_database_connection.py::test_connection_timeout FAILED
+TimeoutError: Database connection timed out after 30 seconds
+"""
+
     @pytest.mark.asyncio
     async def test_api_key_error_handling(self, mock_ai_config):
         """APIキーエラーのハンドリングテスト"""
@@ -368,7 +396,10 @@ class TestAIErrorScenarios:
         with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
 
-            with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
+            with (
+                patch("src.ci_helper.ai.providers.openai.OpenAIProvider.validate_connection", new_callable=AsyncMock),
+                patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai,
+            ):
                 mock_client = Mock()
                 mock_client.chat.completions.create = AsyncMock(side_effect=RateLimitError("openai", retry_after=60))
                 mock_openai.return_value = mock_client
@@ -405,33 +436,37 @@ class TestAIErrorScenarios:
             mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
 
             # OpenAIが利用不可、Anthropicは利用可能
-            with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
+            with (
+                patch("src.ci_helper.ai.providers.openai.OpenAIProvider.validate_connection", side_effect=ProviderError("openai", "OpenAI unavailable")),
+                patch("src.ci_helper.ai.providers.anthropic.AnthropicProvider.validate_connection", new_callable=AsyncMock),
+                patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai,
+                patch("src.ci_helper.ai.providers.anthropic.AsyncAnthropic") as mock_anthropic,
+            ):
                 mock_openai.side_effect = ProviderError("openai", "OpenAI unavailable")
 
-                with patch("src.ci_helper.ai.providers.anthropic.AsyncAnthropic") as mock_anthropic:
-                    mock_client = Mock()
-                    mock_response = Mock()
-                    mock_response.content = [Mock()]
-                    mock_response.content[0].text = "Anthropic分析結果"
-                    mock_response.usage.input_tokens = 500
-                    mock_response.usage.output_tokens = 300
-                    mock_client.messages.create = AsyncMock(return_value=mock_response)
-                    mock_anthropic.return_value = mock_client
+                mock_client = Mock()
+                mock_response = Mock()
+                mock_response.content = [Mock()]
+                mock_response.content[0].text = "Anthropic分析結果"
+                mock_response.usage.input_tokens = 500
+                mock_response.usage.output_tokens = 300
+                mock_client.messages.create = AsyncMock(return_value=mock_response)
+                mock_anthropic.return_value = mock_client
 
-                    ai_integration = AIIntegration(mock_ai_config)
+                ai_integration = AIIntegration(mock_ai_config)
 
-                    # フォールバック機能をテスト
-                    options = AnalyzeOptions(
-                        provider="openai",  # 最初はOpenAIを指定
-                        model="gpt-4o",
-                        use_cache=False,
-                        streaming=False,
-                    )
+                # フォールバック機能をテスト
+                options = AnalyzeOptions(
+                    provider="openai",  # 最初はOpenAIを指定
+                    model="gpt-4o",
+                    use_cache=False,
+                    streaming=False,
+                )
 
-                    # フォールバック処理が実装されている場合のテスト
-                    # 実装に応じて調整が必要
-                    with pytest.raises(ProviderError):
-                        await ai_integration.analyze_log(sample_log_content, options)
+                # フォールバック処理が実装されている場合のテスト
+                # 実装に応じて調整が必要
+                with pytest.raises(ProviderError):
+                    await ai_integration.analyze_log(sample_log_content, options)
 
 
 class TestAIPerformance:

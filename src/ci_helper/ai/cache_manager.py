@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .cache import ResponseCache
+# ResponseCacheは遅延インポートしてテストのパッチが正しく適用されるようにする
 from .models import AnalysisResult
 
 
@@ -36,8 +36,11 @@ class CacheManager:
         self.max_size_mb = max_size_mb
         self.ttl_hours = ttl_hours
 
-        self._cache: ResponseCache | None = None
+        self._cache = None
         if self.enabled:
+            # 遅延インポート：テストのパッチが正しく適用されるようにする
+            from .cache import ResponseCache
+
             self._cache = ResponseCache(
                 cache_dir=cache_dir,
                 max_size_mb=max_size_mb,
@@ -224,6 +227,9 @@ class CacheManager:
         """キャッシュを有効化"""
         if not self.enabled:
             self.enabled = True
+            # 遅延インポート：テストのパッチが正しく適用されるようにする
+            from .cache import ResponseCache
+
             self._cache = ResponseCache(
                 cache_dir=self.cache_dir,
                 max_size_mb=self.max_size_mb,

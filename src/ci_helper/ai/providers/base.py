@@ -125,9 +125,21 @@ class AIProvider(ABC):
 
         Returns:
             実際に使用するモデル名
+
+        Raises:
+            ProviderError: 指定されたモデルが利用不可能な場合
         """
-        if model and model in self.config.available_models:
-            return model
+        if model:
+            if model in self.config.available_models:
+                return model
+            else:
+                # 明示的に指定されたモデルが利用不可能な場合はエラー
+                available = ", ".join(self.config.available_models)
+                raise ProviderError(
+                    self.name,
+                    f"指定されたモデル '{model}' は利用できません",
+                    f"利用可能なモデル: {available}",
+                )
         return self.config.default_model
 
     def validate_model(self, model: str) -> bool:
