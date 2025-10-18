@@ -73,6 +73,9 @@ class OpenAIProvider(AIProvider):
             # 接続テスト
             await self.validate_connection()
 
+        except (APIKeyError, RateLimitError):
+            # APIキーエラーとレート制限エラーはそのまま再発生
+            raise
         except Exception as e:
             raise ProviderError("openai", f"OpenAI プロバイダーの初期化に失敗しました: {e}") from e
 
@@ -101,6 +104,9 @@ class OpenAIProvider(AIProvider):
             raise APIKeyError("openai", f"OpenAI APIキーが無効です: {e}") from e
         except openai.RateLimitError as e:
             raise RateLimitError("openai") from e
+        except RateLimitError:
+            # 既にカスタムRateLimitErrorの場合はそのまま再発生
+            raise
         except Exception as e:
             raise ProviderError("openai", f"OpenAI 接続検証に失敗しました: {e}") from e
 

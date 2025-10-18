@@ -18,7 +18,15 @@ from .cache_manager import CacheManager
 from .config_manager import AIConfigManager
 from .cost_manager import CostManager
 from .error_handler import AIErrorHandler
-from .exceptions import AIError, ConfigurationError, ProviderError
+from .exceptions import (
+    AIError,
+    APIKeyError,
+    ConfigurationError,
+    CostLimitError,
+    ProviderError,
+    RateLimitError,
+    TokenLimitError,
+)
 from .fallback_handler import FallbackHandler
 from .fix_applier import FixApplier
 from .fix_generator import FixSuggestionGenerator
@@ -180,6 +188,9 @@ class AIIntegration:
             self._initialized = True
             logger.info("AI統合システムの初期化完了 (プロバイダー: %d個)", len(self.providers))
 
+        except AIError:
+            # AI固有のエラーはそのまま再発生
+            raise
         except Exception as e:
             logger.error("AI統合システムの初期化に失敗: %s", e)
             error_info = self.error_handler.process_error(e)
@@ -205,6 +216,10 @@ class AIIntegration:
                 else:
                     logger.warning("プロバイダー '%s' の接続検証に失敗しました", provider_name)
 
+            except (APIKeyError, RateLimitError) as e:
+                # APIキーエラーとレート制限エラーは致命的なので再発生
+                logger.error("プロバイダー '%s' の致命的エラー: %s", provider_name, e)
+                raise
             except Exception as e:
                 logger.warning("プロバイダー '%s' の初期化に失敗: %s", provider_name, e)
 
@@ -297,6 +312,9 @@ class AIIntegration:
             )
             return result
 
+        except (TokenLimitError, CostLimitError, APIKeyError, RateLimitError):
+            # 特定のAIエラーはそのまま再発生（テスト用）
+            raise
         except Exception as e:
             logger.error("ログ分析中にエラーが発生: %s", e)
             # エラーハンドラーでエラーを処理
@@ -727,6 +745,9 @@ class AIIntegration:
             result = await provider.analyze(prompt, context, options)
             result.status = AnalysisStatus.COMPLETED
             return result
+        except AIError:
+            # AI固有のエラーはそのまま再発生
+            raise
         except Exception as e:
             logger.error("AI分析の実行に失敗: %s", e)
             error_info = self.error_handler.process_error(e)

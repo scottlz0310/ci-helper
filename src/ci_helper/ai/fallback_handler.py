@@ -13,7 +13,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from ..core.models import ExecutionResult, FailureType
+from ..core.models import ExecutionResult
 from ..utils.config import Config
 from .exceptions import NetworkError, ProviderError, RateLimitError
 from .models import AnalysisResult, AnalysisStatus, AnalyzeOptions
@@ -323,24 +323,48 @@ class FallbackHandler:
 
         try:
             # 既存のログ抽出機能を使用
-            from ..core.extract_failures import FailureExtractor
+            from ..core.log_extractor import LogExtractor
+            from ..core.models import Failure, FailureType, JobResult, WorkflowResult
 
-            # ExecutionResultを作成（簡易版）
+            # 簡易的な失敗を作成
+            failure = Failure(
+                type=FailureType.ERROR,
+                message="フォールバック分析",
+                file_path=None,
+                line_number=None,
+                context_before=[],
+                context_after=[],
+                stack_trace=log_content[:1000] if log_content else None,  # 最初の1000文字のみ
+            )
+
+            # 簡易的なジョブ結果を作成
+            job_result = JobResult(
+                name="fallback_job",
+                success=False,
+                duration=0.0,
+                failures=[failure],
+                steps=[],
+            )
+
+            # 簡易的なワークフロー結果を作成
+            workflow_result = WorkflowResult(
+                name="fallback_workflow",
+                success=False,
+                jobs=[job_result],
+                duration=0.0,
+            )
+
             execution_result = ExecutionResult(
                 success=False,
-                exit_code=1,
-                stdout="",
-                stderr=log_content,
-                execution_time=0.0,
+                workflows=[workflow_result],
+                total_duration=0.0,
+                log_path=None,
                 timestamp=datetime.now(),
-                command="fallback_analysis",
-                workflow_file="",
-                job_name="",
             )
 
             # 失敗抽出を実行
-            extractor = FailureExtractor(self.config)
-            failures = extractor.extract_failures(execution_result)
+            extractor = LogExtractor(context_lines=3)
+            failures = extractor.extract_failures(log_content)
 
             # 根本原因を特定
             root_causes = []
@@ -349,18 +373,19 @@ class FallbackHandler:
             for failure in failures:
                 root_causes.append(
                     {
-                        "category": failure.failure_type.value,
-                        "description": failure.error_message,
+                        "category": failure.type.value,
+                        "description": failure.message,
                         "file_path": failure.file_path,
                         "line_number": failure.line_number,
-                        "severity": "high"
-                        if failure.failure_type in [FailureType.SYNTAX_ERROR, FailureType.BUILD_FAILURE]
-                        else "medium",
+                        "severity": "high" if failure.type in [FailureType.ERROR, FailureType.ASSERTION] else "medium",
                     }
                 )
 
-                if failure.context_lines:
-                    related_errors.extend(failure.context_lines)
+                # Add context from before and after
+                if failure.context_before:
+                    related_errors.extend(failure.context_before)
+                if failure.context_after:
+                    related_errors.extend(failure.context_after)
 
             return {
                 "root_causes": root_causes,

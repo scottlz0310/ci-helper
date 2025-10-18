@@ -146,7 +146,7 @@ class TestOpenAIProvider:
 
             # validate_connectionでAPIKeyErrorを発生させる
             with patch.object(provider, "validate_connection", side_effect=APIKeyError("openai", "Invalid API key")):
-                with pytest.raises(ProviderError):  # initializeはProviderErrorでラップする
+                with pytest.raises(APIKeyError):  # APIKeyErrorはそのまま再発生される
                     await provider.initialize()
 
     @pytest.mark.asyncio
