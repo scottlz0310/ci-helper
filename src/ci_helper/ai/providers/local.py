@@ -22,7 +22,7 @@ class LocalLLMProvider(AIProvider):
     """ローカルLLM（Ollama）プロバイダー"""
 
     # モデル別のトークン制限（推定値）
-    MODEL_LIMITS: Dict[str, int] = {
+    MODEL_LIMITS: dict[str, int] = {
         "llama3.2": 128000,
         "llama3.1": 128000,
         "codellama": 16384,
