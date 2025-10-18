@@ -27,18 +27,19 @@ from .exceptions import (
     RateLimitError,
     TokenLimitError,
 )
-from .models import AIConfig, AnalysisResult, AnalyzeOptions, InteractiveSession, ProviderConfig, TokenUsage, UsageStats
 
 # 実装済み
+from .fix_applier import FixApplier
+from .fix_generator import FixSuggestionGenerator
+
+# AI統合メインロジック
+from .integration import AIIntegration
+from .models import AIConfig, AnalysisResult, AnalyzeOptions, InteractiveSession, ProviderConfig, TokenUsage, UsageStats
 from .prompts import PromptManager
 from .providers.anthropic import AnthropicProvider
 from .providers.base import AIProvider, ProviderFactory
 from .providers.local import LocalLLMProvider
 from .providers.openai import OpenAIProvider
-
-# 後で実装される
-# from .integration import AIIntegration
-# from .cost_tracker import CostTracker
 
 __all__ = [
     "AIConfig",
@@ -46,6 +47,8 @@ __all__ = [
     "AIConfigManager",
     # 例外
     "AIError",
+    # メイン統合クラス
+    "AIIntegration",
     # 基底クラス
     "AIProvider",
     "APIKeyError",
@@ -58,6 +61,9 @@ __all__ = [
     "CostManager",
     # コスト管理
     "CostTracker",
+    # 修正機能
+    "FixApplier",
+    "FixSuggestionGenerator",
     "InteractiveSession",
     "LocalLLMProvider",
     "NetworkError",
@@ -74,6 +80,4 @@ __all__ = [
     "TokenLimitError",
     "TokenUsage",
     "UsageStats",
-    # 後で追加される
-    # "AIIntegration",
 ]
