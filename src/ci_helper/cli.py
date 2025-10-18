@@ -54,6 +54,7 @@ def cli(ctx: click.Context, verbose: bool, config_file: Path | None) -> None:
       init     設定ファイルテンプレートを生成
       doctor   環境依存関係をチェック
       test     CI/CDワークフローをローカルで実行
+      analyze  AI分析でCI失敗の根本原因を特定
       logs     実行ログを管理・表示
       secrets  シークレット管理と検証
       clean    キャッシュとログをクリーンアップ
@@ -66,6 +67,8 @@ def cli(ctx: click.Context, verbose: bool, config_file: Path | None) -> None:
       ci-run cache --pull            # Dockerイメージを事前プル
       ci-run test                    # 全ワークフローを実行
       ci-run test -w test.yml        # 特定のワークフローを実行
+      ci-run analyze                 # 最新のログをAI分析
+      ci-run analyze --interactive   # 対話的なAIデバッグ
       ci-run logs                    # ログ一覧を表示
     """
     # コンテキストオブジェクトの初期化
@@ -109,6 +112,15 @@ cli.add_command(logs)
 cli.add_command(secrets)
 cli.add_command(clean)
 cli.add_command(cache)
+
+# AI統合コマンドの遅延登録（循環インポート回避）
+try:
+    from .commands.analyze import analyze
+
+    cli.add_command(analyze)
+except ImportError:
+    # AI統合が利用できない場合はスキップ
+    pass
 
 
 def _find_project_root(start_path: Path) -> Path:

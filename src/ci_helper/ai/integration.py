@@ -8,7 +8,6 @@ ci-helperのAI分析機能の中核となるクラスです。
 from __future__ import annotations
 
 import logging
-import uuid
 from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import Any
@@ -19,6 +18,8 @@ from .cache_manager import CacheManager
 from .config_manager import AIConfigManager
 from .cost_manager import CostManager
 from .exceptions import AIError, ConfigurationError, ProviderError
+from .fix_applier import FixApplier
+from .fix_generator import FixSuggestionGenerator
 from .models import AIConfig, AnalysisResult, AnalysisStatus, AnalyzeOptions, InteractiveSession
 from .prompts import PromptManager
 from .providers.base import AIProvider, ProviderFactory
@@ -70,6 +71,9 @@ class AIIntegration:
 
             # プロンプト管理を初期化
             self.prompt_manager = PromptManager()
+
+            # セッション管理を初期化
+            self.session_manager = InteractiveSessionManager(self.prompt_manager)
 
             # 修正提案生成器を初期化
             self.fix_generator = FixSuggestionGenerator(self.prompt_manager)
@@ -266,7 +270,7 @@ class AIIntegration:
             logger.error("ストリーミング分析中にエラーが発生: %s", e)
             yield f"エラー: {e}"
 
-    async def interactive_session(self, initial_log: str, options: AnalyzeOptions) -> InteractiveSession:
+    async def start_interactive_session(self, initial_log: str, options: AnalyzeOptions) -> InteractiveSession:
         """対話的なAIセッションを開始
 
         Args:
@@ -279,39 +283,26 @@ class AIIntegration:
         Raises:
             AIError: セッション開始に失敗した場合
         """
-        if not self._initialized:
-            await self.initialize()
-
-        # セッションIDを生成
-        session_id = str(uuid.uuid4())
-
-        # プロバイダーを選択
-        provider = self._select_provider(options.provider)
-        model = options.model or provider.config.default_model
-
-        # セッションを作成
-        session = InteractiveSession(
-            session_id=session_id,
-            start_time=datetime.now(),
-            last_activity=datetime.now(),
-            provider=provider.name,
-            model=model,
-        )
-
-        # 初期分析を実行
         try:
-            initial_result = await self.analyze_log(initial_log, options)
-            session.add_message(
-                role="assistant",
-                content=initial_result.summary,
-                tokens=initial_result.tokens_used.total_tokens if initial_result.tokens_used else 0,
-                cost=initial_result.tokens_used.estimated_cost if initial_result.tokens_used else 0.0,
+            if not self._initialized:
+                await self.initialize()
+
+            # プロバイダーを選択
+            provider = self._select_provider(options.provider)
+            model = options.model or provider.config.default_model
+
+            # セッション管理を使用してセッションを作成
+            session = self.session_manager.create_session(
+                provider=provider.name,
+                model=model,
+                initial_context=initial_log,
+                options=options,
             )
 
             # セッションを登録
-            self.active_sessions[session_id] = session
+            self.active_sessions[session.session_id] = session
 
-            logger.info("対話セッション開始: %s", session_id)
+            logger.info("対話セッション開始: %s", session.session_id)
             return session
 
         except Exception as e:
@@ -711,6 +702,87 @@ class AIIntegration:
         self.active_sessions.clear()
 
         logger.info("AI統合システムのクリーンアップ完了")
+
+    async def process_interactive_input(self, session_id: str, user_input: str) -> AsyncIterator[str]:
+        """対話セッションでのユーザー入力を処理
+
+        Args:
+            session_id: セッションID
+            user_input: ユーザー入力
+
+        Yields:
+            AI応答のチャンク
+
+        Raises:
+            AIError: セッションが見つからない場合
+        """
+        if session_id not in self.active_sessions:
+            raise AIError(f"セッション {session_id} が見つかりません")
+
+        session = self.active_sessions[session_id]
+
+        try:
+            # セッション管理を使用して対話処理
+            if hasattr(self, "session_manager"):
+                # コマンド処理の確認
+                if self.session_manager.command_processor.is_command(user_input):
+                    result = await self.session_manager.command_processor.process_command(session_id, user_input)
+                    if result.get("should_display"):
+                        yield result["output"]
+                    if result.get("should_exit"):
+                        session.is_active = False
+                    return
+
+                # 通常のAI応答処理
+                prompt = self.session_manager.generate_interactive_prompt(session_id, user_input)
+                provider = self._select_provider(session.provider)
+
+                async for chunk in provider.stream_analyze(prompt, session.model):
+                    yield chunk
+
+        except Exception as e:
+            logger.error("対話入力処理中にエラー: %s", e)
+            yield f"エラーが発生しました: {e}"
+
+    async def close_interactive_session(self, session_id: str) -> bool:
+        """対話セッションを終了
+
+        Args:
+            session_id: セッションID
+
+        Returns:
+            成功した場合True
+        """
+        if session_id not in self.active_sessions:
+            return False
+
+        session = self.active_sessions[session_id]
+        session.is_active = False
+
+        # セッション管理を使用してクリーンアップ
+        if hasattr(self, "session_manager"):
+            self.session_manager.close_session(session_id)
+
+        del self.active_sessions[session_id]
+        logger.info("対話セッション %s を終了しました", session_id)
+        return True
+
+    async def apply_fix(self, fix_suggestion) -> None:
+        """修正提案を適用
+
+        Args:
+            fix_suggestion: 修正提案オブジェクト
+
+        Raises:
+            AIError: 修正適用に失敗した場合
+        """
+        if not self.fix_applier:
+            raise AIError("修正適用器が初期化されていません")
+
+        try:
+            await self.fix_applier.apply_fix(fix_suggestion)
+        except Exception as e:
+            raise AIError(f"修正の適用に失敗しました: {e}") from e
 
     def __str__(self) -> str:
         """文字列表現"""

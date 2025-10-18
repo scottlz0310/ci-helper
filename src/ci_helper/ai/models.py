@@ -273,6 +273,7 @@ class AnalyzeOptions:
     interactive_mode: bool = False  # 対話モード
     use_cache: bool = True  # キャッシュ使用
     streaming: bool = True  # ストリーミング
+    output_format: str = "markdown"  # 出力形式
     max_tokens: int | None = None  # 最大トークン数
     temperature: float = 0.1  # 温度パラメータ
     timeout_seconds: int = 30  # タイムアウト
