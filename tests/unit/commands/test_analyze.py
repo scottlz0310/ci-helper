@@ -50,6 +50,10 @@ class TestAnalyzeCommand:
         config.get = Mock(return_value=None)
         config.get_ai_config = Mock(return_value=ai_config)
         config.get_available_ai_providers = Mock(return_value=["openai"])
+        config.get_ai_provider_api_key = Mock(return_value="sk-test-key-123")
+        config.get_default_ai_provider = Mock(return_value="openai")
+        config.get_ai_provider_config = Mock(return_value=provider_config)
+        config.get_path = Mock(return_value=temp_dir / "cache")
         config.__getitem__ = Mock(return_value=None)
         config.__contains__ = Mock(return_value=False)
         return config
@@ -76,23 +80,27 @@ class TestAnalyzeCommand:
 
     def create_mock_analysis_result(self):
         """分析結果のモックを作成"""
-        mock_result = Mock(spec=AnalysisResult)
-        mock_result.summary = "テスト要約"
-        mock_result.root_causes = []
-        mock_result.fix_suggestions = []
-        mock_result.related_errors = []
-        mock_result.confidence_score = 0.8
-        mock_result.analysis_time = 1.5
-        mock_result.tokens_used = Mock()
-        mock_result.tokens_used.total_tokens = 150
-        mock_result.tokens_used.estimated_cost = 0.002
-        mock_result.tokens_used.to_dict = Mock(return_value={"total_tokens": 150, "estimated_cost": 0.002})
-        from src.ci_helper.ai.models import AnalysisStatus
+        from datetime import datetime
 
-        mock_result.status = AnalysisStatus.COMPLETED
-        mock_result.provider = "openai"
-        mock_result.model = "gpt-4o"
-        mock_result.to_dict = Mock(return_value={"summary": "テスト要約", "status": "completed"})
+        from src.ci_helper.ai.models import AnalysisStatus, TokenUsage
+
+        # Create a real AnalysisResult instance instead of a Mock
+        tokens_used = TokenUsage(input_tokens=100, output_tokens=50, total_tokens=150, estimated_cost=0.002)
+
+        mock_result = AnalysisResult(
+            summary="テスト要約",
+            root_causes=[],
+            fix_suggestions=[],
+            related_errors=[],
+            confidence_score=0.8,
+            analysis_time=1.5,
+            tokens_used=tokens_used,
+            status=AnalysisStatus.COMPLETED,
+            provider="openai",
+            model="gpt-4o",
+            timestamp=datetime.now(),
+            cache_hit=False,
+        )
         return mock_result
 
     def test_analyze_help(self, runner):
@@ -180,14 +188,28 @@ class TestAnalyzeCommand:
     @patch("src.ci_helper.commands.analyze.AIIntegration")
     @patch("src.ci_helper.commands.analyze._get_latest_log_file")
     @patch("src.ci_helper.commands.analyze._read_log_file")
+    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
     def test_analyze_with_options(
-        self, mock_read_log, mock_get_latest, mock_ai_class, runner, mock_config, mock_ai_integration, mock_console
+        self,
+        mock_validate,
+        mock_read_log,
+        mock_get_latest,
+        mock_ai_class,
+        runner,
+        mock_config,
+        mock_ai_integration,
+        mock_console,
     ):
         """オプション付き分析のテスト"""
         # モックの設定
+        mock_validate.return_value = True
         mock_ai_class.return_value = mock_ai_integration
         mock_get_latest.return_value = Path("test.log")
         mock_read_log.return_value = "test log content"
+
+        # AI統合の初期化を成功させる
+        mock_ai_integration.initialize = AsyncMock()
+        mock_ai_integration.analyze_log = AsyncMock()
 
         # 分析結果のモック
         mock_result = self.create_mock_analysis_result()

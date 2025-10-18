@@ -123,10 +123,14 @@ TimeoutError: Database connection timed out after 30 seconds
                 mock_response.choices = [Mock()]
                 from dataclasses import asdict
 
-                # Convert enums to strings for JSON serialization
+                # Convert enums and datetime to strings for JSON serialization
                 def convert_enums(obj):
+                    from datetime import datetime
+
                     if hasattr(obj, "value"):
                         return obj.value
+                    elif isinstance(obj, datetime):
+                        return obj.isoformat()
                     elif isinstance(obj, dict):
                         return {k: convert_enums(v) for k, v in obj.items()}
                     elif isinstance(obj, list):
@@ -262,7 +266,7 @@ TimeoutError: Database connection timed out after 30 seconds
                 )
 
                 chunks = []
-                async for chunk in ai_integration.stream_analyze_log(sample_log_content, options):
+                async for chunk in ai_integration.stream_analyze(sample_log_content, options):
                     chunks.append(chunk)
 
                 assert len(chunks) == 4
@@ -288,12 +292,18 @@ default_model = "gpt-4o"
         config_file.write_text(config_content, encoding="utf-8")
 
         with runner.isolated_filesystem(temp_dir=str(temp_dir)):
-            with patch("src.ci_helper.commands.analyze.AIIntegration") as mock_ai_class:
+            with (
+                patch("src.ci_helper.commands.analyze.AIIntegration") as mock_ai_class,
+                patch("src.ci_helper.commands.analyze._validate_analysis_environment") as mock_validate,
+            ):
                 # AI統合のモック
                 mock_ai_integration = Mock()
                 mock_ai_integration.initialize = AsyncMock()
                 mock_ai_integration.analyze_log = AsyncMock(return_value=sample_analysis_result)
                 mock_ai_class.return_value = mock_ai_integration
+
+                # 環境検証をパス
+                mock_validate.return_value = True
 
                 # 環境変数でAPIキーを設定
                 with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test-key-123"}):
@@ -311,21 +321,35 @@ class TestAIErrorScenarios:
     @pytest.fixture
     def mock_ai_config(self):
         """モックAI設定"""
-        return {
-            "default_provider": "openai",
-            "providers": {
-                "openai": {
-                    "api_key": "sk-test-key-123",
-                    "default_model": "gpt-4o",
-                }
+        from src.ci_helper.ai.models import AIConfig, ProviderConfig
+
+        return AIConfig(
+            default_provider="openai",
+            providers={
+                "openai": ProviderConfig(
+                    name="openai",
+                    api_key="sk-test-key-123",
+                    default_model="gpt-4o",
+                    available_models=["gpt-4o", "gpt-4o-mini"],
+                    timeout_seconds=30,
+                    max_retries=3,
+                )
             },
-        }
+            cache_enabled=True,
+            cache_ttl_hours=24,
+            cache_max_size_mb=100,
+            cost_limits={"monthly_usd": 50.0, "per_request_usd": 1.0},
+            interactive_timeout=300,
+            streaming_enabled=True,
+            security_checks_enabled=True,
+            cache_dir=".ci-helper/cache",
+        )
 
     @pytest.mark.asyncio
     async def test_api_key_error_handling(self, mock_ai_config):
         """APIキーエラーのハンドリングテスト"""
         # 無効なAPIキーを設定
-        mock_ai_config["providers"]["openai"]["api_key"] = "invalid-key"
+        mock_ai_config.providers["openai"].api_key = "invalid-key"
 
         with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
@@ -366,10 +390,16 @@ class TestAIErrorScenarios:
     async def test_provider_unavailable_fallback(self, mock_ai_config, sample_log_content):
         """プロバイダー利用不可時のフォールバック テスト"""
         # 複数プロバイダーを設定
-        mock_ai_config["providers"]["anthropic"] = {
-            "api_key": "sk-ant-test-key-123",
-            "default_model": "claude-3-5-sonnet-20241022",
-        }
+        from src.ci_helper.ai.models import ProviderConfig
+
+        mock_ai_config.providers["anthropic"] = ProviderConfig(
+            name="anthropic",
+            api_key="sk-ant-test-key-123",
+            default_model="claude-3-5-sonnet-20241022",
+            available_models=["claude-3-5-sonnet-20241022"],
+            timeout_seconds=30,
+            max_retries=3,
+        )
 
         with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
             mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
@@ -422,16 +452,29 @@ AssertionError: Expected 200, got 404
     @pytest.fixture
     def mock_ai_config(self):
         """モックAI設定"""
-        return {
-            "default_provider": "openai",
-            "providers": {
-                "openai": {
-                    "api_key": "sk-test-key-123",
-                    "default_model": "gpt-4o",
-                }
+        from src.ci_helper.ai.models import AIConfig, ProviderConfig
+
+        return AIConfig(
+            default_provider="openai",
+            providers={
+                "openai": ProviderConfig(
+                    name="openai",
+                    api_key="sk-test-key-123",
+                    default_model="gpt-4o",
+                    available_models=["gpt-4o", "gpt-4o-mini"],
+                    timeout_seconds=30,
+                    max_retries=3,
+                )
             },
-            "cache_enabled": True,
-        }
+            cache_enabled=True,
+            cache_ttl_hours=24,
+            cache_max_size_mb=100,
+            cost_limits={"monthly_usd": 50.0, "per_request_usd": 1.0},
+            interactive_timeout=300,
+            streaming_enabled=True,
+            security_checks_enabled=True,
+            cache_dir=".ci-helper/cache",
+        )
 
     @pytest.mark.asyncio
     async def test_large_log_processing(self, mock_ai_config, large_log_content):

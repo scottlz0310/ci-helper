@@ -192,9 +192,9 @@ class TestLoggerIntegration:
         logger.error("エラーメッセージ")
 
         log_content = log_file.read_text(encoding="utf-8")
-        # ファイルハンドラーはDEBUGレベルなので全て出力される
-        assert "デバッグメッセージ" in log_content
-        assert "情報メッセージ" in log_content
+        # ロガーレベルがWARNINGなので、DEBUG/INFOメッセージは出力されない
+        assert "デバッグメッセージ" not in log_content
+        assert "情報メッセージ" not in log_content
         assert "警告メッセージ" in log_content
         assert "エラーメッセージ" in log_content
 

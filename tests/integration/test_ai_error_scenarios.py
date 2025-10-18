@@ -10,14 +10,9 @@ from unittest.mock import AsyncMock, Mock, patch
 import aiohttp
 import pytest
 
-from src.ci_helper.ai.exceptions import (
-    CacheError,
-    ConfigurationError,
-    CostLimitError,
-    NetworkError,
-    ProviderError,
-    TokenLimitError,
-)
+from src.ci_helper.ai.exceptions import (CacheError, ConfigurationError,
+                                         CostLimitError, NetworkError,
+                                         ProviderError, TokenLimitError)
 from src.ci_helper.ai.integration import AIIntegration
 from src.ci_helper.ai.models import AIConfig, AnalyzeOptions, ProviderConfig
 from src.ci_helper.utils.config import Config
@@ -29,32 +24,40 @@ class TestNetworkErrorScenarios:
     @pytest.fixture
     def mock_ai_config(self):
         """モックAI設定"""
-        return {
-            "default_provider": "openai",
-            "providers": {
-                "openai": {
-                    "api_key": "sk-test-key-123",
-                    "default_model": "gpt-4o",
-                    "timeout_seconds": 30,
-                    "max_retries": 3,
-                }
+        from src.ci_helper.ai.models import AIConfig, ProviderConfig
+
+        return AIConfig(
+            default_provider="openai",
+            providers={
+                "openai": ProviderConfig(
+                    name="openai",
+                    api_key="sk-test-key-123",
+                    default_model="gpt-4o",
+                    available_models=["gpt-4o", "gpt-4o-mini"],
+                    timeout_seconds=30,
+                    max_retries=3,
+                )
             },
-        }
+            cache_enabled=True,
+            cache_ttl_hours=24,
+            cache_max_size_mb=100,
+            cost_limits={"monthly_usd": 50.0, "per_request_usd": 1.0},
+            interactive_timeout=300,
+            streaming_enabled=True,
+            security_checks_enabled=True,
+            cache_dir=".ci-helper/cache",
+        )
 
     @pytest.mark.asyncio
     async def test_network_timeout_error(self, mock_ai_config):
         """ネットワークタイムアウトエラーのテスト"""
-        with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
-            mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
+        with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
+            mock_client = Mock()
+            mock_client.chat.completions.create = AsyncMock(side_effect=TimeoutError("Request timeout"))
+            mock_openai.return_value = mock_client
 
-            with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
-                mock_client = Mock()
-                mock_client.chat.completions.create = AsyncMock(side_effect=TimeoutError("Request timeout"))
-                mock_openai.return_value = mock_client
-
-                config = Config()
-                ai_integration = AIIntegration(config)
-                await ai_integration.initialize()
+            ai_integration = AIIntegration(mock_ai_config)
+            await ai_integration.initialize()
 
                 options = AnalyzeOptions(
                     provider="openai",
@@ -70,19 +73,15 @@ class TestNetworkErrorScenarios:
     async def test_connection_error(self, mock_ai_config):
         """接続エラーのテスト"""
 
-        with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
-            mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
+        with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
+            mock_client = Mock()
+            mock_client.chat.completions.create = AsyncMock(
+                side_effect=aiohttp.ClientConnectorError(Mock(), Mock())
+            )
+            mock_openai.return_value = mock_client
 
-            with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
-                mock_client = Mock()
-                mock_client.chat.completions.create = AsyncMock(
-                    side_effect=aiohttp.ClientConnectorError(Mock(), Mock())
-                )
-                mock_openai.return_value = mock_client
-
-                config = Config()
-                ai_integration = AIIntegration(config)
-                await ai_integration.initialize()
+            ai_integration = AIIntegration(mock_ai_config)
+            await ai_integration.initialize()
 
                 options = AnalyzeOptions(
                     provider="openai",
@@ -97,10 +96,7 @@ class TestNetworkErrorScenarios:
     @pytest.mark.asyncio
     async def test_retry_mechanism(self, mock_ai_config):
         """リトライメカニズムのテスト"""
-        with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
-            mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
-
-            with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
+        with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
                 mock_client = Mock()
 
                 # 最初の2回は失敗、3回目は成功
@@ -122,8 +118,7 @@ class TestNetworkErrorScenarios:
                 mock_client.chat.completions.create = mock_create
                 mock_openai.return_value = mock_client
 
-                config = Config()
-                ai_integration = AIIntegration(config)
+                ai_integration = AIIntegration(mock_ai_config)
                 await ai_integration.initialize()
 
                 options = AnalyzeOptions(
@@ -163,11 +158,7 @@ class TestConfigurationErrorScenarios:
             cache_max_size_mb=100,
         )
 
-        with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
-            mock_config_manager.return_value.get_ai_config.return_value = ai_config_without_key
-
-            config = Config()
-            ai_integration = AIIntegration(config)
+        ai_integration = AIIntegration(ai_config_without_key)
 
             with pytest.raises(ConfigurationError):
                 await ai_integration.initialize()
@@ -183,11 +174,7 @@ class TestConfigurationErrorScenarios:
             cache_max_size_mb=100,
         )
 
-        with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
-            mock_config_manager.return_value.get_ai_config.return_value = invalid_ai_config
-
-            config = Config()
-            ai_integration = AIIntegration(config)
+        ai_integration = AIIntegration(invalid_ai_config)
 
             with pytest.raises(ProviderError):
                 await ai_integration.initialize()

@@ -54,11 +54,29 @@ jobs:
 @pytest.fixture
 def mock_ai_config():
     """AI設定のモック"""
-    import toml
+    from ci_helper.ai.models import AIConfig, ProviderConfig
 
-    from tests.fixtures.ai_config_templates import BASIC_AI_CONFIG_TOML
-
-    return toml.loads(BASIC_AI_CONFIG_TOML)
+    return AIConfig(
+        default_provider="openai",
+        providers={
+            "openai": ProviderConfig(
+                name="openai",
+                api_key="sk-test-key",
+                default_model="gpt-4o",
+                available_models=["gpt-4o", "gpt-4o-mini"],
+                timeout_seconds=30,
+                max_retries=3,
+            )
+        },
+        cache_enabled=True,
+        cache_ttl_hours=24,
+        cache_max_size_mb=100,
+        cost_limits={"monthly_usd": 50.0, "per_request_usd": 1.0},
+        interactive_timeout=300,
+        streaming_enabled=True,
+        security_checks_enabled=True,
+        cache_dir=".ci-helper/cache",
+    )
 
 
 @pytest.fixture

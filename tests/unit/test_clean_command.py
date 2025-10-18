@@ -162,13 +162,15 @@ class TestCleanCommand:
 
             assert result.exit_code == 0
 
-    @patch("ci_helper.core.cache_manager.CacheManager")
+    @patch("ci_helper.commands.clean.CacheManager")
     def test_clean_command_with_cache_manager_error(self, mock_cache_manager):
         """CacheManager エラー時のテスト"""
         from ci_helper.core.exceptions import ExecutionError
 
         mock_manager_instance = Mock()
-        mock_manager_instance.clear_logs.side_effect = ExecutionError("ログクリアに失敗", "権限を確認してください")
+        mock_manager_instance.cleanup_logs_only.side_effect = ExecutionError(
+            "ログクリアに失敗", "権限を確認してください"
+        )
         mock_cache_manager.return_value = mock_manager_instance
 
         runner = CliRunner()
@@ -180,11 +182,11 @@ class TestCleanCommand:
 
             assert result.exit_code == 1
 
-    @patch("ci_helper.core.cache_manager.CacheManager")
+    @patch("ci_helper.commands.clean.CacheManager")
     def test_clean_command_with_permission_error(self, mock_cache_manager):
         """権限エラー時のテスト"""
         mock_manager_instance = Mock()
-        mock_manager_instance.clear_cache.side_effect = PermissionError("Permission denied")
+        mock_manager_instance.cleanup_all.side_effect = PermissionError("Permission denied")
         mock_cache_manager.return_value = mock_manager_instance
 
         runner = CliRunner()

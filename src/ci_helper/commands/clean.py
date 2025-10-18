@@ -155,7 +155,7 @@ def _clean_all(console: Console, cache_manager: CacheManager, dry_run: bool, for
 
         if not click.confirm("続行しますか？"):
             console.print("[yellow]操作がキャンセルされました。[/yellow]")
-            raise click.Abort()
+            return {"skipped": True, "reason": "ユーザーによりキャンセルされました"}
 
     if dry_run:
         console.print("\n[bold yellow]ドライラン: すべてのキャッシュ削除[/bold yellow]")
@@ -188,7 +188,7 @@ def _clean_logs_only(console: Console, cache_manager: CacheManager, dry_run: boo
 
             if not click.confirm("続行しますか？"):
                 console.print("[yellow]操作がキャンセルされました。[/yellow]")
-                raise click.Abort()
+                return {"skipped": True, "reason": "ユーザーによりキャンセルされました"}
 
     if dry_run:
         console.print("\n[bold yellow]ドライラン: ログファイル削除[/bold yellow]")
@@ -226,7 +226,7 @@ def _clean_default(console: Console, cache_manager: CacheManager, dry_run: bool,
 
         if not click.confirm("標準クリーンアップを実行しますか？"):
             console.print("[yellow]操作がキャンセルされました。[/yellow]")
-            raise click.Abort()
+            return {"skipped": True, "reason": "ユーザーによりキャンセルされました"}
 
     if dry_run:
         console.print("\n[bold yellow]ドライラン: 標準クリーンアップ[/bold yellow]")

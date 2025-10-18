@@ -444,8 +444,7 @@ class CostManager:
 
             if current_usage + estimate.estimated_cost > limit:
                 raise CostLimitError(
-                    f"リクエストコスト({estimate.estimated_cost:.4f})が制限を超過します。"
-                    f"現在の使用量: {current_usage:.4f}, 制限: {limit:.4f}"
+                    current_cost=current_usage + estimate.estimated_cost, limit=limit, provider=estimate.provider
                 )
 
     def _calculate_warning_level(self, current_usage: float, limit: float) -> str:
