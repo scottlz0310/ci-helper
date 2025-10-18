@@ -495,9 +495,71 @@ ci-run test --workflow test.yml --step-by-step
 ci-run test --workflow test.yml --step "Run tests"
 ```
 
+## AI統合機能
+
+ci-helper にはAI統合機能が含まれており、CI/CDの失敗ログを自動的に分析できます。
+
+### AI分析の基本使用方法
+
+```bash
+# 最新のテスト結果をAI分析
+ci-run analyze
+
+# 特定のログファイルを分析
+ci-run analyze --log .ci-helper/logs/act_20241019_120000.log
+
+# プロバイダーとモデルを指定
+ci-run analyze --provider anthropic --model claude-3-5-sonnet-20241022
+
+# 修正提案を生成
+ci-run analyze --fix
+
+# 対話モードで詳細分析
+ci-run analyze --interactive
+```
+
+### AI機能のセットアップ
+
+```bash
+# APIキーを設定
+export OPENAI_API_KEY="sk-proj-your-openai-key"
+export ANTHROPIC_API_KEY="sk-ant-your-anthropic-key"
+
+# AI環境をチェック
+ci-run doctor --ai
+
+# 使用統計を確認
+ci-run analyze --stats
+```
+
+### AI統合ワークフロー例
+
+```bash
+# 1. テストを実行
+ci-run test --workflow test.yml
+
+# 2. 失敗した場合、AI分析を実行
+ci-run analyze --fix
+
+# 3. 対話モードで詳細調査
+ci-run analyze --interactive
+
+# 4. 修正を適用して再テスト
+ci-run test --workflow test.yml
+```
+
+詳細については以下のガイドを参照してください：
+
+- [AI統合機能ガイド](ai-integration.md) - AI機能の詳細な使用方法
+- [APIキー設定ガイド](api-key-setup.md) - APIキーの取得と設定方法
+- [AI設定リファレンス](ai-configuration.md) - AI機能の詳細設定
+- [AIトラブルシューティング](ai-troubleshooting.md) - AI機能の問題解決
+
 ## 次のステップ
 
 - [設定リファレンス](configuration.md) - 詳細な設定オプション
 - [トラブルシューティング](troubleshooting.md) - 問題解決ガイド
+- [AI統合機能ガイド](ai-integration.md) - AI機能の使用方法
+- [セキュリティガイド](security-guide.md) - セキュリティのベストプラクティス
 - [API リファレンス](api-reference.md) - 内部 API 仕様
 - [開発者ガイド](development.md) - 拡張とカスタマイズ

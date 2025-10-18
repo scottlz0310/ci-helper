@@ -54,7 +54,7 @@ jobs:
 @pytest.fixture
 def mock_ai_config():
     """AI設定のモック"""
-    from ci_helper.ai.models import AIConfig, ProviderConfig
+    from src.ci_helper.ai.models import AIConfig, ProviderConfig
 
     return AIConfig(
         default_provider="openai",
@@ -192,3 +192,39 @@ def mock_cache_manager():
     mock_manager.get_cache_summary = Mock()
 
     return mock_manager
+
+
+@pytest.fixture
+def mock_config(temp_dir):
+    """analyzeコマンド用のモック設定"""
+    from src.ci_helper.ai.models import AIConfig, ProviderConfig
+
+    # Create a proper AIConfig object
+    provider_config = ProviderConfig(
+        name="openai",
+        api_key="sk-test-key-123",
+        default_model="gpt-4o",
+        available_models=["gpt-4o", "gpt-4o-mini"],
+    )
+
+    ai_config = AIConfig(
+        default_provider="openai",
+        providers={"openai": provider_config},
+        cache_enabled=True,
+        cost_limits={"monthly_usd": 50.0},
+        cache_dir=str(temp_dir / "cache"),
+    )
+
+    config = Mock(spec=Config)
+    config.project_root = temp_dir
+    config.get_path.return_value = temp_dir / "cache"
+    config.get = Mock(return_value=None)
+    config.get_ai_config = Mock(return_value=ai_config)
+    config.get_available_ai_providers = Mock(return_value=["openai"])
+    config.get_ai_provider_api_key = Mock(return_value="sk-test-key-123")
+    config.get_default_ai_provider = Mock(return_value="openai")
+    config.get_ai_provider_config = Mock(return_value=provider_config)
+    config.get_path = Mock(return_value=temp_dir / "cache")
+    config.__getitem__ = Mock(return_value=None)
+    config.__contains__ = Mock(return_value=False)
+    return config

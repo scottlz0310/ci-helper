@@ -124,6 +124,12 @@ def doctor(ctx: click.Context, verbose: bool, guide: str | None) -> None:
     if not security_result["passed"]:
         all_passed = False
 
+    # 8. ファイル所有権のチェック
+    ownership_result = _check_file_ownership(config, show_verbose)
+    checks.append(ownership_result)
+    if not ownership_result["passed"]:
+        all_passed = False
+
     # 結果の表示
     _display_results(checks, show_verbose)
 
@@ -475,6 +481,100 @@ def _display_results(checks: list[DoctorCheckResult], verbose: bool) -> None:
         for i, check in enumerate(failed_checks, 1):
             if check["suggestion"]:
                 console.print(f"{i}. [bold]{check['name']}[/bold]: {check['suggestion']}")
+
+
+def _check_file_ownership(config: Config, verbose: bool) -> DoctorCheckResult:
+    """ファイル所有権をチェック"""
+    check_name = "ファイル所有権"
+
+    try:
+        import os
+        import pwd
+
+        current_uid = os.getuid()
+        current_user = pwd.getpwuid(current_uid).pw_name
+
+        # チェック対象のパス
+        important_paths = [
+            config.project_root,
+            config.project_root / ".github",
+            config.project_root / ".ci-helper",
+            config.project_root / "pyproject.toml",
+            config.project_root / "ci-helper.toml",
+        ]
+
+        docker_owned_files = []
+        permission_issues = []
+
+        for path in important_paths:
+            if not path.exists():
+                continue
+
+            try:
+                stat_info = path.stat()
+                file_uid = stat_info.st_uid
+                file_gid = stat_info.st_gid
+
+                # dockerユーザー（通常はuid=999またはgid=docker）が所有している場合
+                if file_gid == 999 or (file_uid != current_uid and file_uid == 999):
+                    docker_owned_files.append(str(path))
+
+                # 読み書き権限をチェック
+                if not os.access(path, os.R_OK | os.W_OK):
+                    permission_issues.append(str(path))
+
+            except (OSError, PermissionError) as e:
+                permission_issues.append(f"{path}: {e}")
+
+        # 結果の判定
+        if docker_owned_files or permission_issues:
+            details = []
+            suggestions = []
+
+            if docker_owned_files:
+                details.append(f"Dockerが所有するファイル: {len(docker_owned_files)}個")
+                if verbose:
+                    for file_path in docker_owned_files[:5]:  # 最初の5個のみ表示
+                        details.append(f"  - {file_path}")
+                    if len(docker_owned_files) > 5:
+                        details.append(f"  ... 他{len(docker_owned_files) - 5}個")
+
+                suggestions.append(f"sudo chown -R {current_user}:{current_user} .")
+
+            if permission_issues:
+                details.append(f"権限の問題: {len(permission_issues)}個")
+                if verbose:
+                    for issue in permission_issues[:3]:
+                        details.append(f"  - {issue}")
+
+                suggestions.append("ファイル権限を確認してください")
+
+            return {
+                "name": check_name,
+                "passed": False,
+                "message": "ファイル所有権に問題があります",
+                "suggestion": " または ".join(suggestions),
+                "details": "\n".join(details) if details else None,
+            }
+        else:
+            return {
+                "name": check_name,
+                "passed": True,
+                "message": f"ファイル所有権は正常です（所有者: {current_user}）",
+                "suggestion": None,
+                "details": f"チェック対象: {len([p for p in important_paths if p.exists()])}個のパス"
+                if verbose
+                else None,
+            }
+
+    except Exception as e:
+        return {
+            "name": check_name,
+            "passed": False,
+            "message": f"ファイル所有権のチェックに失敗しました: {e}",
+            "suggestion": "手動でファイル権限を確認してください",
+            "details": None,
+        }
 
 
 def _check_security_configuration(config: Config, verbose: bool) -> DoctorCheckResult:

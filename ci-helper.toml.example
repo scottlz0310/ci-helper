@@ -20,8 +20,80 @@ timeout_seconds = 1800  # タイムアウト（秒）
 verbose = false  # 詳細ログを有効にするか
 save_logs = true  # ログを自動保存するか
 
-# AI統合設定（フェーズ3で使用）
-# [ci-helper.ai]
-# provider = "openai"  # AI プロバイダー
-# model = "gpt-4"  # 使用するモデル
-# max_tokens = 4000  # 最大トークン数
+# AI統合設定
+[ai]
+default_provider = "openai"  # デフォルトAIプロバイダー: openai, anthropic, local
+cache_enabled = true         # AIレスポンスキャッシュを有効にするか
+cache_ttl_hours = 24        # キャッシュの有効期限（時間）
+interactive_timeout = 300    # 対話モードのタイムアウト（秒）
+parallel_requests = false    # 並列リクエストを有効にするか
+
+# OpenAI設定
+[ai.providers.openai]
+default_model = "gpt-4o"                    # デフォルトモデル
+available_models = ["gpt-4o", "gpt-4o-mini"]  # 利用可能なモデル
+timeout_seconds = 30                        # APIタイムアウト（秒）
+max_retries = 3                            # 最大リトライ回数
+# base_url = "https://api.openai.com/v1"   # カスタムベースURL（オプション）
+
+# Anthropic設定
+[ai.providers.anthropic]
+default_model = "claude-3-5-sonnet-20241022"
+available_models = [
+    "claude-3-5-sonnet-20241022",
+    "claude-3-5-haiku-20241022"
+]
+timeout_seconds = 30
+max_retries = 3
+# base_url = "https://api.anthropic.com"   # カスタムベースURL（オプション）
+
+# ローカルLLM設定（Ollama）
+[ai.providers.local]
+default_model = "llama3.2"                  # デフォルトローカルモデル
+available_models = ["llama3.2", "codellama", "mistral"]
+timeout_seconds = 60                        # ローカルLLMは時間がかかる場合がある
+max_retries = 2
+base_url = "http://localhost:11434"         # OllamaサーバーURL
+
+# コスト管理設定
+[ai.cost_limits]
+monthly_usd = 50.0          # 月間使用コスト上限（USD）
+per_request_usd = 1.0       # 1回のリクエストあたりのコスト上限（USD）
+warning_threshold = 0.8     # 警告を表示する閾値（制限の80%で警告）
+
+# キャッシュ設定
+[ai.cache]
+max_size_mb = 100          # キャッシュの最大サイズ（MB）
+cleanup_threshold = 0.9    # 自動クリーンアップを開始する閾値
+auto_cleanup = true        # 自動クリーンアップを有効にするか
+compression = true         # キャッシュデータの圧縮を有効にするか
+
+# プロンプトテンプレート設定
+[ai.prompts]
+analysis = "templates/analysis.txt"           # 一般的な分析用プロンプト
+fix_suggestion = "templates/fix.txt"          # 修正提案用プロンプト
+interactive = "templates/interactive.txt"     # 対話モード用プロンプト
+build_failure = "templates/build_failure.txt" # ビルド失敗用プロンプト
+test_failure = "templates/test_failure.txt"   # テスト失敗用プロンプト
+
+# セキュリティ設定
+[ai.security]
+mask_secrets = true                          # ログ内のシークレットを自動マスクするか
+allowed_domains = [                          # 接続を許可するドメイン
+    "api.openai.com",
+    "api.anthropic.com"
+]
+verify_ssl = true                           # SSL証明書の検証を行うか
+
+# ログ処理設定
+[ai.log_processing]
+max_tokens = 100000        # AIに送信する最大トークン数
+compression_ratio = 0.3    # ログ圧縮の目標比率
+preserve_errors = true     # エラー情報を優先的に保持するか
+context_lines = 5          # エラー前後の文脈行数
+
+# パフォーマンス設定
+[ai.performance]
+concurrent_requests = 2    # 同時実行するリクエスト数
+request_delay_ms = 100     # リクエスト間の遅延時間（ミリ秒）
+memory_limit_mb = 512      # AI処理で使用する最大メモリ（MB）

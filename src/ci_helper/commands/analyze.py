@@ -30,6 +30,40 @@ from ..utils.config import Config
 console = Console()
 
 
+class AnalysisErrorContext:
+    """分析エラーのコンテキスト管理"""
+
+    def __init__(self, console: Console, operation_name: str, verbose: bool = False):
+        self.console = console
+        self.operation_name = operation_name
+        self.verbose = verbose
+        self.start_time = datetime.now()
+        self.error_count = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            self.error_count += 1
+            duration = (datetime.now() - self.start_time).total_seconds()
+
+            # エラー統計をログに記録
+            logger = logging.getLogger(__name__)
+            logger.error("操作 '%s' が %.2f秒後にエラーで終了: %s", self.operation_name, duration, exc_val)
+
+        return False  # エラーを再発生させる
+
+    def log_progress(self, message: str):
+        """進捗をログに記録"""
+        elapsed = (datetime.now() - self.start_time).total_seconds()
+        if self.verbose:
+            self.console.print(f"[dim][{elapsed:.1f}s] {message}[/dim]")
+
+
+import logging
+
+
 @click.command()
 @click.option(
     "--log",
@@ -191,8 +225,54 @@ def analyze(
         # AI固有のエラーハンドリング
         _handle_analysis_error(e, console, verbose)
 
-        # フォールバック機能の提案
-        _suggest_fallback_options(console, log_file)
+        # 自動復旧の提案と実行
+        recovery_choice = _offer_interactive_recovery(console)
+
+        if recovery_choice == "auto":
+            console.print("\n[blue]🔄 自動復旧を準備中...[/blue]")
+            console.print("[yellow]自動復旧は次回のコマンド実行時に利用可能です[/yellow]")
+            console.print("[cyan]ci-run analyze --retry auto[/cyan] で自動復旧を試行できます")
+
+            # 復旧情報を保存（同期的に実行）
+            try:
+                recovery_info = {
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "timestamp": datetime.now().isoformat(),
+                    "options": {
+                        "provider": provider,
+                        "model": model,
+                        "custom_prompt": custom_prompt,
+                        "fix": fix,
+                        "interactive": interactive,
+                        "streaming": streaming,
+                        "cache": cache,
+                        "output_format": output_format,
+                        "verbose": verbose,
+                    },
+                    "log_file": str(log_file) if log_file else None,
+                }
+
+                # 復旧情報をファイルに保存
+                recovery_dir = config.get_path("cache_dir") / "recovery"
+                recovery_dir.mkdir(parents=True, exist_ok=True)
+                recovery_file = recovery_dir / "last_error.json"
+
+                import json
+
+                with recovery_file.open("w", encoding="utf-8") as f:
+                    json.dump(recovery_info, f, ensure_ascii=False, indent=2)
+
+                console.print(f"[dim]復旧情報を保存しました: {recovery_file}[/dim]")
+
+            except Exception as save_error:
+                console.print(f"[yellow]⚠️  復旧情報の保存に失敗: {save_error}[/yellow]")
+
+        elif recovery_choice == "manual":
+            # 手動対処のガイダンスを表示
+            _suggest_fallback_options(console, log_file)
+
+        # recovery_choice == "skip" の場合はそのまま終了
 
         # 一般的なエラーハンドリング
         ErrorHandler.handle_error(e, verbose)
@@ -277,6 +357,11 @@ async def _run_analysis(
             console.print("[dim]部分的な状態が保存されました。後でリトライできます。[/dim]")
         except Exception:
             pass  # 部分保存の失敗は無視
+
+        # 自動復旧を提案（非対話的）
+        console.print("\n[blue]💡 自動復旧オプション:[/blue]")
+        console.print("  コマンドを再実行すると自動復旧を試行できます")
+        console.print("  [cyan]ci-run analyze --retry auto[/cyan]")
 
         raise
 
@@ -371,18 +456,43 @@ async def _run_interactive_mode(
                 from ..ai.exceptions import NetworkError, RateLimitError, TokenLimitError
 
                 if isinstance(e, RateLimitError):
-                    console.print(
-                        f"[yellow]レート制限に達しました。{e.retry_after or 60}秒後に再試行してください。[/yellow]"
-                    )
-                elif isinstance(e, NetworkError):
-                    console.print("[yellow]ネットワークエラーです。接続を確認してください。[/yellow]")
-                elif isinstance(e, TokenLimitError):
-                    console.print("[yellow]入力が長すぎます。より短い質問を試してください。[/yellow]")
-                else:
-                    console.print("[yellow]一時的なエラーの可能性があります。[/yellow]")
+                    retry_time = e.retry_after or 60
+                    console.print(f"[yellow]⏱️  レート制限に達しました。{retry_time}秒後に再試行してください。[/yellow]")
 
-                console.print("[blue]💡 対話を続けるか、'/exit' で終了してください。[/blue]")
-                console.print("[dim]ヒント: '/help' で利用可能なコマンドを確認できます[/dim]")
+                    # 短時間の場合は自動待機を提案
+                    if retry_time <= 120:  # 2分以内
+                        console.print("[blue]💡 自動待機しますか？ (y/n)[/blue]")
+                        # 実際の実装では入力を受け付ける
+
+                elif isinstance(e, NetworkError):
+                    console.print("[yellow]🌐 ネットワークエラーです。接続を確認してください。[/yellow]")
+                    console.print("[blue]💡 復旧手順:[/blue]")
+                    console.print("  1. インターネット接続を確認")
+                    console.print("  2. プロキシ設定を確認")
+                    console.print("  3. '/retry' で再試行")
+
+                elif isinstance(e, TokenLimitError):
+                    console.print("[yellow]📊 入力が長すぎます。より短い質問を試してください。[/yellow]")
+                    console.print("[blue]💡 対処法:[/blue]")
+                    console.print("  • 質問を短縮する")
+                    console.print("  • '/summarize' で要約を依頼")
+                    console.print("  • '/model smaller' で小さなモデルに変更")
+
+                else:
+                    console.print("[yellow]⚠️  一時的なエラーの可能性があります。[/yellow]")
+                    console.print("[blue]💡 対処法:[/blue]")
+                    console.print("  • '/retry' で再試行")
+                    console.print("  • '/provider switch' で別のプロバイダーに変更")
+                    console.print("  • '/reset' でセッションをリセット")
+
+                # 対話継続のオプション
+                console.print("\n[blue]🔄 対話オプション:[/blue]")
+                console.print("  [green]/retry[/green] - 最後の質問を再試行")
+                console.print("  [yellow]/help[/yellow] - 利用可能なコマンドを表示")
+                console.print("  [red]/exit[/red] - 対話セッションを終了")
+
+                # エラー統計の更新（実装は別途）
+                console.print(f"[dim]エラー発生時刻: {datetime.now().strftime('%H:%M:%S')}[/dim]")
 
     except KeyboardInterrupt:
         console.print("\n[yellow]対話セッションを終了します。[/yellow]")
@@ -747,70 +857,293 @@ def _handle_analysis_error(error: Exception, console: Console, verbose: bool) ->
         TokenLimitError,
     )
 
+    # エラーの重要度を判定
+    error_severity = _determine_error_severity(error)
+    severity_color = _get_severity_color(error_severity)
+
+    # エラーヘッダーを表示
+    console.print(f"\n[{severity_color}]{'=' * 60}[/{severity_color}]")
+    console.print(f"[{severity_color}]🚨 AI分析エラーが発生しました[/{severity_color}]")
+    console.print(f"[{severity_color}]{'=' * 60}[/{severity_color}]")
+
     if isinstance(error, APIKeyError):
-        console.print(f"[red]APIキーエラー ({error.provider}):[/red] {error.message}")
-        if error.suggestion:
-            console.print(f"[yellow]解決方法:[/yellow] {error.suggestion}")
-        console.print("\n[blue]APIキー設定ガイド:[/blue]")
-        console.print(f"1. {error.provider.upper()}_API_KEY 環境変数を設定")
-        console.print("2. ci-helper.toml の [ai.providers] セクションを確認")
+        _handle_api_key_error_enhanced(error, console, verbose)
 
     elif isinstance(error, RateLimitError):
-        console.print(f"[red]レート制限エラー ({error.provider}):[/red] {error.message}")
-        if error.retry_after:
-            console.print(f"[yellow]{error.retry_after}秒後に再試行してください[/yellow]")
-        elif error.reset_time:
-            console.print(f"[yellow]制限リセット時刻: {error.reset_time.strftime('%H:%M:%S')}[/yellow]")
-        console.print("[blue]💡 ヒント:[/blue] より小さなモデルを使用するか、入力を短縮してください")
+        _handle_rate_limit_error_enhanced(error, console, verbose)
 
     elif isinstance(error, TokenLimitError):
-        console.print(f"[red]トークン制限エラー:[/red] {error.message}")
-        console.print(f"[yellow]使用トークン:[/yellow] {error.used_tokens:,} / {error.limit:,}")
-        console.print(f"[yellow]モデル:[/yellow] {error.model}")
-        console.print("[blue]💡 解決方法:[/blue]")
-        console.print("  • より大きなコンテキストウィンドウを持つモデルを使用")
-        console.print("  • ログファイルを分割して分析")
-        console.print("  • --no-cache オプションで古いキャッシュを回避")
+        _handle_token_limit_error_enhanced(error, console, verbose)
 
     elif isinstance(error, NetworkError):
-        console.print(f"[red]ネットワークエラー:[/red] {error.message}")
-        if error.retry_count > 0:
-            console.print(f"[yellow]リトライ回数:[/yellow] {error.retry_count}")
-        console.print("[blue]💡 解決方法:[/blue]")
-        console.print("  • インターネット接続を確認")
-        console.print("  • プロキシ設定を確認")
-        console.print("  • しばらく待ってから再試行")
+        _handle_network_error_enhanced(error, console, verbose)
 
     elif isinstance(error, ConfigurationError):
-        console.print(f"[red]設定エラー:[/red] {error.message}")
-        if error.config_key:
-            console.print(f"[yellow]設定キー:[/yellow] {error.config_key}")
-        console.print("[blue]💡 解決方法:[/blue]")
-        console.print("  • ci-helper.toml の [ai] セクションを確認")
-        console.print("  • ci-run doctor で環境をチェック")
-        console.print("  • ci-run init で設定を再生成")
+        _handle_configuration_error_enhanced(error, console, verbose)
 
     elif isinstance(error, ProviderError):
-        console.print(f"[red]プロバイダーエラー ({error.provider}):[/red] {error.message}")
-        if error.details:
-            console.print(f"[yellow]詳細:[/yellow] {error.details}")
-        console.print("[blue]💡 解決方法:[/blue]")
-        console.print("  • 別のプロバイダーを試す (--provider オプション)")
-        console.print("  • APIキーと設定を確認")
-        console.print("  • プロバイダーのサービス状況を確認")
+        _handle_provider_error_enhanced(error, console, verbose)
 
     else:
-        # 一般的なエラー
-        console.print(f"[red]分析中にエラーが発生しました:[/red] {error}")
-        console.print("[blue]💡 解決方法:[/blue]")
-        console.print("  • --verbose フラグで詳細情報を確認")
-        console.print("  • ci-run doctor で環境をチェック")
-        console.print("  • 問題が続く場合は GitHub Issues で報告")
+        _handle_generic_error_enhanced(error, console, verbose)
+
+    # 共通のフッター情報を表示
+    _display_error_footer(error, console, verbose)
+
+
+def _determine_error_severity(error: Exception) -> str:
+    """エラーの重要度を判定
+
+    Args:
+        error: 発生したエラー
+
+    Returns:
+        エラーの重要度 (critical, high, medium, low)
+    """
+    from ..ai.exceptions import (
+        APIKeyError,
+        ConfigurationError,
+        NetworkError,
+        ProviderError,
+        RateLimitError,
+        SecurityError,
+        TokenLimitError,
+    )
+
+    if isinstance(error, (APIKeyError, SecurityError, ConfigurationError)):
+        return "critical"
+    elif isinstance(error, (ProviderError, TokenLimitError)):
+        return "high"
+    elif isinstance(error, (RateLimitError, NetworkError)):
+        return "medium"
+    else:
+        return "low"
+
+
+def _get_severity_color(severity: str) -> str:
+    """重要度に応じた色を取得
+
+    Args:
+        severity: エラーの重要度
+
+    Returns:
+        Rich用の色名
+    """
+    colors = {
+        "critical": "bright_red",
+        "high": "red",
+        "medium": "yellow",
+        "low": "blue",
+    }
+    return colors.get(severity, "white")
+
+
+def _handle_api_key_error_enhanced(error: APIKeyError, console: Console, verbose: bool) -> None:
+    """APIキーエラーの拡張処理"""
+    console.print(f"\n[bright_red]🔑 APIキーエラー ({error.provider})[/bright_red]")
+    console.print(f"[red]{error.message}[/red]")
+
+    # 環境変数名を決定
+    env_var_name = f"{error.provider.upper()}_API_KEY"
+    if error.provider == "openai":
+        env_var_name = "OPENAI_API_KEY"
+    elif error.provider == "anthropic":
+        env_var_name = "ANTHROPIC_API_KEY"
+
+    console.print("\n[blue]📋 段階的解決手順:[/blue]")
+    console.print(f"  1️⃣  環境変数を設定: [cyan]export {env_var_name}=your_api_key[/cyan]")
+    console.print("  2️⃣  APIキーの有効性を確認")
+    console.print(f"  3️⃣  {error.provider}ダッシュボードで権限を確認")
+    console.print("  4️⃣  設定後にコマンドを再実行")
+
+    # プロバイダー固有の追加情報
+    if error.provider == "openai":
+        console.print("\n[dim]💡 OpenAI APIキー取得: https://platform.openai.com/api-keys[/dim]")
+        console.print("[dim]💡 使用制限確認: https://platform.openai.com/usage[/dim]")
+    elif error.provider == "anthropic":
+        console.print("[dim]💡 Anthropic APIキー取得: https://console.anthropic.com/[/dim]")
+
+    # 代替手段の提案
+    console.print("\n[green]🔄 代替手段:[/green]")
+    console.print("  • 別のプロバイダーを試す: [cyan]--provider local[/cyan]")
+    console.print("  • 従来のログ表示: [cyan]ci-run logs --show latest[/cyan]")
+
+
+def _handle_rate_limit_error_enhanced(error: RateLimitError, console: Console, verbose: bool) -> None:
+    """レート制限エラーの拡張処理"""
+    console.print(f"\n[yellow]⏱️  レート制限エラー ({error.provider})[/yellow]")
+    console.print(f"[yellow]{error.message}[/yellow]")
+
+    # 待機時間の表示
+    if error.retry_after:
+        minutes, seconds = divmod(error.retry_after, 60)
+        if minutes > 0:
+            console.print(f"[blue]⏰ 待機時間: {minutes}分{seconds}秒[/blue]")
+        else:
+            console.print(f"[blue]⏰ 待機時間: {seconds}秒[/blue]")
+    elif error.reset_time:
+        console.print(f"[blue]⏰ 制限リセット: {error.reset_time.strftime('%H:%M:%S')}[/blue]")
+
+    console.print("\n[blue]📋 対処方法:[/blue]")
+    console.print("  1️⃣  しばらく待ってから再試行")
+    console.print("  2️⃣  より小さなモデルを使用: [cyan]--model gpt-4o-mini[/cyan]")
+    console.print("  3️⃣  入力を短縮または分割")
+    console.print("  4️⃣  プランのアップグレードを検討")
+
+    # 自動リトライの提案
+    if error.retry_after and error.retry_after <= 300:  # 5分以内
+        console.print("\n[green]🔄 自動リトライが利用可能です[/green]")
+        console.print("[dim]コマンドを再実行すると自動的に待機してリトライします[/dim]")
+
+
+def _handle_token_limit_error_enhanced(error: TokenLimitError, console: Console, verbose: bool) -> None:
+    """トークン制限エラーの拡張処理"""
+    console.print("\n[red]📊 トークン制限エラー[/red]")
+    console.print(f"[red]{error.message}[/red]")
+
+    # トークン使用量の詳細表示
+    usage_percentage = (error.used_tokens / error.limit) * 100
+    console.print("\n[yellow]📈 トークン使用状況:[/yellow]")
+    console.print(f"  使用量: {error.used_tokens:,} / {error.limit:,} ({usage_percentage:.1f}%)")
+    console.print(f"  モデル: {error.model}")
+    console.print(f"  超過量: {error.used_tokens - error.limit:,} トークン")
+
+    # 削減提案の計算
+    reduction_needed = ((error.used_tokens - error.limit) / error.used_tokens) * 100
+    console.print("\n[blue]📋 解決方法:[/blue]")
+    console.print(f"  1️⃣  入力を約{reduction_needed:.1f}%削減")
+    console.print("  2️⃣  より大きなモデルを使用: [cyan]--model gpt-4-turbo[/cyan]")
+    console.print("  3️⃣  ログを要約してから分析")
+    console.print("  4️⃣  複数の小さなチャンクに分割")
+
+    # 自動圧縮の提案
+    console.print("\n[green]🗜️  自動圧縮機能が利用可能です[/green]")
+    console.print("[dim]--compress オプションで自動的にログを圧縮できます[/dim]")
+
+
+def _handle_network_error_enhanced(error: NetworkError, console: Console, verbose: bool) -> None:
+    """ネットワークエラーの拡張処理"""
+    console.print("\n[yellow]🌐 ネットワークエラー[/yellow]")
+    console.print(f"[yellow]{error.message}[/yellow]")
+
+    if error.retry_count > 0:
+        console.print(f"[blue]🔄 リトライ回数: {error.retry_count}/3[/blue]")
+
+    console.print("\n[blue]📋 診断手順:[/blue]")
+    console.print("  1️⃣  インターネット接続を確認")
+    console.print("  2️⃣  プロキシ設定を確認")
+    console.print("  3️⃣  ファイアウォール設定を確認")
+    console.print("  4️⃣  DNS設定を確認")
+
+    # 接続テストの提案
+    console.print("\n[green]🔍 接続テスト:[/green]")
+    console.print("  • OpenAI: [cyan]curl -I https://api.openai.com[/cyan]")
+    console.print("  • Anthropic: [cyan]curl -I https://api.anthropic.com[/cyan]")
+
+    # 自動リトライ情報
+    if error.retry_count < 3:
+        retry_delay = min(2**error.retry_count, 60)
+        console.print(f"\n[green]🔄 自動リトライ: {retry_delay}秒後に実行されます[/green]")
+
+
+def _handle_configuration_error_enhanced(error: ConfigurationError, console: Console, verbose: bool) -> None:
+    """設定エラーの拡張処理"""
+    console.print("\n[red]⚙️  設定エラー[/red]")
+    console.print(f"[red]{error.message}[/red]")
+
+    if error.config_key:
+        console.print(f"[yellow]🔑 問題のある設定キー: {error.config_key}[/yellow]")
+
+    console.print("\n[blue]📋 設定修復手順:[/blue]")
+    console.print("  1️⃣  設定ファイルを確認: [cyan]ci-helper.toml[/cyan]")
+    console.print("  2️⃣  環境変数を確認: [cyan]env | grep CI_HELPER[/cyan]")
+    console.print("  3️⃣  環境診断を実行: [cyan]ci-run doctor[/cyan]")
+    console.print("  4️⃣  設定を再生成: [cyan]ci-run init[/cyan]")
+
+    # 設定例の表示
+    console.print("\n[green]📝 設定例:[/green]")
+    console.print("[dim][ai][/dim]")
+    console.print('[dim]default_provider = "openai"[/dim]')
+    console.print("[dim]cache_enabled = true[/dim]")
+
+
+def _handle_provider_error_enhanced(error: ProviderError, console: Console, verbose: bool) -> None:
+    """プロバイダーエラーの拡張処理"""
+    console.print(f"\n[red]🔌 プロバイダーエラー ({error.provider})[/red]")
+    console.print(f"[red]{error.message}[/red]")
+
+    if error.details:
+        console.print(f"[yellow]📋 詳細: {error.details}[/yellow]")
+
+    console.print("\n[blue]📋 解決手順:[/blue]")
+    console.print("  1️⃣  プロバイダー設定を確認")
+    console.print("  2️⃣  APIキーの有効性を確認")
+    console.print("  3️⃣  サービス状況を確認")
+    console.print("  4️⃣  別のプロバイダーを試す")
+
+    # 代替プロバイダーの提案
+    alternatives = []
+    if error.provider != "openai":
+        alternatives.append("openai")
+    if error.provider != "anthropic":
+        alternatives.append("anthropic")
+    if error.provider != "local":
+        alternatives.append("local")
+
+    if alternatives:
+        console.print("\n[green]🔄 代替プロバイダー:[/green]")
+        for alt in alternatives:
+            console.print(f"  • {alt}: [cyan]--provider {alt}[/cyan]")
+
+    # サービス状況確認リンク
+    status_urls = {
+        "openai": "https://status.openai.com/",
+        "anthropic": "https://status.anthropic.com/",
+    }
+    if error.provider in status_urls:
+        console.print(f"\n[dim]🔍 サービス状況: {status_urls[error.provider]}[/dim]")
+
+
+def _handle_generic_error_enhanced(error: Exception, console: Console, verbose: bool) -> None:
+    """汎用エラーの拡張処理"""
+    error_type = type(error).__name__
+    console.print(f"\n[red]❌ 予期しないエラー ({error_type})[/red]")
+    console.print(f"[red]{error}[/red]")
+
+    console.print("\n[blue]📋 トラブルシューティング:[/blue]")
+    console.print("  1️⃣  詳細ログで確認: [cyan]--verbose[/cyan]")
+    console.print("  2️⃣  環境を診断: [cyan]ci-run doctor[/cyan]")
+    console.print("  3️⃣  キャッシュをクリア: [cyan]ci-run clean[/cyan]")
+    console.print("  4️⃣  設定をリセット: [cyan]ci-run init[/cyan]")
+
+    # バグレポートの提案
+    console.print("\n[green]🐛 バグレポート:[/green]")
+    console.print("  問題が続く場合は GitHub Issues で報告してください")
+    console.print("  [cyan]https://github.com/scottlz0310/ci-helper/issues[/cyan]")
+
+
+def _display_error_footer(error: Exception, console: Console, verbose: bool) -> None:
+    """エラー表示のフッター情報"""
+    console.print(f"\n[dim]{'─' * 60}[/dim]")
+
+    # エラー発生時刻
+    console.print(f"[dim]⏰ エラー発生時刻: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}[/dim]")
+
+    # エラータイプ
+    console.print(f"[dim]🏷️  エラータイプ: {type(error).__name__}[/dim]")
 
     # 詳細表示モードの場合はスタックトレースを表示
     if verbose:
-        console.print("\n[dim]詳細なエラー情報:[/dim]")
+        console.print("\n[dim]📊 詳細なエラー情報:[/dim]")
         console.print_exception()
+
+    # ヘルプ情報
+    console.print("\n[blue]💡 追加ヘルプ:[/blue]")
+    console.print("  • コマンドヘルプ: [cyan]ci-run analyze --help[/cyan]")
+    console.print("  • 環境診断: [cyan]ci-run doctor[/cyan]")
+    console.print("  • 設定ガイド: [cyan]ci-run init[/cyan]")
+
+    console.print(f"[dim]{'─' * 60}[/dim]")
 
 
 def _suggest_fallback_options(console: Console, log_file: Path | None) -> None:
@@ -822,34 +1155,86 @@ def _suggest_fallback_options(console: Console, log_file: Path | None) -> None:
         console: Richコンソール
         log_file: 分析対象のログファイル
     """
-    console.print("\n[blue]💡 代替手段:[/blue]")
+    from rich.panel import Panel
+    from rich.table import Table
+
+    # フォールバックオプションをテーブル形式で表示
+    console.print(Panel.fit("🔄 利用可能な代替手段", style="blue"))
+
+    # 即座に実行可能な代替手段
+    immediate_table = Table(title="🚀 即座に実行可能", show_header=True, header_style="bold blue")
+    immediate_table.add_column("方法", style="cyan", width=20)
+    immediate_table.add_column("コマンド", style="green", width=35)
+    immediate_table.add_column("説明", style="white", width=25)
 
     # ログファイル関連の代替手段
     if log_file and log_file.exists():
-        console.print(f"  📄 ログファイルを直接確認: [cyan]{log_file}[/cyan]")
-        console.print("  📋 従来のログ表示: [cyan]ci-run logs --show latest[/cyan]")
+        immediate_table.add_row("📄 ログ直接確認", f"cat {log_file}", "ログファイルを直接表示")
+        immediate_table.add_row("📋 従来ログ表示", "ci-run logs --show latest", "整形されたログ表示")
     else:
-        console.print("  🔄 新しいテストを実行: [cyan]ci-run test[/cyan]")
-        console.print("  📋 過去のログを確認: [cyan]ci-run logs[/cyan]")
+        immediate_table.add_row("🔄 新規テスト実行", "ci-run test", "新しいログを生成")
+        immediate_table.add_row("📋 過去ログ確認", "ci-run logs", "既存のログ一覧表示")
 
-    # 環境・設定関連の代替手段
-    console.print("  🔍 環境チェック: [cyan]ci-run doctor[/cyan]")
-    console.print("  ⚙️  設定を再生成: [cyan]ci-run init[/cyan]")
+    # 環境診断
+    immediate_table.add_row("🔍 環境診断", "ci-run doctor", "システム環境をチェック")
 
-    # AI関連の代替手段
-    console.print("  🤖 別のプロバイダーを試す:")
-    console.print("    • OpenAI: [cyan]ci-run analyze --provider openai[/cyan]")
-    console.print("    • Anthropic: [cyan]ci-run analyze --provider anthropic[/cyan]")
-    console.print("    • ローカルLLM: [cyan]ci-run analyze --provider local[/cyan]")
+    console.print(immediate_table)
+
+    # AI代替プロバイダー
+    ai_table = Table(title="🤖 AI代替プロバイダー", show_header=True, header_style="bold yellow")
+    ai_table.add_column("プロバイダー", style="cyan", width=15)
+    ai_table.add_column("コマンド", style="green", width=40)
+    ai_table.add_column("特徴", style="white", width=25)
+
+    ai_table.add_row("OpenAI", "ci-run analyze --provider openai", "高精度、多機能")
+    ai_table.add_row("Anthropic", "ci-run analyze --provider anthropic", "長文対応、安全性重視")
+    ai_table.add_row("ローカルLLM", "ci-run analyze --provider local", "プライベート、無料")
+
+    console.print(ai_table)
 
     # トラブルシューティング
-    console.print("  🧹 トラブルシューティング:")
-    console.print("    • キャッシュをクリア: [cyan]ci-run clean --cache-only[/cyan]")
-    console.print("    • 古いログを削除: [cyan]ci-run clean --logs-only[/cyan]")
-    console.print("    • 全てをリセット: [cyan]ci-run clean --all[/cyan]")
+    troubleshoot_table = Table(title="🧹 トラブルシューティング", show_header=True, header_style="bold red")
+    troubleshoot_table.add_column("問題", style="cyan", width=20)
+    troubleshoot_table.add_column("解決コマンド", style="green", width=35)
+    troubleshoot_table.add_column("効果", style="white", width=25)
 
-    console.print("\n[dim]📚 詳細なヘルプ: ci-run analyze --help[/dim]")
-    console.print("[dim]🐛 問題が続く場合は GitHub Issues で報告してください[/dim]")
+    troubleshoot_table.add_row("キャッシュ問題", "ci-run clean --cache-only", "AIキャッシュをクリア")
+    troubleshoot_table.add_row("古いログ問題", "ci-run clean --logs-only", "古いログファイルを削除")
+    troubleshoot_table.add_row("設定問題", "ci-run init", "設定ファイルを再生成")
+    troubleshoot_table.add_row("全体リセット", "ci-run clean --all", "全データをクリア")
+
+    console.print(troubleshoot_table)
+
+    # 段階的復旧手順
+    console.print(Panel.fit("📋 段階的復旧手順", style="green"))
+    console.print("[bold green]1. 基本診断[/bold green]")
+    console.print("   [cyan]ci-run doctor[/cyan] - 環境の基本チェック")
+    console.print()
+    console.print("[bold green]2. 設定確認[/bold green]")
+    console.print("   [cyan]ci-run init[/cyan] - 設定ファイルの再生成")
+    console.print()
+    console.print("[bold green]3. 代替プロバイダー[/bold green]")
+    console.print("   [cyan]ci-run analyze --provider local[/cyan] - ローカルLLMを試す")
+    console.print()
+    console.print("[bold green]4. 従来手法[/bold green]")
+    console.print("   [cyan]ci-run logs --show latest[/cyan] - 従来のログ表示")
+
+    # 緊急時の連絡先
+    console.print(Panel.fit("🆘 緊急時の対応", style="red"))
+    console.print("[bold red]問題が解決しない場合:[/bold red]")
+    console.print("  📧 GitHub Issues: [cyan]https://github.com/scottlz0310/ci-helper/issues[/cyan]")
+    console.print("  📚 ドキュメント: [cyan]https://github.com/scottlz0310/ci-helper/docs[/cyan]")
+    console.print("  🔍 詳細ヘルプ: [cyan]ci-run analyze --help[/cyan]")
+
+    # 自動復旧の提案
+    console.print(Panel.fit("🤖 自動復旧オプション", style="blue"))
+    console.print("[bold blue]自動復旧を試しますか？[/bold blue]")
+    console.print("  Y: 基本的な修復を自動実行")
+    console.print("  N: 手動で対処")
+    console.print("  H: 詳細ヘルプを表示")
+
+    # ユーザー入力を受け付ける場合の準備（実装は別途）
+    console.print("\n[dim]💡 ヒント: 上記のコマンドをコピーして実行してください[/dim]")
 
 
 async def _save_partial_analysis_state(
@@ -887,6 +1272,248 @@ async def _save_partial_analysis_state(
     except Exception:
         # 部分保存の失敗は無視
         pass
+
+
+async def _attempt_automatic_recovery(
+    error: Exception, ai_integration: AIIntegration, log_content: str, options: AnalyzeOptions, console: Console
+) -> AnalysisResult | None:
+    """自動復旧を試行
+
+    Args:
+        error: 発生したエラー
+        ai_integration: AI統合インスタンス
+        log_content: ログ内容
+        options: 分析オプション
+        console: Richコンソール
+
+    Returns:
+        復旧成功時の分析結果、失敗時はNone
+    """
+    from ..ai.exceptions import NetworkError, ProviderError, RateLimitError, TokenLimitError
+
+    console.print("\n[blue]🔄 自動復旧を試行中...[/blue]")
+
+    try:
+        # エラータイプに応じた復旧戦略
+        if isinstance(error, TokenLimitError):
+            return await _recover_from_token_limit(error, ai_integration, log_content, options, console)
+        elif isinstance(error, RateLimitError):
+            return await _recover_from_rate_limit(error, ai_integration, log_content, options, console)
+        elif isinstance(error, NetworkError):
+            return await _recover_from_network_error(error, ai_integration, log_content, options, console)
+        elif isinstance(error, ProviderError):
+            return await _recover_from_provider_error(error, ai_integration, log_content, options, console)
+        else:
+            return await _recover_from_generic_error(error, ai_integration, log_content, options, console)
+
+    except Exception as recovery_error:
+        console.print(f"[red]自動復旧に失敗しました: {recovery_error}[/red]")
+        return None
+
+
+async def _recover_from_token_limit(
+    error: TokenLimitError, ai_integration: AIIntegration, log_content: str, options: AnalyzeOptions, console: Console
+) -> AnalysisResult | None:
+    """トークン制限エラーからの復旧"""
+    console.print("[yellow]📊 トークン制限エラーの自動復旧を実行中...[/yellow]")
+
+    # ログ内容を圧縮
+    try:
+        from ..core.log_compressor import LogCompressor
+
+        compressor = LogCompressor(target_tokens=error.limit // 2)  # 制限の半分を目標
+        compressed_content = compressor.compress_log(log_content)
+
+        console.print(f"[green]✓ ログを圧縮しました ({len(log_content)} → {len(compressed_content)} 文字)[/green]")
+
+        # 圧縮されたログで再試行
+        result = await ai_integration.analyze_log(compressed_content, options)
+        console.print("[green]✓ 圧縮ログでの分析が成功しました[/green]")
+        return result
+
+    except Exception as e:
+        console.print(f"[red]✗ ログ圧縮による復旧に失敗: {e}[/red]")
+
+    # より小さなモデルで試行
+    try:
+        smaller_models = {
+            "gpt-4o": "gpt-4o-mini",
+            "gpt-4-turbo": "gpt-4o-mini",
+            "claude-3-5-sonnet-20241022": "claude-3-5-haiku-20241022",
+        }
+
+        if options.model and options.model in smaller_models:
+            console.print(f"[blue]🔄 より小さなモデルで再試行: {smaller_models[options.model]}[/blue]")
+            options.model = smaller_models[options.model]
+            result = await ai_integration.analyze_log(log_content, options)
+            console.print("[green]✓ 小さなモデルでの分析が成功しました[/green]")
+            return result
+
+    except Exception as e:
+        console.print(f"[red]✗ 小さなモデルでの復旧に失敗: {e}[/red]")
+
+    return None
+
+
+async def _recover_from_rate_limit(
+    error: RateLimitError, ai_integration: AIIntegration, log_content: str, options: AnalyzeOptions, console: Console
+) -> AnalysisResult | None:
+    """レート制限エラーからの復旧"""
+    console.print("[yellow]⏱️  レート制限エラーの自動復旧を実行中...[/yellow]")
+
+    # 短時間の制限の場合は待機
+    if error.retry_after and error.retry_after <= 60:  # 1分以内
+        console.print(f"[blue]⏰ {error.retry_after}秒間待機中...[/blue]")
+
+        import asyncio
+
+        from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            TimeElapsedColumn(),
+            console=console,
+        ) as progress:
+            task = progress.add_task("レート制限解除まで待機中...", total=error.retry_after)
+            await asyncio.sleep(error.retry_after)
+            progress.update(task, completed=error.retry_after)
+
+        try:
+            result = await ai_integration.analyze_log(log_content, options)
+            console.print("[green]✓ 待機後の分析が成功しました[/green]")
+            return result
+        except Exception as e:
+            console.print(f"[red]✗ 待機後の再試行に失敗: {e}[/red]")
+
+    # 代替プロバイダーで試行
+    alternative_providers = ["openai", "anthropic", "local"]
+    current_provider = options.provider or "openai"
+
+    for provider in alternative_providers:
+        if provider != current_provider:
+            try:
+                console.print(f"[blue]🔄 代替プロバイダーで試行: {provider}[/blue]")
+                options.provider = provider
+                result = await ai_integration.analyze_log(log_content, options)
+                console.print(f"[green]✓ {provider}プロバイダーでの分析が成功しました[/green]")
+                return result
+            except Exception as e:
+                console.print(f"[yellow]⚠️  {provider}プロバイダーでも失敗: {e}[/yellow]")
+                continue
+
+    return None
+
+
+async def _recover_from_network_error(
+    error: NetworkError, ai_integration: AIIntegration, log_content: str, options: AnalyzeOptions, console: Console
+) -> AnalysisResult | None:
+    """ネットワークエラーからの復旧"""
+    console.print("[yellow]🌐 ネットワークエラーの自動復旧を実行中...[/yellow]")
+
+    # 指数バックオフでリトライ
+    max_retries = 3
+    for attempt in range(max_retries):
+        if attempt > 0:
+            delay = min(2**attempt, 30)  # 最大30秒
+            console.print(f"[blue]⏰ {delay}秒後にリトライします (試行 {attempt + 1}/{max_retries})[/blue]")
+
+            import asyncio
+
+            await asyncio.sleep(delay)
+
+        try:
+            result = await ai_integration.analyze_log(log_content, options)
+            console.print(f"[green]✓ リトライ {attempt + 1} で分析が成功しました[/green]")
+            return result
+        except NetworkError as e:
+            console.print(f"[yellow]⚠️  リトライ {attempt + 1} 失敗: {e}[/yellow]")
+            if attempt == max_retries - 1:
+                console.print("[red]✗ 全てのリトライが失敗しました[/red]")
+        except Exception as e:
+            console.print(f"[red]✗ リトライ中に別のエラー: {e}[/red]")
+            break
+
+    return None
+
+
+async def _recover_from_provider_error(
+    error: ProviderError, ai_integration: AIIntegration, log_content: str, options: AnalyzeOptions, console: Console
+) -> AnalysisResult | None:
+    """プロバイダーエラーからの復旧"""
+    console.print(f"[yellow]🔌 プロバイダーエラー ({error.provider}) の自動復旧を実行中...[/yellow]")
+
+    # 代替プロバイダーで試行
+    alternative_providers = ["openai", "anthropic", "local"]
+    failed_provider = error.provider
+
+    for provider in alternative_providers:
+        if provider != failed_provider:
+            try:
+                console.print(f"[blue]🔄 代替プロバイダーで試行: {provider}[/blue]")
+                options.provider = provider
+                result = await ai_integration.analyze_log(log_content, options)
+                console.print(f"[green]✓ {provider}プロバイダーでの分析が成功しました[/green]")
+                return result
+            except Exception as e:
+                console.print(f"[yellow]⚠️  {provider}プロバイダーでも失敗: {e}[/yellow]")
+                continue
+
+    console.print("[red]✗ 全ての代替プロバイダーで失敗しました[/red]")
+    return None
+
+
+async def _recover_from_generic_error(
+    error: Exception, ai_integration: AIIntegration, log_content: str, options: AnalyzeOptions, console: Console
+) -> AnalysisResult | None:
+    """汎用エラーからの復旧"""
+    console.print(f"[yellow]❌ 汎用エラー ({type(error).__name__}) の自動復旧を実行中...[/yellow]")
+
+    # キャッシュを無効にして再試行
+    try:
+        console.print("[blue]🔄 キャッシュを無効にして再試行...[/blue]")
+        options.use_cache = False
+        result = await ai_integration.analyze_log(log_content, options)
+        console.print("[green]✓ キャッシュ無効化での分析が成功しました[/green]")
+        return result
+    except Exception as e:
+        console.print(f"[yellow]⚠️  キャッシュ無効化でも失敗: {e}[/yellow]")
+
+    # 従来のログ表示にフォールバック
+    try:
+        console.print("[blue]🔄 従来のログ分析にフォールバック...[/blue]")
+        fallback_result = await ai_integration.fallback_handler.handle_analysis_failure(error, log_content, options)
+        console.print("[green]✓ 従来のログ分析が成功しました[/green]")
+        return fallback_result
+    except Exception as e:
+        console.print(f"[red]✗ フォールバック分析も失敗: {e}[/red]")
+
+    return None
+
+
+def _offer_interactive_recovery(console: Console) -> str:
+    """対話的な復旧オプションを提供
+
+    Args:
+        console: Richコンソール
+
+    Returns:
+        ユーザーの選択 ('auto', 'manual', 'skip')
+    """
+    from rich.panel import Panel
+    from rich.prompt import Prompt
+
+    console.print(Panel.fit("🤖 自動復旧オプション", style="blue"))
+    console.print("[bold blue]どのように対処しますか？[/bold blue]")
+    console.print("  [green]A[/green] - 自動復旧を試行")
+    console.print("  [yellow]M[/yellow] - 手動で対処")
+    console.print("  [red]S[/red] - スキップして終了")
+
+    choice = Prompt.ask("選択してください", choices=["A", "M", "S", "a", "m", "s"], default="A").upper()
+
+    choice_map = {"A": "auto", "M": "manual", "S": "skip"}
+
+    return choice_map.get(choice, "auto")
 
 
 def _validate_analysis_environment(config: Config, console: Console) -> bool:

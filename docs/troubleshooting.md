@@ -484,7 +484,7 @@ cp ci-helper.toml config-sample.toml
 ### GitHub Issues
 
 バグレポートは以下のリポジトリに報告してください：
-https://github.com/scottlz0310/ci-helper/issues
+<https://github.com/scottlz0310/ci-helper/issues>
 
 **テンプレート:**
 
@@ -542,6 +542,42 @@ A: はい。GitHub Actions と同様に、適切なアクセストークンを�
 
 A: キャッシュサイズの制限、古いログの削除、軽量な Docker イメージの使用を検討してください。詳細は「パフォーマンスの問題」セクションを参照してください。
 
+## AI統合機能のトラブルシューティング
+
+AI統合機能に関する問題については、専用のトラブルシューティングガイドを参照してください：
+
+- [AI統合機能 トラブルシューティングガイド](ai-troubleshooting.md)
+- [APIキー設定ガイド](api-key-setup.md)
+- [AI統合機能ガイド](ai-integration.md)
+
+### AI関連の一般的な問題
+
+#### APIキーが設定されていない
+
+```bash
+# 環境変数を設定
+export OPENAI_API_KEY="sk-proj-your-key"
+export ANTHROPIC_API_KEY="sk-ant-your-key"
+
+# 設定確認
+ci-run doctor --ai
+```
+
+#### AI分析が失敗する
+
+```bash
+# フォールバック機能を使用
+ci-run analyze --no-ai
+
+# 別のプロバイダーを試す
+ci-run analyze --provider anthropic
+
+# ローカルLLMを使用
+ci-run analyze --provider local
+```
+
+詳細な解決方法については、[AI統合機能 トラブルシューティングガイド](ai-troubleshooting.md)を参照してください。
+
 ## 関連リソース
 
 - [GitHub Actions ドキュメント](https://docs.github.com/en/actions)
@@ -549,3 +585,5 @@ A: キャッシュサイズの制限、古いログの削除、軽量な Docker 
 - [Docker ドキュメント](https://docs.docker.com/)
 - [uv ドキュメント](https://docs.astral.sh/uv/)
 - [ci-helper GitHub リポジトリ](https://github.com/scottlz0310/ci-helper)
+- [AI統合機能ガイド](ai-integration.md)
+- [APIキー設定ガイド](api-key-setup.md)

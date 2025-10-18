@@ -6,6 +6,7 @@ actコマンドを使用してGitHub Actionsワークフローをローカルで
 
 from __future__ import annotations
 
+import logging
 import subprocess
 import time
 from pathlib import Path
@@ -18,6 +19,8 @@ from ..core.exceptions import ExecutionError, SecurityError
 from ..core.models import ExecutionResult, JobResult, StepResult, WorkflowResult
 from ..core.security import EnvironmentSecretManager, SecretSummary, SecretValidationResult, SecurityValidator
 from ..utils.config import Config
+
+logger = logging.getLogger(__name__)
 
 
 class CIRunner:
@@ -222,6 +225,9 @@ class CIRunner:
         Raises:
             ExecutionError: actコマンドの実行に失敗した場合
         """
+        # 実行前のファイル所有権を記録
+        original_ownership = self._record_file_ownership()
+
         # actコマンドの構築
         cmd = ["act"]
 
@@ -232,6 +238,9 @@ class CIRunner:
         act_image = self.config.get("act_image")
         if act_image:
             cmd.extend(["-P", f"ubuntu-latest={act_image}"])
+
+        # ファイル所有権保持のためのオプションを追加
+        self._add_ownership_preservation_options(cmd)
 
         # 詳細出力
         if verbose:
@@ -259,6 +268,9 @@ class CIRunner:
                 env=safe_env,  # 安全な環境変数を使用
             )
 
+            # 実行後にファイル所有権をチェックして修正
+            self._restore_file_ownership(original_ownership)
+
             return result
 
         except FileNotFoundError as e:
@@ -272,6 +284,115 @@ class CIRunner:
                 f"actコマンドの実行がタイムアウトしました（{self.config.get('timeout_seconds')}秒）",
                 "より長いタイムアウト時間を設定するか、ワークフローを最適化してください",
             ) from e
+
+    def _record_file_ownership(self) -> dict[str, tuple[int, int]]:
+        """実行前のファイル所有権を記録
+
+        Returns:
+            ファイルパスと(uid, gid)のマッピング
+        """
+        ownership_map = {}
+
+        try:
+            # プロジェクトルート配下の重要なファイル・ディレクトリの所有権を記録
+            important_paths = [
+                self.project_root,
+                self.project_root / ".github",
+                self.project_root / ".ci-helper",
+            ]
+
+            # 存在するパスのみを対象とする
+            for path in important_paths:
+                if path.exists():
+                    stat_info = path.stat()
+                    ownership_map[str(path)] = (stat_info.st_uid, stat_info.st_gid)
+
+                    # ディレクトリの場合は中身も記録
+                    if path.is_dir():
+                        for item in path.rglob("*"):
+                            if item.exists():
+                                item_stat = item.stat()
+                                ownership_map[str(item)] = (item_stat.st_uid, item_stat.st_gid)
+
+        except (OSError, PermissionError) as e:
+            logger.warning(f"ファイル所有権の記録に失敗しました: {e}")
+
+        return ownership_map
+
+    def _add_ownership_preservation_options(self, cmd: list[str]) -> None:
+        """ファイル所有権保持のためのオプションを追加
+
+        Args:
+            cmd: actコマンドのリスト
+        """
+        import os
+
+        # 現在のユーザーIDとグループIDを取得
+        uid = os.getuid()
+        gid = os.getgid()
+
+        # Dockerコンテナ内でホストユーザーと同じUID/GIDを使用
+        cmd.extend(["--container-options", f"--user {uid}:{gid}"])
+
+        logger.debug(f"Docker実行時のユーザー設定: {uid}:{gid}")
+
+    def _restore_file_ownership(self, original_ownership: dict[str, tuple[int, int]]) -> None:
+        """ファイル所有権を元に戻す
+
+        Args:
+            original_ownership: 元の所有権情報
+        """
+        import os
+
+        changed_files = []
+
+        try:
+            for file_path, (original_uid, original_gid) in original_ownership.items():
+                path = Path(file_path)
+                if not path.exists():
+                    continue
+
+                current_stat = path.stat()
+                current_uid = current_stat.st_uid
+                current_gid = current_stat.st_gid
+
+                # 所有権が変更されている場合
+                if current_uid != original_uid or current_gid != original_gid:
+                    changed_files.append(str(path))
+
+                    try:
+                        # 所有権を復元
+                        os.chown(path, original_uid, original_gid)
+                        logger.debug(
+                            f"所有権を復元しました: {path} ({current_uid}:{current_gid} -> {original_uid}:{original_gid})"
+                        )
+                    except (OSError, PermissionError) as e:
+                        logger.warning(f"所有権の復元に失敗しました: {path} - {e}")
+
+            if changed_files:
+                logger.info(f"ファイル所有権を修正しました: {len(changed_files)}個のファイル")
+                if logger.isEnabledFor(logging.DEBUG):
+                    for file_path in changed_files[:10]:  # 最初の10個のみ表示
+                        logger.debug(f"  修正: {file_path}")
+                    if len(changed_files) > 10:
+                        logger.debug(f"  ... 他{len(changed_files) - 10}個")
+
+        except Exception as e:
+            logger.error(f"ファイル所有権の復元処理でエラーが発生しました: {e}")
+            # 手動修正のガイダンスを表示
+            self._show_manual_fix_guidance()
+
+    def _show_manual_fix_guidance(self) -> None:
+        """手動でのファイル所有権修正ガイダンスを表示"""
+        import os
+
+        current_user = os.getenv("USER", "user")
+
+        logger.error("ファイル所有権の自動修正に失敗しました。")
+        logger.error("以下のコマンドで手動修正してください:")
+        logger.error(f"  sudo chown -R {current_user}:{current_user} .")
+        logger.error("または、現在のユーザー名が異なる場合:")
+        logger.error("  sudo chown -R $(whoami):$(whoami) .")
 
     def _prepare_secure_environment(self) -> dict[str, str]:
         """act実行用の安全な環境変数を準備
