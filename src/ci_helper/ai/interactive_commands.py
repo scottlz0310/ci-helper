@@ -50,7 +50,7 @@ class HelpCommand(InteractiveCommand):
         self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] = None
     ) -> dict[str, Any]:
         """ヘルプを表示"""
-        help_text = """
+        help_text = f"""
 🤖 対話的AIデバッグモード - 利用可能なコマンド
 
 **基本コマンド:**
