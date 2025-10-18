@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from ..ai.models import AnalysisResult
 
 from ..ai.integration import AIIntegration
+from ..ai.models import AnalyzeOptions
 from ..core.error_handler import ErrorHandler
 from ..core.exceptions import CIHelperError
 from ..core.log_manager import LogManager
@@ -88,6 +89,11 @@ console = Console()
     is_flag=True,
     help="詳細な実行情報を表示",
 )
+@click.option(
+    "--retry",
+    "retry_operation_id",
+    help="失敗した操作をリトライ（操作IDを指定）",
+)
 @click.pass_context
 def analyze(
     ctx: click.Context,
@@ -102,6 +108,7 @@ def analyze(
     stats: bool,
     output_format: str,
     verbose: bool,
+    retry_operation_id: str | None,
 ) -> None:
     """CI/CDの失敗ログをAIで分析
 
@@ -130,6 +137,11 @@ def analyze(
 
         # AI統合の初期化
         ai_integration = AIIntegration(config)
+
+        # リトライ操作の場合
+        if retry_operation_id:
+            asyncio.run(_handle_retry_operation(ai_integration, retry_operation_id, console))
+            return
 
         # 非同期実行
         asyncio.run(
@@ -372,6 +384,9 @@ def _display_result_as_markdown(result: AnalysisResult, console: Console) -> Non
         result: 分析結果
         console: Richコンソール
     """
+    # フォールバック情報を最初に表示
+    _display_fallback_info(result, console)
+
     console.print(Panel.fit("🔍 AI分析結果", style="blue"))
     console.print()
 
@@ -382,25 +397,44 @@ def _display_result_as_markdown(result: AnalysisResult, console: Console) -> Non
         console.print()
 
     # 根本原因
-    if result.root_cause:
+    if result.root_causes:
         console.print("[bold]根本原因:[/bold]")
-        console.print(result.root_cause)
+        for i, cause in enumerate(result.root_causes, 1):
+            console.print(f"{i}. {cause.description}")
+            if cause.file_path:
+                console.print(f"   ファイル: {cause.file_path}")
+            if cause.line_number:
+                console.print(f"   行番号: {cause.line_number}")
         console.print()
 
-    # 推奨事項
-    if result.recommendations:
-        console.print("[bold]推奨事項:[/bold]")
-        for i, rec in enumerate(result.recommendations, 1):
-            console.print(f"{i}. {rec}")
+    # 修正提案
+    if result.fix_suggestions:
+        console.print("[bold]修正提案:[/bold]")
+        for i, fix in enumerate(result.fix_suggestions, 1):
+            console.print(f"{i}. {fix.title}")
+            console.print(f"   {fix.description}")
+        console.print()
+
+    # 関連エラー
+    if result.related_errors:
+        console.print("[bold]関連エラー:[/bold]")
+        for error in result.related_errors[:5]:  # 最初の5個のみ表示
+            console.print(f"- {error}")
+        if len(result.related_errors) > 5:
+            console.print(f"... 他 {len(result.related_errors) - 5} 個")
         console.print()
 
     # 統計情報
-    if result.tokens_used or result.cost:
-        console.print("[dim]統計情報:[/dim]")
-        if result.tokens_used:
-            console.print(f"[dim]使用トークン: {result.tokens_used:,}[/dim]")
-        if result.cost:
-            console.print(f"[dim]推定コスト: ${result.cost:.4f}[/dim]")
+    console.print("[dim]統計情報:[/dim]")
+    console.print(f"[dim]信頼度: {result.confidence_score:.1%}[/dim]")
+    console.print(f"[dim]分析時間: {result.analysis_time:.2f}秒[/dim]")
+    console.print(f"[dim]プロバイダー: {result.provider}[/dim]")
+    console.print(f"[dim]モデル: {result.model}[/dim]")
+    if result.tokens_used:
+        console.print(f"[dim]使用トークン: {result.tokens_used.total_tokens:,}[/dim]")
+        console.print(f"[dim]推定コスト: ${result.tokens_used.estimated_cost:.4f}[/dim]")
+    if result.cache_hit:
+        console.print("[dim]キャッシュヒット: はい[/dim]")
 
 
 def _display_result_as_table(result: AnalysisResult, console: Console) -> None:
@@ -497,3 +531,70 @@ def _read_log_file(log_file: Path) -> str:
         return log_file.read_text(encoding="utf-8")
     except Exception as e:
         raise CIHelperError(f"ログファイルの読み込みに失敗しました: {e}") from e
+
+
+async def _handle_retry_operation(ai_integration: AIIntegration, operation_id: str, console: Console) -> None:
+    """失敗した操作をリトライ
+
+    Args:
+        ai_integration: AI統合インスタンス
+        operation_id: 操作ID
+        console: コンソール
+    """
+    try:
+        console.print(f"[blue]操作 {operation_id} をリトライしています...[/blue]")
+
+        # AI統合を初期化
+        await ai_integration.initialize()
+
+        # リトライを実行
+        result = await ai_integration.retry_failed_operation(operation_id)
+
+        if result:
+            console.print("[green]✓ リトライが成功しました[/green]")
+            _display_analysis_result(result, "markdown", console)
+        else:
+            console.print(f"[red]✗ 操作 {operation_id} のリトライに失敗しました[/red]")
+            console.print("[yellow]操作IDが見つからないか、リトライ情報が利用できません。[/yellow]")
+
+    except Exception as e:
+        console.print(f"[red]✗ リトライ中にエラーが発生しました: {e}[/red]")
+
+        # フォールバック提案を表示
+        suggestions = await ai_integration.get_fallback_suggestions(e)
+        if suggestions:
+            console.print("\n[yellow]提案:[/yellow]")
+            for i, suggestion in enumerate(suggestions, 1):
+                console.print(f"  {i}. {suggestion}")
+
+
+def _display_fallback_info(result: AnalysisResult, console: Console) -> None:
+    """フォールバック情報を表示
+
+    Args:
+        result: 分析結果
+        console: コンソール
+    """
+    if result.status.value != "fallback":
+        return
+
+    # フォールバック理由を表示
+    if result.fallback_reason:
+        console.print(f"\n[yellow]フォールバック理由: {result.fallback_reason}[/yellow]")
+
+    # リトライ情報を表示
+    if result.retry_available:
+        if result.retry_after:
+            console.print(f"[blue]💡 {result.retry_after}秒後にリトライできます[/blue]")
+        else:
+            console.print("[blue]💡 すぐにリトライできます[/blue]")
+
+    # 代替プロバイダー情報を表示
+    if result.alternative_providers:
+        providers_text = ", ".join(result.alternative_providers)
+        console.print(f"[blue]💡 代替プロバイダー: {providers_text}[/blue]")
+
+    # 操作IDを表示（リトライ用）
+    operation_id = f"fallback_{result.timestamp.strftime('%Y%m%d_%H%M%S')}"
+    console.print(f"[dim]操作ID: {operation_id}[/dim]")
+    console.print("[dim]リトライするには: ci-run analyze --retry {operation_id}[/dim]")

@@ -38,6 +38,7 @@ class AnalysisStatus(Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CACHED = "cached"
+    FALLBACK = "fallback"
 
 
 @dataclass
@@ -108,6 +109,10 @@ class AnalysisResult:
     provider: str = ""  # 使用したプロバイダー
     model: str = ""  # 使用したモデル
     cache_hit: bool = False  # キャッシュヒットかどうか
+    fallback_reason: str | None = None  # フォールバック理由
+    retry_available: bool = False  # リトライ可能かどうか
+    retry_after: int | None = None  # リトライまでの秒数
+    alternative_providers: list[str] = field(default_factory=list)  # 代替プロバイダー
 
     @property
     def has_high_confidence(self) -> bool:

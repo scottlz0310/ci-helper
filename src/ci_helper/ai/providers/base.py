@@ -156,6 +156,20 @@ class AIProvider(ABC):
                 "default_model": self.config.default_model,
                 "rate_limit": self.config.rate_limit_per_minute,
             }
+        except RateLimitError as e:
+            return {
+                "provider": self.name,
+                "status": "rate_limited",
+                "error": str(e),
+                "reset_time": e.reset_time.isoformat() if e.reset_time else None,
+            }
+        except NetworkError as e:
+            return {
+                "provider": self.name,
+                "status": "network_error",
+                "error": str(e),
+                "retry_count": e.retry_count,
+            }
         except Exception as e:
             return {
                 "provider": self.name,
@@ -183,6 +197,33 @@ class AIProvider(ABC):
             total_tokens=total_tokens,
             estimated_cost=estimated_cost,
         )
+
+    def handle_api_error(self, error: Exception, operation: str) -> Exception:
+        """API エラーを適切な例外に変換
+
+        Args:
+            error: 元のエラー
+            operation: 実行していた操作
+
+        Returns:
+            変換された例外
+        """
+        error_str = str(error).lower()
+
+        # レート制限エラーの検出
+        if "rate limit" in error_str or "too many requests" in error_str:
+            return RateLimitError(self.name)
+
+        # トークン制限エラーの検出
+        if "token" in error_str and ("limit" in error_str or "maximum" in error_str):
+            return TokenLimitError(0, 0, self.config.default_model)
+
+        # ネットワークエラーの検出
+        if any(keyword in error_str for keyword in ["connection", "network", "timeout", "unreachable"]):
+            return NetworkError(f"{operation}中にネットワークエラーが発生しました: {error}")
+
+        # その他はプロバイダーエラーとして処理
+        return ProviderError(self.name, f"{operation}中にエラーが発生しました: {error}")
 
     async def cleanup(self) -> None:
         """リソースをクリーンアップ
