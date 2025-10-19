@@ -665,25 +665,31 @@ def _display_stats(config: Config, console: Console) -> None:
 
         storage_path = config.get_path("cache_dir") / "ai" / "usage.json"
         cost_manager = CostManager(storage_path, config.get_ai_cost_limits())
-        stats = cost_manager.get_monthly_usage(datetime.now().year, datetime.now().month)
+        stats = cost_manager.get_monthly_report(datetime.now().year, datetime.now().month)
 
         console.print(Panel.fit("📊 AI使用統計", style="blue"))
         console.print()
 
         # 月間統計
-        if stats.get("monthly_usage"):
-            monthly = stats["monthly_usage"]
+        if stats.get("stats"):
+            monthly = stats["stats"]
             console.print("[bold]今月の使用量:[/bold]")
             console.print(f"総トークン数: {monthly.get('total_tokens', 0):,}")
             console.print(f"総コスト: ${monthly.get('total_cost', 0):.4f}")
-            console.print(f"リクエスト数: {monthly.get('request_count', 0)}")
+            console.print(f"リクエスト数: {monthly.get('total_requests', 0)}")
+            console.print(f"成功率: {monthly.get('success_rate', 0):.1%}")
             console.print()
 
         # プロバイダー別統計
-        if stats.get("by_provider"):
+        if stats.get("provider_breakdown"):
             console.print("[bold]プロバイダー別使用量:[/bold]")
-            for provider, data in stats["by_provider"].items():
-                console.print(f"{provider}: {data.get('total_tokens', 0):,} トークン, ${data.get('total_cost', 0):.4f}")
+            for provider, data in stats["provider_breakdown"].items():
+                if isinstance(data, dict):
+                    console.print(
+                        f"{provider}: {data.get('total_tokens', 0):,} トークン, ${data.get('total_cost', 0):.4f}"
+                    )
+                else:
+                    console.print(f"{provider}: {data:,} 回使用")
 
     except Exception as e:
         console.print(f"[red]統計情報の取得に失敗しました: {e}[/red]")

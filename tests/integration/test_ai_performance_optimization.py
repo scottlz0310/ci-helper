@@ -19,7 +19,6 @@ from src.ci_helper.ai.integration import AIIntegration
 from src.ci_helper.ai.models import AnalysisResult, AnalysisStatus, AnalyzeOptions
 
 
-@patch("src.ci_helper.ai.providers.openai.OpenAIProvider.count_tokens", return_value=1000)
 class TestAIPerformanceOptimization:
     """AI統合パフォーマンス最適化テスト"""
 
@@ -138,7 +137,10 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
     @pytest.mark.asyncio
     async def test_large_log_processing_performance(self, large_log_content, mock_ai_config):
         """大きなログファイルの処理パフォーマンステスト"""
-        with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
+        with (
+            patch("src.ci_helper.ai.providers.openai.OpenAIProvider.count_tokens", return_value=1000),
+            patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager,
+        ):
             mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
 
             with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
@@ -195,7 +197,10 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
     @pytest.mark.asyncio
     async def test_very_large_log_handling(self, very_large_log_content, mock_ai_config):
         """非常に大きなログの処理テスト（メモリ効率性）"""
-        with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
+        with (
+            patch("src.ci_helper.ai.providers.openai.OpenAIProvider.count_tokens", return_value=1000),
+            patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager,
+        ):
             mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
 
             with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
@@ -244,7 +249,10 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
             variant = large_log_content.replace("ERROR:", f"ERROR-{i}:")
             log_variants.append(variant)
 
-        with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
+        with (
+            patch("src.ci_helper.ai.providers.openai.OpenAIProvider.count_tokens", return_value=1000),
+            patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager,
+        ):
             mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
 
             with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
@@ -297,7 +305,10 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
     @pytest.mark.asyncio
     async def test_streaming_performance_optimization(self, large_log_content, mock_ai_config):
         """ストリーミング処理のパフォーマンス最適化テスト"""
-        with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
+        with (
+            patch("src.ci_helper.ai.providers.openai.OpenAIProvider.count_tokens", return_value=1000),
+            patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager,
+        ):
             mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
 
             with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
@@ -375,7 +386,10 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
     @pytest.mark.asyncio
     async def test_memory_cleanup_after_analysis(self, large_log_content, mock_ai_config):
         """分析後のメモリクリーンアップテスト"""
-        with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
+        with (
+            patch("src.ci_helper.ai.providers.openai.OpenAIProvider.count_tokens", return_value=1000),
+            patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager,
+        ):
             mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
 
             with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
@@ -433,7 +447,10 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
         cache_dir = temp_dir / "performance_cache"
         mock_ai_config.cache_dir = str(cache_dir)
 
-        with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
+        with (
+            patch("src.ci_helper.ai.providers.openai.OpenAIProvider.count_tokens", return_value=1000),
+            patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager,
+        ):
             mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
 
             with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
@@ -490,7 +507,10 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
         response_times = {}
 
         for size_name, log_content in log_sizes:
-            with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
+            with (
+                patch("src.ci_helper.ai.providers.openai.OpenAIProvider.count_tokens", return_value=1000),
+                patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager,
+            ):
                 mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
 
                 with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
@@ -541,7 +561,10 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
     @pytest.mark.asyncio
     async def test_token_optimization_strategies(self, large_log_content, mock_ai_config):
         """トークン最適化戦略のテスト"""
-        with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
+        with (
+            patch("src.ci_helper.ai.providers.openai.OpenAIProvider.count_tokens", return_value=1000),
+            patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager,
+        ):
             mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
 
             # トークン制限エラーをシミュレート
@@ -595,7 +618,10 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
     @pytest.mark.asyncio
     async def test_error_recovery_performance(self, large_log_content, mock_ai_config):
         """エラー復旧のパフォーマンステスト"""
-        with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
+        with (
+            patch("src.ci_helper.ai.providers.openai.OpenAIProvider.count_tokens", return_value=1000),
+            patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager,
+        ):
             mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
 
             with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
@@ -671,7 +697,10 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
         # 複数の小さなログを生成
         small_logs = [f"ERROR {i}: Test failure in module_{i}" for i in range(20)]
 
-        with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
+        with (
+            patch("src.ci_helper.ai.providers.openai.OpenAIProvider.count_tokens", return_value=1000),
+            patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager,
+        ):
             mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
 
             with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
@@ -760,7 +789,10 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
 
         async def run_analysis():
             """分析を実行"""
-            with patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager:
+            with (
+                patch("src.ci_helper.ai.providers.openai.OpenAIProvider.count_tokens", return_value=1000),
+                patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager,
+            ):
                 mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
 
                 with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:

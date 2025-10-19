@@ -4,6 +4,7 @@ AIプロバイダーのテスト
 各AIプロバイダー（OpenAI、Anthropic、ローカルLLM）の機能をテストします。
 """
 
+from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -357,3 +358,305 @@ class TestLocalLLMProvider:
             with patch("aiohttp.ClientSession"):
                 with pytest.raises(ProviderError):
                     await local_provider.initialize()
+
+
+class TestTemplateLoader:
+    """テンプレートローダーのテスト"""
+
+    @pytest.fixture
+    def temp_template_dir(self, tmp_path):
+        """一時テンプレートディレクトリ"""
+        template_dir = tmp_path / "templates"
+        template_dir.mkdir()
+        return template_dir
+
+    @pytest.fixture
+    def template_loader(self, temp_template_dir):
+        """テンプレートローダー"""
+        from src.ci_helper.ai.template_loader import TemplateLoader
+
+        return TemplateLoader(temp_template_dir)
+
+    def test_template_loader_initialization(self, template_loader, temp_template_dir):
+        """テンプレートローダー初期化のテスト"""
+        assert template_loader.template_dir == temp_template_dir
+
+    def test_template_loader_default_dir(self):
+        """デフォルトディレクトリでの初期化テスト"""
+        from src.ci_helper.ai.template_loader import TemplateLoader
+
+        loader = TemplateLoader()
+        assert loader.template_dir == Path("templates")
+
+    def test_load_template_file_success(self, template_loader, temp_template_dir):
+        """テンプレートファイル読み込み成功のテスト"""
+        # テンプレートファイルを作成
+        template_file = temp_template_dir / "test_template.txt"
+        template_content = "これはテストテンプレートです。\n変数: {variable}"
+        template_file.write_text(template_content, encoding="utf-8")
+
+        # テンプレートを読み込み
+        result = template_loader.load_template_file("test_template")
+        assert result == template_content
+
+    def test_load_template_file_not_found(self, template_loader):
+        """存在しないテンプレートファイルの読み込みテスト"""
+        from src.ci_helper.ai.exceptions import ConfigurationError
+
+        with pytest.raises(ConfigurationError) as exc_info:
+            template_loader.load_template_file("nonexistent")
+
+        assert "テンプレートファイルが見つかりません" in str(exc_info.value)
+
+    def test_load_template_file_read_error(self, template_loader, temp_template_dir):
+        """テンプレートファイル読み込みエラーのテスト"""
+        from src.ci_helper.ai.exceptions import ConfigurationError
+
+        # 読み込み不可能なファイルを作成（権限エラーをシミュレート）
+        template_file = temp_template_dir / "unreadable.txt"
+        template_file.write_text("content", encoding="utf-8")
+
+        # ファイル読み込みでエラーが発生するようにモック
+        with patch("builtins.open", side_effect=PermissionError("Permission denied")):
+            with pytest.raises(ConfigurationError) as exc_info:
+                template_loader.load_template_file("unreadable")
+
+            assert "テンプレートファイルの読み込みに失敗しました" in str(exc_info.value)
+
+    def test_load_templates_from_config_success(self, template_loader, temp_template_dir):
+        """設定ファイルからのテンプレート読み込み成功テスト"""
+        # 設定ファイルを作成
+        config_file = temp_template_dir / "config.toml"
+        config_content = f"""
+[ai.prompt_templates]
+analysis = "{temp_template_dir / "analysis_template.txt"}"
+fix = "{temp_template_dir / "fix_template.txt"}"
+"""
+        config_file.write_text(config_content, encoding="utf-8")
+
+        # テンプレートファイルを作成（config.tomlと同じディレクトリに）
+        (temp_template_dir / "analysis_template.txt").write_text("分析テンプレート", encoding="utf-8")
+        (temp_template_dir / "fix_template.txt").write_text("修正テンプレート", encoding="utf-8")
+
+        # テンプレートを読み込み
+        templates = template_loader.load_templates_from_config(config_file)
+
+        assert templates["analysis"] == "分析テンプレート"
+        assert templates["fix"] == "修正テンプレート"
+
+    def test_load_templates_from_config_file_not_found(self, template_loader, temp_template_dir):
+        """存在しない設定ファイルからの読み込みテスト"""
+        from src.ci_helper.ai.exceptions import ConfigurationError
+
+        nonexistent_config = temp_template_dir / "nonexistent.toml"
+
+        with pytest.raises(ConfigurationError) as exc_info:
+            template_loader.load_templates_from_config(nonexistent_config)
+
+        assert "設定ファイルが見つかりません" in str(exc_info.value)
+
+    def test_load_templates_from_config_invalid_toml(self, template_loader, temp_template_dir):
+        """無効なTOMLファイルからの読み込みテスト"""
+        from src.ci_helper.ai.exceptions import ConfigurationError
+
+        # 無効なTOMLファイルを作成
+        config_file = temp_template_dir / "invalid.toml"
+        config_file.write_text("invalid toml content [", encoding="utf-8")
+
+        with pytest.raises(ConfigurationError) as exc_info:
+            template_loader.load_templates_from_config(config_file)
+
+        assert "設定ファイルからのテンプレート読み込みに失敗しました" in str(exc_info.value)
+
+    def test_load_templates_from_config_missing_template_file(self, template_loader, temp_template_dir):
+        """設定ファイルで指定されたテンプレートファイルが存在しない場合のテスト"""
+
+        # 設定ファイルを作成（存在しないテンプレートファイルを指定）
+        config_file = temp_template_dir / "config.toml"
+        config_content = """
+[ai.prompt_templates]
+analysis = "missing_template.txt"
+"""
+        config_file.write_text(config_content, encoding="utf-8")
+
+        # 存在しないファイルは単純にスキップされる（エラーにならない）
+        templates = template_loader.load_templates_from_config(config_file)
+        assert templates == {}  # 空の辞書が返される
+
+    def test_load_templates_from_config_no_templates_section(self, template_loader, temp_template_dir):
+        """templatesセクションがない設定ファイルのテスト"""
+        # templatesセクションがない設定ファイルを作成
+        config_file = temp_template_dir / "config.toml"
+        config_content = """
+[other_section]
+key = "value"
+"""
+        config_file.write_text(config_content, encoding="utf-8")
+
+        # templatesセクションがない場合は空の辞書を返す
+        templates = template_loader.load_templates_from_config(config_file)
+        assert templates == {}
+
+    def test_save_template_success(self, template_loader, temp_template_dir):
+        """テンプレート保存成功のテスト"""
+        template_name = "new_template"
+        template_content = "新しいテンプレート内容\n変数: {var}"
+
+        template_loader.save_template(template_name, template_content)
+
+        # ファイルが作成されたことを確認
+        template_file = temp_template_dir / f"{template_name}.txt"
+        assert template_file.exists()
+        assert template_file.read_text(encoding="utf-8") == template_content
+
+    def test_save_template_create_directory(self, tmp_path):
+        """ディレクトリが存在しない場合の保存テスト"""
+        from src.ci_helper.ai.template_loader import TemplateLoader
+
+        # 存在しないディレクトリを指定
+        nonexistent_dir = tmp_path / "nonexistent" / "templates"
+        loader = TemplateLoader(nonexistent_dir)
+
+        template_name = "test"
+        template_content = "テスト内容"
+
+        loader.save_template(template_name, template_content)
+
+        # ディレクトリとファイルが作成されたことを確認
+        assert nonexistent_dir.exists()
+        template_file = nonexistent_dir / f"{template_name}.txt"
+        assert template_file.exists()
+        assert template_file.read_text(encoding="utf-8") == template_content
+
+    def test_save_template_write_error(self, template_loader):
+        """テンプレート保存エラーのテスト"""
+        from src.ci_helper.ai.exceptions import ConfigurationError
+
+        # ファイル書き込みでエラーが発生するようにモック
+        with patch("builtins.open", side_effect=PermissionError("Permission denied")):
+            with pytest.raises(ConfigurationError) as exc_info:
+                template_loader.save_template("test", "content")
+
+            assert "テンプレートの保存に失敗しました" in str(exc_info.value)
+
+    def test_list_available_templates(self, template_loader, temp_template_dir):
+        """利用可能なテンプレート一覧取得のテスト"""
+        # テンプレートファイルを作成
+        (temp_template_dir / "template1.txt").write_text("内容1", encoding="utf-8")
+        (temp_template_dir / "template2.txt").write_text("内容2", encoding="utf-8")
+        (temp_template_dir / "not_template.md").write_text("マークダウン", encoding="utf-8")  # .txtでないファイル
+
+        templates = template_loader.list_available_templates()
+
+        assert sorted(templates) == ["template1", "template2"]
+        assert "not_template" not in templates  # .txtでないファイルは含まれない
+
+    def test_list_available_templates_empty_directory(self, template_loader):
+        """空のディレクトリでのテンプレート一覧取得テスト"""
+        templates = template_loader.list_available_templates()
+        assert templates == []
+
+    def test_list_available_templates_nonexistent_directory(self, tmp_path):
+        """存在しないディレクトリでのテンプレート一覧取得テスト"""
+        from src.ci_helper.ai.template_loader import TemplateLoader
+
+        nonexistent_dir = tmp_path / "nonexistent"
+        loader = TemplateLoader(nonexistent_dir)
+
+        templates = loader.list_available_templates()
+        assert templates == []
+
+    def test_template_exists_true(self, template_loader, temp_template_dir):
+        """テンプレート存在確認（存在する場合）のテスト"""
+        # テンプレートファイルを作成
+        (temp_template_dir / "existing.txt").write_text("内容", encoding="utf-8")
+
+        assert template_loader.template_exists("existing") is True
+
+    def test_template_exists_false(self, template_loader):
+        """テンプレート存在確認（存在しない場合）のテスト"""
+        assert template_loader.template_exists("nonexistent") is False
+
+    def test_get_template_info_success(self, template_loader, temp_template_dir):
+        """テンプレート情報取得成功のテスト"""
+        # テンプレートファイルを作成
+        template_content = "テンプレート内容\n変数: {variable1}\n別の変数: {variable2}"
+        template_file = temp_template_dir / "info_test.txt"
+        template_file.write_text(template_content, encoding="utf-8")
+
+        info = template_loader.get_template_info("info_test")
+
+        assert info["name"] == "info_test"
+        assert info["path"] == str(template_file)
+        assert info["size"] > 0
+        assert info["modified"] > 0
+        assert info["lines"] == 3
+        assert sorted(info["variables"]) == ["variable1", "variable2"]
+
+    def test_get_template_info_not_found(self, template_loader):
+        """存在しないテンプレートの情報取得テスト"""
+        from src.ci_helper.ai.exceptions import ConfigurationError
+
+        with pytest.raises(ConfigurationError) as exc_info:
+            template_loader.get_template_info("nonexistent")
+
+        assert "テンプレートが見つかりません" in str(exc_info.value)
+
+    def test_get_template_info_error(self, template_loader, temp_template_dir):
+        """テンプレート情報取得エラーのテスト"""
+        from src.ci_helper.ai.exceptions import ConfigurationError
+
+        # テンプレートファイルを作成
+        (temp_template_dir / "error_test.txt").write_text("内容", encoding="utf-8")
+
+        # stat()でエラーが発生するようにモック
+        with patch("pathlib.Path.stat", side_effect=OSError("Stat error")):
+            with pytest.raises(ConfigurationError) as exc_info:
+                template_loader.get_template_info("error_test")
+
+            assert "テンプレート情報の取得に失敗しました" in str(exc_info.value)
+
+    def test_extract_variables(self, template_loader):
+        """変数抽出のテスト"""
+        content = """
+        これは{variable1}のテストです。
+        {variable2}と{variable1}が含まれています。
+        {variable3}も含まれています。
+        通常のテキストです。
+        """
+
+        variables = template_loader._extract_variables(content)
+        assert sorted(variables) == ["variable1", "variable2", "variable3"]
+
+    def test_extract_variables_no_variables(self, template_loader):
+        """変数が含まれていないテンプレートの変数抽出テスト"""
+        content = "これは変数が含まれていないテンプレートです。"
+
+        variables = template_loader._extract_variables(content)
+        assert variables == []
+
+    def test_create_sample_templates(self, template_loader, temp_template_dir):
+        """サンプルテンプレート作成のテスト"""
+        template_loader.create_sample_templates()
+
+        # サンプルテンプレートが作成されたことを確認
+        assert (temp_template_dir / "custom_analysis.txt").exists()
+        assert (temp_template_dir / "custom_fix.txt").exists()
+
+        # 内容を確認
+        analysis_content = (temp_template_dir / "custom_analysis.txt").read_text(encoding="utf-8")
+        assert "{context}" in analysis_content
+        assert "分析対象" in analysis_content
+
+        fix_content = (temp_template_dir / "custom_fix.txt").read_text(encoding="utf-8")
+        assert "{analysis_result}" in fix_content
+        assert "修正提案" in fix_content
+
+    def test_create_sample_templates_error(self, template_loader):
+        """サンプルテンプレート作成エラーのテスト"""
+        from src.ci_helper.ai.exceptions import ConfigurationError
+
+        # save_templateでエラーが発生するようにモック
+        with patch.object(template_loader, "save_template", side_effect=ConfigurationError("Save error")):
+            with pytest.raises(ConfigurationError):
+                template_loader.create_sample_templates()

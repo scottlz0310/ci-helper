@@ -163,6 +163,11 @@ class AIIntegration:
             # セッション管理を初期化
             self.session_manager = InteractiveSessionManager(self.prompt_manager)
 
+            # コマンドプロセッサーを初期化
+            from .interactive_commands import InteractiveCommandProcessor
+
+            self.session_manager.command_processor = InteractiveCommandProcessor(self.session_manager)
+
             # 修正提案生成器を初期化
             self.fix_generator = FixSuggestionGenerator(self.prompt_manager)
 
@@ -441,7 +446,7 @@ class AIIntegration:
 
             # 初期ログに対して処理を実行（タイムアウトやメモリエラーをテストするため）
             if initial_log:
-                if callable(getattr(self.session_manager, 'process_input', None)):
+                if callable(getattr(self.session_manager, "process_input", None)):
                     try:
                         await self.session_manager.process_input(session.session_id, initial_log)
                     except (TimeoutError, MemoryError) as e:
