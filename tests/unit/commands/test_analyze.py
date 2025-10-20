@@ -15,11 +15,23 @@ from src.ci_helper.commands.analyze import analyze
 
 
 class TestAnalyzeCommand:
-    """analyzeコマンドのテストクラス"""
+    """
+    analyzeコマンドのテストクラス
+    
+    AI分析コマンドの基本機能をテストします。
+    各テストは独立して実行可能で、モックを使用して外部依存を排除します。
+    """
 
     @pytest.fixture
     def runner(self):
-        """CLIランナー"""
+        """
+        CLIランナーフィクスチャ
+        
+        Click CLIコマンドのテスト実行に使用するランナーを提供します。
+        
+        Returns:
+            CliRunner: CLIテスト用ランナー
+        """
         return CliRunner()
 
     @pytest.fixture
@@ -68,13 +80,27 @@ class TestAnalyzeCommand:
         return mock_result
 
     def test_analyze_help(self, runner):
-        """ヘルプ表示のテスト"""
+        """
+        ヘルプ表示のテスト
+        
+        analyzeコマンドのヘルプが正しく表示されることを確認します。
+        - 終了コードが0であること
+        - 主要な説明文が含まれること
+        - 重要なオプションが表示されること
+        
+        Args:
+            runner: CLIランナーフィクスチャ
+        """
         result = runner.invoke(analyze, ["--help"])
-        assert result.exit_code == 0
-        assert "CI/CDの失敗ログをAIで分析" in result.output
-        assert "--log" in result.output
-        assert "--provider" in result.output
-        assert "--interactive" in result.output
+        
+        # 正常終了の確認
+        assert result.exit_code == 0, "ヘルプ表示は正常終了すること"
+        
+        # 必要な内容が含まれることを確認
+        assert "CI/CDの失敗ログをAIで分析" in result.output, "コマンドの説明が表示されること"
+        assert "--log" in result.output, "ログファイル指定オプションが表示されること"
+        assert "--provider" in result.output, "プロバイダー指定オプションが表示されること"
+        assert "--interactive" in result.output, "対話モードオプションが表示されること"
 
     @patch("src.ci_helper.commands.analyze.AIIntegration")
     @patch("src.ci_helper.commands.analyze._get_latest_log_file")
