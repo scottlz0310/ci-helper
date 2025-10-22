@@ -25,25 +25,32 @@ class ProviderError(AIError):
     def __init__(self, provider: str, message: str, details: str | None = None):
         super().__init__(message, details)
         self.provider = provider
+        self.message = message
+
+    def __str__(self) -> str:
+        return f"[{self.provider}] {self.message}"
 
 
-class APIKeyError(AIError):
+class APIKeyError(ProviderError):
     """APIキー関連のエラー"""
 
     def __init__(self, provider: str, message: str = "APIキーが無効または設定されていません"):
-        super().__init__(
-            message,
-            f"{provider}のAPIキーを確認してください",
-            f"環境変数 {provider.upper()}_API_KEY を設定してください",
-        )
-        self.provider = provider
+        super().__init__(provider, message)
+        details = f"{provider}のAPIキーを確認してください"
+        suggestion = f"環境変数 {provider.upper()}_API_KEY を設定してください"
+        self.details = details
+        self.suggestion = suggestion
 
 
-class RateLimitError(AIError):
+class RateLimitError(ProviderError):
     """レート制限エラー"""
 
-    def __init__(self, provider: str, reset_time: datetime | None = None, retry_after: int | None = None):
-        message = f"{provider}のレート制限に達しました"
+    def __init__(self, provider: str, message: str | None = None, retry_after: int | None = None, reset_time: datetime | None = None):
+        if message is None:
+            message = f"{provider}のレート制限に達しました"
+        
+        super().__init__(provider, message)
+        
         details = None
         suggestion = "しばらく待ってから再試行してください"
 
@@ -52,8 +59,8 @@ class RateLimitError(AIError):
         if retry_after:
             suggestion = f"{retry_after}秒後に再試行してください"
 
-        super().__init__(message, details, suggestion)
-        self.provider = provider
+        self.details = details
+        self.suggestion = suggestion
         self.reset_time = reset_time
         self.retry_after = retry_after
 
@@ -81,6 +88,7 @@ class NetworkError(AIError):
             f"リトライ回数: {retry_count}",
             "ネットワーク接続を確認し、再試行してください",
         )
+        self.message = message
         self.retry_count = retry_count
 
 

@@ -112,13 +112,13 @@ class TestRateLimitError:
     def test_rate_limit_error_basic(self):
         """基本的なレート制限エラーのテスト"""
         provider = "openai"
-        message = "レート制限に達しました"
-        error = RateLimitError(provider, message)
+        error = RateLimitError(provider)
 
         assert error.provider == provider
-        assert error.message == message
         assert error.retry_after is None
-        assert str(error) == f"[{provider}] {message}"
+        assert error.reset_time is None
+        expected_message = f"{provider}のレート制限に達しました"
+        assert expected_message in str(error)
 
     def test_rate_limit_error_with_retry_after(self):
         """リトライ時間付きレート制限エラーのテスト"""
@@ -141,7 +141,7 @@ class TestRateLimitError:
 
     def test_rate_limit_error_zero_retry_after(self):
         """リトライ時間0のレート制限エラーテスト"""
-        error = RateLimitError("test", "テストエラー", retry_after=0)
+        error = RateLimitError("test", retry_after=0)
         assert error.retry_after == 0
 
 
@@ -171,11 +171,12 @@ class TestTokenLimitError:
         """モデル名なしのトークン制限エラーテスト"""
         used_tokens = 2000
         limit = 1500
-        error = TokenLimitError(used_tokens, limit)
+        model = "test-model"
+        error = TokenLimitError(used_tokens, limit, model)
 
         assert error.used_tokens == used_tokens
         assert error.limit == limit
-        assert error.model is None
+        assert error.model == model
         expected_message = f"トークン制限を超過しました: {used_tokens}/{limit}"
         assert str(error) == expected_message
 

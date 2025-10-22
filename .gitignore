@@ -17,6 +17,7 @@ uv.lock
 logs/
 test_results/
 test_results.xml
+coverage_test.json
 
 # Auto-generated entries from templates
 $RECYCLE.BIN/

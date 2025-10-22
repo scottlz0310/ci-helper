@@ -8,11 +8,83 @@ pytest設定と共有フィクスチャ
 from collections.abc import Generator
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
 from ci_helper.utils.config import Config
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_environment():
+    """
+    テスト環境のセットアップ
+    
+    並列テスト実行時のリソース競合を防ぐため、テスト環境を適切に設定します。
+    セッション開始時に一度だけ実行され、全テストで共有されます。
+    """
+    import os
+    import tempfile
+    
+    # テスト専用の一時ディレクトリを設定
+    original_tmpdir = os.environ.get("TMPDIR")
+    test_tmpdir = tempfile.mkdtemp(prefix="ci_helper_test_session_")
+    os.environ["TMPDIR"] = test_tmpdir
+    
+    # テスト用の環境変数を設定
+    os.environ["CI_HELPER_TEST_MODE"] = "1"
+    os.environ["CI_HELPER_LOG_LEVEL"] = "WARNING"
+    
+    yield
+    
+    # クリーンアップ
+    if original_tmpdir:
+        os.environ["TMPDIR"] = original_tmpdir
+    else:
+        os.environ.pop("TMPDIR", None)
+    os.environ.pop("CI_HELPER_TEST_MODE", None)
+    os.environ.pop("CI_HELPER_LOG_LEVEL", None)
+    
+    # テスト用一時ディレクトリをクリーンアップ
+    import shutil
+    try:
+        shutil.rmtree(test_tmpdir, ignore_errors=True)
+    except Exception:
+        pass  # クリーンアップエラーは無視
+
+
+@pytest.fixture
+def isolated_test_resources(monkeypatch):
+    """
+    テストリソースの分離（オプション）
+    
+    並列テスト実行時にリソース競合が発生する可能性があるテストで使用します。
+    このフィクスチャを明示的に使用するテストのみが分離されます。
+    """
+    import os
+    import uuid
+    
+    # テスト固有の識別子を生成
+    test_id = f"{os.getpid()}_{uuid.uuid4().hex[:8]}"
+    
+    # 環境変数でテスト識別子を設定
+    monkeypatch.setenv("CI_HELPER_TEST_ID", test_id)
+    
+    # ログファイルの競合を避けるため、テスト固有のログディレクトリを設定
+    monkeypatch.setenv("CI_HELPER_LOG_DIR", f".ci-helper-test-{test_id}/logs")
+    
+    # キャッシュディレクトリの競合を避ける
+    monkeypatch.setenv("CI_HELPER_CACHE_DIR", f".ci-helper-test-{test_id}/cache")
+    
+    yield test_id
+    
+    # テスト終了後のクリーンアップ
+    import shutil
+    for cleanup_dir in [f".ci-helper-test-{test_id}"]:
+        try:
+            shutil.rmtree(cleanup_dir, ignore_errors=True)
+        except Exception:
+            pass  # クリーンアップエラーは無視
 
 
 @pytest.fixture
@@ -22,11 +94,17 @@ def temp_dir() -> Generator[Path, None, None]:
     
     テスト実行時に一時的なディレクトリを作成し、テスト終了後に自動的にクリーンアップします。
     ファイル操作のテストで使用され、テスト間の独立性を保証します。
+    並列テスト実行時の競合を避けるため、プロセス固有の一意なディレクトリを作成します。
     
     Returns:
         Path: 一時ディレクトリのパス
     """
-    with TemporaryDirectory() as tmp_dir:
+    import os
+    import uuid
+    
+    # 並列テスト実行時の競合を避けるため、プロセス固有の一意なディレクトリを作成
+    unique_suffix = f"{os.getpid()}_{uuid.uuid4().hex[:8]}"
+    with TemporaryDirectory(prefix=f"ci_helper_test_{unique_suffix}_") as tmp_dir:
         yield Path(tmp_dir)
 
 
@@ -319,3 +397,63 @@ def mock_config(temp_dir):
     config.__getitem__ = Mock(return_value=None)
     config.__contains__ = Mock(return_value=False)
     return config
+
+
+@pytest.fixture
+async def async_ai_integration_with_cleanup(mock_config, mock_ai_config):
+    """
+    非同期リソースクリーンアップ付きのAIIntegration
+    
+    aiohttp.ClientSessionなどの非同期リソースを適切にクリーンアップする
+    AIIntegrationフィクスチャを提供します。
+    
+    Args:
+        mock_config: モック設定オブジェクト
+        mock_ai_config: モックAI設定オブジェクト
+        
+    Yields:
+        AIIntegration: 適切にセットアップされたAIIntegrationインスタンス
+    """
+    from ci_helper.ai.integration import AIIntegration
+    
+    integration = AIIntegration(mock_config)
+    integration.ai_config = mock_ai_config
+    integration._initialized = True
+    
+    # 必要なコンポーネントをモック化
+    integration.prompt_manager = Mock()
+    integration.cache_manager = Mock()
+    integration.cache_manager.cache_result = AsyncMock()
+    integration.cost_manager = Mock()
+    integration.cost_manager.check_usage_limits.return_value = {"over_limit": False, "usage_percentage": 10.0}
+    integration.cost_manager.record_ai_usage = AsyncMock()
+    
+    # 非同期メソッドをAsyncMockで設定
+    integration.error_handler = Mock()
+    integration.error_handler.handle_error_with_retry = AsyncMock()
+    integration.fallback_handler = Mock()
+    integration.fallback_handler.handle_analysis_failure = AsyncMock()
+    integration.session_manager = Mock()
+    integration.fix_generator = Mock()
+    integration.fix_applier = Mock()
+    
+    # モックプロバイダーを設定（cleanup メソッド付き）
+    mock_provider = Mock()
+    mock_provider.name = "openai"
+    mock_provider.config = mock_ai_config.providers["openai"]
+    mock_provider.count_tokens.return_value = 100
+    mock_provider.estimate_cost.return_value = 0.01
+    mock_provider.cleanup = AsyncMock()  # 非同期クリーンアップメソッド
+    
+    integration.providers = {"openai": mock_provider}
+    
+    try:
+        yield integration
+    finally:
+        # テスト終了時に必ずクリーンアップを実行
+        try:
+            await integration.cleanup()
+        except Exception as e:
+            # クリーンアップエラーは警告として記録
+            import logging
+            logging.warning(f"テスト終了時のクリーンアップに失敗: {e}")

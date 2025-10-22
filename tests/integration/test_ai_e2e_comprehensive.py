@@ -170,16 +170,20 @@ class TestAIE2EComprehensive:
                 ):
                     # AI統合を実行
                     ai_integration = AIIntegration(mock_ai_config)
-                    await ai_integration.initialize()
+                    try:
+                        await ai_integration.initialize()
 
-                    options = AnalyzeOptions(
-                        provider="openai",
-                        model="gpt-4o",
-                        use_cache=False,
-                        streaming=False,
-                    )
+                        options = AnalyzeOptions(
+                            provider="openai",
+                            model="gpt-4o",
+                            use_cache=False,
+                            streaming=False,
+                        )
 
-                    result = await ai_integration.analyze_log(log_content, options)
+                        result = await ai_integration.analyze_log(log_content, options)
+                    finally:
+                        # リソースクリーンアップを確実に実行
+                        await ai_integration.cleanup()
 
                     # 結果の検証
                     assert isinstance(result, AnalysisResult)
@@ -233,16 +237,20 @@ class TestAIE2EComprehensive:
                 mock_anthropic.return_value = mock_client
 
                 ai_integration = AIIntegration(mock_ai_config)
-                await ai_integration.initialize()
+                try:
+                    await ai_integration.initialize()
 
-                options = AnalyzeOptions(
-                    provider="anthropic",
-                    model="claude-3-5-sonnet-20241022",
-                    use_cache=False,
-                    streaming=False,
-                )
+                    options = AnalyzeOptions(
+                        provider="anthropic",
+                        model="claude-3-5-sonnet-20241022",
+                        use_cache=False,
+                        streaming=False,
+                    )
 
-                result = await ai_integration.analyze_log(log_content, options)
+                    result = await ai_integration.analyze_log(log_content, options)
+                finally:
+                    # リソースクリーンアップを確実に実行
+                    await ai_integration.cleanup()
 
                 # 結果の検証
                 assert isinstance(result, AnalysisResult)
@@ -294,16 +302,20 @@ class TestAIE2EComprehensive:
                 ),
             ):
                 ai_integration = AIIntegration(mock_ai_config)
-                await ai_integration.initialize()
+                try:
+                    await ai_integration.initialize()
 
-                options = AnalyzeOptions(
-                    provider="local",
-                    model="llama3.2",
-                    use_cache=False,
-                    streaming=False,
-                )
+                    options = AnalyzeOptions(
+                        provider="local",
+                        model="llama3.2",
+                        use_cache=False,
+                        streaming=False,
+                    )
 
-                result = await ai_integration.analyze_log(log_content, options)
+                    result = await ai_integration.analyze_log(log_content, options)
+                finally:
+                    # リソースクリーンアップを確実に実行
+                    await ai_integration.cleanup()
 
                 # 結果の検証
                 assert isinstance(result, AnalysisResult)
@@ -381,17 +393,21 @@ class TestAIE2EComprehensive:
                     mock_provider.return_value = mock_client
 
                     ai_integration = AIIntegration(mock_ai_config)
-                    await ai_integration.initialize()
+                    try:
+                        await ai_integration.initialize()
 
-                    options = AnalyzeOptions(
-                        provider=provider_name,
-                        model=mock_ai_config.providers[provider_name].default_model,
-                        use_cache=False,
-                        streaming=False,
-                    )
+                        options = AnalyzeOptions(
+                            provider=provider_name,
+                            model=mock_ai_config.providers[provider_name].default_model,
+                            use_cache=False,
+                            streaming=False,
+                        )
 
-                    result = await ai_integration.analyze_log(log_content, options)
-                    results[provider_name] = result
+                        result = await ai_integration.analyze_log(log_content, options)
+                        results[provider_name] = result
+                    finally:
+                        # リソースクリーンアップを確実に実行
+                        await ai_integration.cleanup()
 
         # 比較検証
         assert len(results) == 2
@@ -444,48 +460,52 @@ class TestAIE2EComprehensive:
                 mock_stream.side_effect = mock_stream_response
 
                 ai_integration = AIIntegration(mock_ai_config)
-                await ai_integration.initialize()
+                try:
+                    await ai_integration.initialize()
 
-                options = AnalyzeOptions(
-                    provider="openai",
-                    model="gpt-4o",
-                    use_cache=False,
-                    streaming=True,
-                )
+                    options = AnalyzeOptions(
+                        provider="openai",
+                        model="gpt-4o",
+                        use_cache=False,
+                        streaming=True,
+                    )
 
-                # 対話セッションを開始
-                session = await ai_integration.start_interactive_session(initial_log, options)
+                    # 対話セッションを開始
+                    session = await ai_integration.start_interactive_session(initial_log, options)
 
-                # セッションの検証
-                assert session is not None
-                assert session.session_id is not None
-                assert hasattr(session, "is_active")  # 属性の存在確認
-                assert session.provider == "openai"
-                assert session.model == "gpt-4o"
+                    # セッションの検証
+                    assert session is not None
+                    assert session.session_id is not None
+                    assert hasattr(session, "is_active")  # 属性の存在確認
+                    assert session.provider == "openai"
+                    assert session.model == "gpt-4o"
 
-                # 対話入力のテスト
-                user_inputs = [
-                    "このエラーの原因は何ですか？",
-                    "修正方法を教えてください",
-                    "/help",
-                    "/exit",
-                ]
+                    # 対話入力のテスト
+                    user_inputs = [
+                        "このエラーの原因は何ですか？",
+                        "修正方法を教えてください",
+                        "/help",
+                        "/exit",
+                    ]
 
-                for user_input in user_inputs:
-                    if user_input == "/exit":
-                        # セッション終了
-                        success = await ai_integration.close_interactive_session(session.session_id)
-                        assert success is True
-                        break
-                    else:
-                        # 通常の対話
-                        responses = []
-                        async for chunk in ai_integration.process_interactive_input(session.session_id, user_input):
-                            responses.append(chunk)
+                    for user_input in user_inputs:
+                        if user_input == "/exit":
+                            # セッション終了
+                            success = await ai_integration.close_interactive_session(session.session_id)
+                            assert success is True
+                            break
+                        else:
+                            # 通常の対話
+                            responses = []
+                            async for chunk in ai_integration.process_interactive_input(session.session_id, user_input):
+                                responses.append(chunk)
 
-                        assert len(responses) > 0
-                        # 何らかのレスポンスが返されることを確認
-                        assert any(len(response.strip()) > 0 for response in responses)
+                            assert len(responses) > 0
+                            # 何らかのレスポンスが返されることを確認
+                            assert any(len(response.strip()) > 0 for response in responses)
+                finally:
+                    # リソースクリーンアップを確実に実行
+                    await ai_integration.cleanup()
 
     def test_analyze_command_with_real_logs(self, runner, temp_dir, real_log_files, mock_ai_config):
         """実際のログファイルでのanalyzeコマンドテスト"""

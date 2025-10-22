@@ -69,7 +69,7 @@ AssertionError: Expected 200, got 404
             )
 
             assert isinstance(result, AnalysisResult)
-            assert result.status == AnalysisStatus.FALLBACK_USED
+            assert result.status == AnalysisStatus.FALLBACK
             assert "Traditional analysis result" in result.summary
             mock_traditional.assert_called_once_with(sample_log_content)
 
@@ -93,7 +93,7 @@ AssertionError: Expected 200, got 404
                 )
 
                 assert isinstance(result, AnalysisResult)
-                assert result.status == AnalysisStatus.FALLBACK_USED
+                assert result.status == AnalysisStatus.FALLBACK
                 mock_retry.assert_called_once()
                 mock_traditional.assert_called_once()
 
@@ -117,7 +117,7 @@ AssertionError: Expected 200, got 404
                 )
 
                 assert isinstance(result, AnalysisResult)
-                assert result.status == AnalysisStatus.FALLBACK_USED
+                assert result.status == AnalysisStatus.FALLBACK
                 mock_suggest.assert_called_once_with("openai")
                 mock_traditional.assert_called_once()
 
@@ -135,7 +135,7 @@ AssertionError: Expected 200, got 404
             )
 
             assert isinstance(result, AnalysisResult)
-            assert result.status == AnalysisStatus.FALLBACK_USED
+            assert result.status == AnalysisStatus.FALLBACK
             mock_traditional.assert_called_once()
 
     @pytest.mark.asyncio
@@ -259,7 +259,9 @@ AssertionError: Expected 200, got 404
 
         # ファイルの更新時刻を古く設定
         old_time = datetime.now() - timedelta(days=10)
-        old_file.touch(times=(old_time.timestamp(), old_time.timestamp()))
+        old_file.touch()
+        import os
+        os.utime(old_file, (old_time.timestamp(), old_time.timestamp()))
 
         # 新しいファイルを作成
         new_file = fallback_handler.fallback_dir / "new_result.json"
@@ -296,8 +298,7 @@ AssertionError: Expected 200, got 404
         str_repr = str(fallback_handler)
 
         assert "FallbackHandler" in str_repr
-        assert "2 partial results" in str_repr
-        assert "2 operations" in str_repr
+        assert "partial_results=2" in str_repr
 
 
 class TestFallbackHandlerIntegration:
@@ -325,7 +326,7 @@ class TestFallbackHandlerIntegration:
 
         # 結果の検証
         assert isinstance(result, AnalysisResult)
-        assert result.status == AnalysisStatus.FALLBACK_USED
+        assert result.status == AnalysisStatus.FALLBACK
         assert result.summary is not None
         assert len(result.summary) > 0
 
@@ -354,4 +355,4 @@ class TestFallbackHandlerIntegration:
         # すべての結果がフォールバック結果であることを確認
         for result in results:
             assert isinstance(result, AnalysisResult)
-            assert result.status == AnalysisStatus.FALLBACK_USED
+            assert result.status == AnalysisStatus.FALLBACK

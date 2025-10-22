@@ -31,8 +31,10 @@ def create_test_log_file() -> Path:
 2024-01-15 10:31:00 [ERROR] Missing closing parenthesis
 """
 
-    temp_file = Path(tempfile.mktemp(suffix=".log"))
-    temp_file.write_text(content.strip())
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='w', suffix=".log", delete=False) as f:
+        f.write(content.strip())
+        temp_file = Path(f.name)
     return temp_file
 
 

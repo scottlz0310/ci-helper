@@ -169,7 +169,11 @@ ignore_missing_imports = true
 
 [tool.coverage.run]
 source = ["src"]
-omit = ["tests/*"]
+omit = ["tests/*", "*/migrations/*", "*/__pycache__/*"]
+parallel = true
+data_file = ".coverage"
+branch = false
+concurrency = ["thread", "multiprocessing"]
 
 [tool.coverage.report]
 fail_under = 70
@@ -185,6 +189,12 @@ exclude_lines = [
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
 ]
+show_missing = true
+skip_covered = false
+skip_empty = false
+
+[tool.coverage.paths]
+source = ["src/", "*/site-packages/"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -196,17 +206,20 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=html:htmlcov",
     "--cov-config=pyproject.toml",
-    "-n", "logical",
+    "--cov-append",
+    "-n",
+    "auto",
     "--tb=short",
     "--strict-markers",
-    "--disable-warnings"
+    "--disable-warnings",
+    "--maxfail=10",
 ]
 minversion = "8.0"
 asyncio_mode = "auto"
 timeout = 300
 timeout_method = "thread"
-log_cli = true
-log_cli_level = "INFO"
+log_cli = false
+log_cli_level = "WARNING"
 log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 markers = [
@@ -215,12 +228,14 @@ markers = [
     "performance: パフォーマンステスト",
     "ci: CI/CD関連テスト",
     "unit: ユニットテスト",
-    "ai: AI機能関連テスト"
+    "ai: AI機能関連テスト",
 ]
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::PendingDeprecationWarning",
-    "ignore::UserWarning:pytest_xdist"
+    "ignore::UserWarning:pytest_xdist",
+    "ignore::pytest.PytestUnraisableExceptionWarning",
+    "ignore::ResourceWarning",
 ]
 
 [tool.bandit]

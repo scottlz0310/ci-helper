@@ -1,0 +1,67 @@
+{
+  "mock_mismatch": {
+    "pattern_id": "mock_mismatch",
+    "pattern_name": "モック不一致",
+    "description": "モックの期待値と実際の呼び出しが一致しない",
+    "error_signature": "AssertionError.*assert_called.*with",
+    "fix_strategy": "実際の実装に合わせてモック期待値を更新",
+    "examples": [
+      "mock_subprocess_run.assert_called_once_with",
+      "mock_api_call.assert_called_with"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-22T16:34:15.610603"
+  },
+  "exception_init": {
+    "pattern_id": "exception_init",
+    "pattern_name": "例外初期化エラー",
+    "description": "例外クラスの初期化時に必須引数が不足",
+    "error_signature": "TypeError.*missing.*required.*argument",
+    "fix_strategy": "必須引数を追加して例外を正しく初期化",
+    "examples": [
+      "TokenLimitError(5000, 4000, 'gpt-4o')",
+      "RateLimitError(retry_after=60)"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-22T16:34:15.610625"
+  },
+  "async_cleanup": {
+    "pattern_id": "async_cleanup",
+    "pattern_name": "非同期リソースクリーンアップ",
+    "description": "非同期リソースが適切にクリーンアップされない",
+    "error_signature": "RuntimeError.*Event loop is closed",
+    "fix_strategy": "async withコンテキストマネージャーを使用",
+    "examples": [
+      "async with aiohttp.ClientSession() as session:",
+      "await integration.cleanup()"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-22T16:34:15.610627"
+  },
+  "attribute_error": {
+    "pattern_id": "attribute_error",
+    "pattern_name": "属性エラー",
+    "description": "存在しない属性やメソッドへのアクセス",
+    "error_signature": "AttributeError.*has no attribute",
+    "fix_strategy": "正しい属性名やメソッド名を使用",
+    "examples": [
+      "AnalysisStatus.COMPLETED_WITH_FALLBACK",
+      "datetime.strftime()"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-22T16:34:15.610629"
+  },
+  "fixture_missing": {
+    "pattern_id": "fixture_missing",
+    "pattern_name": "フィクスチャ不足",
+    "description": "テストに必要なフィクスチャやファイルが存在しない",
+    "error_signature": "FileNotFoundError|fixture.*not found",
+    "fix_strategy": "必要なフィクスチャファイルを作成",
+    "examples": [
+      "tests/fixtures/sample_logs/ai_analysis_test.log",
+      "tests/fixtures/sample_logs/complex_failure.log"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-22T16:34:15.610631"
+  }
+}

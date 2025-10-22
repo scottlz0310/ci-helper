@@ -71,7 +71,7 @@ class TestAIIntegrationCore:
         """AIIntegrationインスタンス"""
         return AIIntegration(mock_config)
 
-    def test_initialization_with_config(self, mock_config, ai_config):
+    def test_initialization_with_config(self, mock_config, mock_ai_config):
         """設定を使用した初期化のテスト"""
         # Configオブジェクトでの初期化
         integration = AIIntegration(mock_config)
@@ -79,8 +79,8 @@ class TestAIIntegrationCore:
         assert not integration._initialized
 
         # AIConfigオブジェクトでの初期化
-        integration_ai = AIIntegration(ai_config)
-        assert integration_ai.ai_config == ai_config
+        integration_ai = AIIntegration(mock_ai_config)
+        assert integration_ai.ai_config == mock_ai_config
         assert not integration_ai._initialized
 
         # 辞書での初期化
@@ -139,23 +139,8 @@ class TestAIIntegrationCore:
         assert ai_integration.providers["openai"] == mock_provider
 
     @pytest.mark.asyncio
-    @patch("src.ci_helper.ai.integration.PromptManager")
-    @patch("src.ci_helper.ai.integration.CacheManager")
-    @pytest.mark.asyncio
-    async def test_analysis_workflow_orchestration(
-        self, mock_cache_manager, mock_prompt_manager, ai_integration, ai_config
-    ):
+    async def test_analysis_workflow_orchestration(self, async_ai_integration_with_cleanup):
         """分析ワークフロー統制のテスト"""
-        # AI設定を設定
-        ai_integration.ai_config = ai_config
-
-        # モックプロバイダーを設定
-        mock_provider = Mock()
-        mock_provider.name = "openai"
-        mock_provider.config = ai_config.providers["openai"]
-        mock_provider.count_tokens.return_value = 100
-        mock_provider.estimate_cost.return_value = 0.01
-
         # 分析結果を設定
         analysis_result = AnalysisResult(
             summary="テスト分析結果",
@@ -163,22 +148,19 @@ class TestAIIntegrationCore:
             tokens_used=TokenUsage(input_tokens=100, output_tokens=50, total_tokens=150, estimated_cost=0.01),
             status=AnalysisStatus.COMPLETED,
         )
-        mock_provider.analyze = AsyncMock(return_value=analysis_result)
-
-        ai_integration.providers = {"openai": mock_provider}
-        ai_integration._initialized = True
+        async_ai_integration_with_cleanup.providers["openai"].analyze = AsyncMock(return_value=analysis_result)
 
         # 分析オプションを作成
         options = AnalyzeOptions(provider="openai", model="gpt-4o", use_cache=False)
 
         # 分析を実行
-        result = await ai_integration.analyze_log("test log content", options)
+        result = await async_ai_integration_with_cleanup.analyze_log("test log content", options)
 
         # 結果を検証
         assert result.summary == "テスト分析結果"
         assert result.provider == "openai"
         assert result.model == "gpt-4o"
-        assert result.status == AnalysisStatus.COMPLETED
+        assert result.status.value == "completed"
         assert result.analysis_time > 0
 
     @pytest.mark.asyncio
@@ -231,9 +213,9 @@ class TestAIIntegrationCore:
 
     @pytest.mark.asyncio
     @patch("src.ci_helper.ai.integration.ProviderFactory")
-    async def test_provider_initialization_failure(self, mock_provider_factory, ai_integration, ai_config):
+    async def test_provider_initialization_failure(self, mock_provider_factory, ai_integration, mock_ai_config):
         """プロバイダー初期化失敗のテスト"""
-        ai_integration.ai_config = ai_config
+        ai_integration.ai_config = mock_ai_config
 
         # プロバイダー作成時にエラーを発生させる
         mock_provider_factory.create_provider.side_effect = APIKeyError("openai", "Invalid API key")
@@ -347,16 +329,46 @@ class TestAsyncProcessing:
     """非同期処理機能のテスト"""
 
     @pytest.fixture
-    def async_integration(self, mock_config, ai_config):
+    def async_integration(self, mock_config, mock_ai_config):
         """非同期処理用のAIIntegration"""
         integration = AIIntegration(mock_config)
-        integration.ai_config = ai_config
+        integration.ai_config = mock_ai_config
         integration._initialized = True
+
+        # 必要なコンポーネントをモック化
+        integration.prompt_manager = Mock()
+        integration.cache_manager = Mock()
+        integration.cost_manager = Mock()
+        integration.cost_manager.check_usage_limits.return_value = {"over_limit": False, "usage_percentage": 10.0}
+        
+        # 非同期メソッドをAsyncMockで設定
+        integration.error_handler = Mock()
+        error_info = {
+            "can_retry": True,
+            "auto_retry": False,
+            "message": "タイムアウトエラーが発生しました"
+        }
+        integration.error_handler.handle_error_with_retry = AsyncMock(return_value=error_info)
+        
+        # フォールバックハンドラーを適切に設定
+        integration.fallback_handler = Mock()
+        fallback_result = AnalysisResult(
+            summary="タイムアウトが発生しました。フォールバック分析を実行しました。",
+            status=AnalysisStatus.FALLBACK,
+            analysis_time=1.0,
+            provider="fallback",
+            model="fallback"
+        )
+        integration.fallback_handler.handle_analysis_failure = AsyncMock(return_value=fallback_result)
+        
+        integration.session_manager = Mock()
+        integration.fix_generator = Mock()
+        integration.fix_applier = Mock()
 
         # モックプロバイダーを設定
         mock_provider = Mock()
         mock_provider.name = "openai"
-        mock_provider.config = ai_config.providers["openai"]
+        mock_provider.config = mock_ai_config.providers["openai"]
         mock_provider.count_tokens.return_value = 100
         mock_provider.estimate_cost.return_value = 0.01
 
@@ -442,11 +454,21 @@ class TestCacheIntegration:
     """キャッシュ統合機能のテスト"""
 
     @pytest.fixture
-    def cache_integration(self, mock_config, ai_config):
+    def cache_integration(self, mock_config, mock_ai_config):
         """キャッシュ機能付きのAIIntegration"""
         integration = AIIntegration(mock_config)
-        integration.ai_config = ai_config
+        integration.ai_config = mock_ai_config
         integration._initialized = True
+
+        # 必要なコンポーネントをモック化
+        integration.prompt_manager = Mock()
+        integration.cost_manager = Mock()
+        integration.cost_manager.check_usage_limits.return_value = {"over_limit": False, "usage_percentage": 10.0}
+        integration.error_handler = Mock()
+        integration.fallback_handler = Mock()
+        integration.session_manager = Mock()
+        integration.fix_generator = Mock()
+        integration.fix_applier = Mock()
 
         # モックキャッシュマネージャーを設定
         mock_cache = Mock()
@@ -457,7 +479,7 @@ class TestCacheIntegration:
         # モックプロバイダーを設定
         mock_provider = Mock()
         mock_provider.name = "openai"
-        mock_provider.config = ai_config.providers["openai"]
+        mock_provider.config = mock_ai_config.providers["openai"]
         mock_provider.count_tokens.return_value = 100
         mock_provider.estimate_cost.return_value = 0.01
         mock_provider.analyze = AsyncMock(

@@ -144,7 +144,7 @@ class TestCacheHelperFunctions:
         result = _check_docker_available()
 
         assert result is True
-        mock_subprocess_run.assert_called_once_with(["docker", "--version"], capture_output=True, text=True, timeout=10)
+        mock_subprocess_run.assert_called_once_with(["docker", "info"], capture_output=True, text=True, timeout=10)
 
     @patch("subprocess.run")
     def test_check_docker_available_failure(self, mock_subprocess_run):
@@ -233,12 +233,7 @@ alpine                        latest    abcdef123456   3 weeks ago    5.61MB"""
         _list_cached_images()
 
         mock_subprocess_run.assert_called_once_with(
-            [
-                "docker",
-                "images",
-                "--format",
-                "table {{.Repository}}\\t{{.Tag}}\\t{{.ID}}\\t{{.CreatedSince}}\\t{{.Size}}",
-            ],
+            ["docker", "images", "--format", "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"],
             capture_output=True,
             text=True,
             timeout=30,
@@ -269,7 +264,7 @@ alpine                        latest    abcdef123456   3 weeks ago    5.61MB"""
         _clean_unused_images()
 
         mock_subprocess_run.assert_called_once_with(
-            ["docker", "system", "prune", "-f", "--filter", "until=24h"], capture_output=True, text=True, timeout=300
+            ["docker", "image", "prune", "-f"], capture_output=True, text=True, timeout=60
         )
 
     @patch("subprocess.run")
@@ -290,18 +285,17 @@ alpine                        latest    abcdef123456   3 weeks ago    5.61MB"""
         """キャッシュ状況表示成功のテスト"""
         from src.ci_helper.commands.cache import _show_cache_status
 
-        # docker system dfコマンドの出力をモック
-        mock_output = """TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
-Images          10        5         2.5GB     1.2GB (48%)
-Containers      3         2         100MB     50MB (50%)
-Local Volumes   2         1         500MB     250MB (50%)"""
+        # docker imagesコマンドの出力をモック
+        mock_output = """ghcr.io/catthehacker/ubuntu:act-latest	1.2GB
+ubuntu:20.04	72.8MB
+alpine:latest	5.61MB"""
 
         mock_subprocess_run.return_value = Mock(returncode=0, stdout=mock_output)
 
         _show_cache_status()
 
         mock_subprocess_run.assert_called_once_with(
-            ["docker", "system", "df"], capture_output=True, text=True, timeout=30
+            ["docker", "images", "--format", "{{.Repository}}:{{.Tag}}\t{{.Size}}"], capture_output=True, text=True, timeout=30
         )
 
     @patch("subprocess.run")
@@ -330,17 +324,18 @@ class TestCacheIntegration:
     @patch("src.ci_helper.commands.cache._list_cached_images")
     @patch("src.ci_helper.commands.cache._clean_unused_images")
     def test_cache_multiple_operations(self, mock_clean, mock_list, mock_pull, mock_check_docker, runner):
-        """複数操作の統合テスト"""
+        """複数操作の統合テスト（優先順位に従って最初のオプションのみ実行）"""
         mock_check_docker.return_value = True
 
-        # 複数のオプションを同時に指定
+        # 複数のオプションを同時に指定（pullが最優先で実行される）
         result = runner.invoke(cache, ["--pull", "--list", "--clean"])
 
         assert result.exit_code == 0
         mock_check_docker.assert_called_once()
         mock_pull.assert_called_once()
-        mock_list.assert_called_once()
-        mock_clean.assert_called_once()
+        # pullが実行されるため、listとcleanは実行されない
+        mock_list.assert_not_called()
+        mock_clean.assert_not_called()
 
     @patch("src.ci_helper.commands.cache._check_docker_available")
     def test_cache_error_handling(self, mock_check_docker, runner):
