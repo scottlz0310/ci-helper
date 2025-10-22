@@ -172,6 +172,7 @@ source = ["src"]
 omit = ["tests/*"]
 
 [tool.coverage.report]
+fail_under = 70
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
@@ -190,9 +191,37 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "--cov=ci_helper --cov-report=term-missing --cov-report=html -n logical --cov-config=pyproject.toml"
+addopts = [
+    "--cov=ci_helper",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-config=pyproject.toml",
+    "-n", "logical",
+    "--tb=short",
+    "--strict-markers",
+    "--disable-warnings"
+]
 minversion = "8.0"
 asyncio_mode = "auto"
+timeout = 300
+timeout_method = "thread"
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+markers = [
+    "slow: 実行時間が長いテスト",
+    "integration: 統合テスト",
+    "performance: パフォーマンステスト",
+    "ci: CI/CD関連テスト",
+    "unit: ユニットテスト",
+    "ai: AI機能関連テスト"
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::UserWarning:pytest_xdist"
+]
 
 [tool.bandit]
 exclude_dirs = ["tests"]

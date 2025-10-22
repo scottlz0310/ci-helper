@@ -95,7 +95,7 @@ def mock_ai_config():
     Returns:
         AIConfig: テスト用AI設定オブジェクト
     """
-    from src.ci_helper.ai.models import AIConfig, ProviderConfig
+    from ci_helper.ai.models import AIConfig, ProviderConfig
 
     return AIConfig(
         default_provider="openai",
@@ -289,7 +289,7 @@ def mock_cache_manager():
 @pytest.fixture
 def mock_config(temp_dir):
     """analyzeコマンド用のモック設定"""
-    from src.ci_helper.ai.models import AIConfig, ProviderConfig
+    from ci_helper.ai.models import AIConfig, ProviderConfig
 
     # Create a proper AIConfig object
     provider_config = ProviderConfig(
@@ -309,7 +309,6 @@ def mock_config(temp_dir):
 
     config = Mock(spec=Config)
     config.project_root = temp_dir
-    config.get_path.return_value = temp_dir / "cache"
     config.get = Mock(return_value=None)
     config.get_ai_config = Mock(return_value=ai_config)
     config.get_available_ai_providers = Mock(return_value=["openai"])
