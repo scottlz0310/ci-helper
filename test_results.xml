@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="0.044" timestamp="2025-10-20T23:04:33.064363+09:00" hostname="G-tune-i712700K"><testcase classname="tests.unit.ai.test_integration.TestAIIntegrationCore" name="test_initialization_with_config" time="0.005" /></testsuite></testsuites>

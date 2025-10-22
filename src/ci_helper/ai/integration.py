@@ -32,7 +32,7 @@ from .fallback_handler import FallbackHandler
 from .fix_applier import FixApplier
 from .fix_generator import FixSuggestionGenerator
 from .interactive_session import InteractiveSessionManager
-from .models import AIConfig, AnalysisResult, AnalysisStatus, AnalyzeOptions, InteractiveSession
+from .models import AIConfig, AnalysisResult, AnalysisStatus, AnalyzeOptions, InteractiveSession, ProviderConfig
 from .prompts import PromptManager
 from .providers.base import AIProvider, ProviderFactory
 

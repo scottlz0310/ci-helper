@@ -68,6 +68,7 @@ dev = [
     "pre-commit>=4.0.0",
     "bandit[toml]>=1.7.0",
     "pytest-asyncio>=1.2.0",
+    "psutil>=7.1.1",
 ]
 test = [
     "pytest>=8.0.0",
@@ -191,6 +192,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "--cov=ci_helper --cov-report=term-missing --cov-report=html -n logical --cov-config=pyproject.toml"
 minversion = "8.0"
+asyncio_mode = "auto"
 
 [tool.bandit]
 exclude_dirs = ["tests"]

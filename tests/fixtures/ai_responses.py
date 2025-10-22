@@ -1,72 +1,50 @@
 """
 AI APIレスポンスのモックデータ
 
-テスト用のAI APIレスポンスサンプルを提供します。
+このファイルはAI API（OpenAI、Anthropic等）のレスポンスを模擬するテストデータを提供します。
+実際のAPI呼び出しを行わずにAI機能をテストするために使用されます。
 """
 
 from datetime import datetime
+from typing import Dict, Any, List
 
 # OpenAI APIレスポンスのモック
 MOCK_OPENAI_RESPONSE = {
     "id": "chatcmpl-test123",
     "object": "chat.completion",
-    "created": 1699999999,
+    "created": 1699000000,
     "model": "gpt-4o",
     "choices": [
         {
             "index": 0,
             "message": {
                 "role": "assistant",
-                "content": """# CI/CD失敗分析結果
+                "content": """# CI/CD分析結果
 
 ## 概要
-複数のエラーが検出されました。主な問題は依存関係の不足とテストの失敗です。
+テストの実行中にnpmパッケージが見つからないエラーが発生しています。
 
 ## 根本原因
-
-### 1. 依存関係エラー
-- **カテゴリ**: dependency
-- **説明**: package.jsonが見つかりません
-- **ファイル**: package.json
-- **重要度**: HIGH
-
-### 2. テスト失敗
-- **カテゴリ**: test
-- **説明**: 認証テストが失敗しています
-- **ファイル**: test_user_authentication.py
-- **行番号**: 42
-- **重要度**: MEDIUM
+1. **依存関係の問題**: package.jsonファイルが見つからない
+2. **ワークスペース設定**: GitHub Actionsのワークスペース設定に問題がある可能性
 
 ## 修正提案
+1. package.jsonファイルの存在確認
+2. npm installステップの追加
+3. ワークディレクトリの設定確認
 
-### 1. package.jsonの作成
-- **優先度**: HIGH
-- **推定工数**: 5分
-- **信頼度**: 90%
-- **説明**: プロジェクトルートにpackage.jsonファイルを作成してください
-
-### 2. 認証テストの修正
-- **優先度**: MEDIUM
-- **推定工数**: 15分
-- **信頼度**: 85%
-- **説明**: 期待値と実際の値を確認してテストを修正してください
-
-## 関連エラー
-- ENOENT
-- AssertionError
-- TimeoutError
-
-## 信頼度スコア
-85%""",
+## 信頼度
+85% - 一般的なNode.jsプロジェクトのエラーパターンです。
+"""
             },
-            "finish_reason": "stop",
+            "finish_reason": "stop"
         }
     ],
     "usage": {
-        "prompt_tokens": 500,
-        "completion_tokens": 300,
-        "total_tokens": 800,
-    },
+        "prompt_tokens": 150,
+        "completion_tokens": 200,
+        "total_tokens": 350
+    }
 }
 
 # Anthropic APIレスポンスのモック
@@ -77,323 +55,232 @@ MOCK_ANTHROPIC_RESPONSE = {
     "content": [
         {
             "type": "text",
-            "text": """# CI/CD失敗分析結果（Claude分析）
+            "text": """# CI/CD失敗分析
 
-## 分析サマリー
-Claudeによる詳細な分析結果です。複数の問題が特定されました。
+## 問題の特定
+ログを分析した結果、以下の問題が特定されました：
 
-## 検出された問題
+### 主要エラー
+- ファイルシステムエラー: package.jsonが見つからない
+- 認証エラー: テストでの認証失敗
+- タイムアウトエラー: データベース接続タイムアウト
 
-### 依存関係の問題
-- package.jsonファイルが存在しません
-- npm installが実行できない状態です
+### 推奨対応
+1. **即座に対応**: package.jsonの配置確認
+2. **中期対応**: 認証システムの見直し
+3. **長期対応**: データベース接続の最適化
 
-### テストの失敗
-- 認証関連のテストで期待値と異なる結果が返されています
-- データベース接続のタイムアウトが発生しています
-
-## 推奨される修正手順
-
-1. **package.jsonの作成**
-   - プロジェクトルートに適切なpackage.jsonを配置
-   - 必要な依存関係を定義
-
-2. **テストの修正**
-   - 認証テストの期待値を確認
-   - データベース接続のタイムアウト設定を調整
-
-## 信頼度
-この分析の信頼度は90%です。""",
+信頼度: 90%
+"""
         }
     ],
     "model": "claude-3-5-sonnet-20241022",
     "stop_reason": "end_turn",
     "stop_sequence": None,
     "usage": {
-        "input_tokens": 500,
-        "output_tokens": 250,
-    },
-}
-
-# ローカルLLM（Ollama）レスポンスのモック
-MOCK_LOCAL_LLM_RESPONSE = {
-    "model": "llama3.2",
-    "created_at": "2024-01-01T12:00:00Z",
-    "response": """ローカルLLMによる分析結果:
-
-エラーログを分析した結果、以下の問題が見つかりました：
-
-1. ファイルが見つからないエラー (ENOENT)
-   - package.jsonが存在しません
-   - 解決策: package.jsonファイルを作成してください
-
-2. テストの失敗
-   - 認証テストで予期しない結果
-   - 解決策: テストの期待値を確認してください
-
-3. データベース接続タイムアウト
-   - 30秒でタイムアウト
-   - 解決策: 接続設定を確認してください
-
-推奨される対応順序:
-1. package.jsonの作成 (優先度: 高)
-2. テストの修正 (優先度: 中)
-3. DB設定の確認 (優先度: 中)""",
-    "done": True,
-    "context": [1, 2, 3],
-    "total_duration": 2500000000,
-    "load_duration": 500000000,
-    "prompt_eval_count": 100,
-    "prompt_eval_duration": 1000000000,
-    "eval_count": 150,
-    "eval_duration": 1000000000,
+        "input_tokens": 180,
+        "output_tokens": 220
+    }
 }
 
 # ストリーミングレスポンスのモック
 MOCK_STREAMING_CHUNKS = [
-    {
-        "id": "chatcmpl-test123",
-        "object": "chat.completion.chunk",
-        "created": 1699999999,
-        "model": "gpt-4o",
-        "choices": [
-            {
-                "index": 0,
-                "delta": {"role": "assistant", "content": "# CI/CD"},
-                "finish_reason": None,
-            }
-        ],
-    },
-    {
-        "id": "chatcmpl-test123",
-        "object": "chat.completion.chunk",
-        "created": 1699999999,
-        "model": "gpt-4o",
-        "choices": [
-            {
-                "index": 0,
-                "delta": {"content": "失敗分析"},
-                "finish_reason": None,
-            }
-        ],
-    },
-    {
-        "id": "chatcmpl-test123",
-        "object": "chat.completion.chunk",
-        "created": 1699999999,
-        "model": "gpt-4o",
-        "choices": [
-            {
-                "index": 0,
-                "delta": {"content": "結果\n\n"},
-                "finish_reason": None,
-            }
-        ],
-    },
-    {
-        "id": "chatcmpl-test123",
-        "object": "chat.completion.chunk",
-        "created": 1699999999,
-        "model": "gpt-4o",
-        "choices": [
-            {
-                "index": 0,
-                "delta": {"content": "複数のエラーが"},
-                "finish_reason": None,
-            }
-        ],
-    },
-    {
-        "id": "chatcmpl-test123",
-        "object": "chat.completion.chunk",
-        "created": 1699999999,
-        "model": "gpt-4o",
-        "choices": [
-            {
-                "index": 0,
-                "delta": {"content": "検出されました。"},
-                "finish_reason": "stop",
-            }
-        ],
-    },
+    "分析を開始します...",
+    "\n\n## エラーの特定",
+    "\n\nログを確認した結果、以下のエラーが見つかりました：",
+    "\n\n1. **ファイル不足エラー**",
+    "\n   - package.jsonが見つからない",
+    "\n   - 原因: ワークスペース設定の問題",
+    "\n\n2. **テスト失敗**",
+    "\n   - 認証テストが失敗",
+    "\n   - データベース接続タイムアウト",
+    "\n\n## 修正提案",
+    "\n\n### 即座に対応すべき項目",
+    "\n1. package.jsonファイルの配置確認",
+    "\n2. npm installステップの追加",
+    "\n\n### 中長期的な改善",
+    "\n1. 認証システムの見直し",
+    "\n2. データベース接続の最適化",
+    "\n\n分析完了。信頼度: 85%"
 ]
 
 # エラーレスポンスのモック
 MOCK_ERROR_RESPONSES = {
-    "rate_limit": {
+    "api_key_error": {
         "error": {
-            "message": "Rate limit reached for requests",
+            "message": "Invalid API key provided",
+            "type": "invalid_request_error",
+            "param": None,
+            "code": "invalid_api_key"
+        }
+    },
+    "rate_limit_error": {
+        "error": {
+            "message": "Rate limit exceeded",
             "type": "rate_limit_error",
             "param": None,
-            "code": "rate_limit_exceeded",
+            "code": "rate_limit_exceeded"
         }
     },
-    "invalid_api_key": {
+    "token_limit_error": {
         "error": {
-            "message": "Incorrect API key provided",
-            "type": "invalid_request_error",
-            "param": None,
-            "code": "invalid_api_key",
-        }
-    },
-    "token_limit": {
-        "error": {
-            "message": "This model's maximum context length is 4097 tokens",
+            "message": "Token limit exceeded",
             "type": "invalid_request_error",
             "param": "messages",
-            "code": "context_length_exceeded",
+            "code": "context_length_exceeded"
         }
-    },
-    "server_error": {
-        "error": {
-            "message": "The server had an error while processing your request",
-            "type": "server_error",
-            "param": None,
-            "code": "server_error",
-        }
-    },
-}
-
-# 使用統計のモックデータ
-MOCK_USAGE_STATS = {
-    "daily": {
-        "date": "2024-01-01",
-        "total_requests": 15,
-        "total_cost": 0.125,
-        "total_input_tokens": 7500,
-        "total_output_tokens": 3750,
-        "by_provider": {
-            "openai": {
-                "requests": 10,
-                "cost": 0.08,
-                "input_tokens": 5000,
-                "output_tokens": 2500,
-            },
-            "anthropic": {
-                "requests": 5,
-                "cost": 0.045,
-                "input_tokens": 2500,
-                "output_tokens": 1250,
-            },
-        },
-    },
-    "monthly": {
-        "year": 2024,
-        "month": 1,
-        "total_requests": 450,
-        "total_cost": 3.75,
-        "total_input_tokens": 225000,
-        "total_output_tokens": 112500,
-        "by_provider": {
-            "openai": {
-                "requests": 300,
-                "cost": 2.4,
-                "input_tokens": 150000,
-                "output_tokens": 75000,
-            },
-            "anthropic": {
-                "requests": 150,
-                "cost": 1.35,
-                "input_tokens": 75000,
-                "output_tokens": 37500,
-            },
-        },
-    },
-}
-
-# キャッシュデータのモック
-MOCK_CACHE_DATA = {
-    "cache_key_123": {
-        "result": {
-            "summary": "キャッシュされた分析結果",
-            "root_causes": [],
-            "fix_suggestions": [],
-            "confidence_score": 0.8,
-            "provider": "openai",
-            "model": "gpt-4o",
-            "cost": 0.005,
-        },
-        "timestamp": datetime.now().isoformat(),
-        "ttl_hours": 24,
     }
 }
 
-# 設定ファイルのモック
-MOCK_AI_CONFIG = {
-    "default_provider": "openai",
-    "cache_enabled": True,
-    "cache_ttl_hours": 24,
-    "interactive_timeout": 300,
-    "providers": {
-        "openai": {
-            "api_key": "sk-test-key-123",
-            "base_url": "https://api.openai.com/v1",
-            "default_model": "gpt-4o",
-            "available_models": ["gpt-4o", "gpt-4o-mini", "gpt-4"],
-            "timeout_seconds": 30,
-            "max_retries": 3,
-        },
-        "anthropic": {
-            "api_key": "sk-ant-test-key-123",
-            "base_url": "https://api.anthropic.com",
-            "default_model": "claude-3-5-sonnet-20241022",
-            "available_models": ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022"],
-            "timeout_seconds": 30,
-            "max_retries": 3,
-        },
-        "local": {
-            "api_key": "",
-            "base_url": "http://localhost:11434",
-            "default_model": "llama3.2",
-            "available_models": ["llama3.2", "codellama"],
-            "timeout_seconds": 60,
-            "max_retries": 2,
-        },
+# 修正提案のモック
+MOCK_FIX_SUGGESTIONS = [
+    {
+        "title": "package.jsonファイルの追加",
+        "description": "プロジェクトルートにpackage.jsonファイルを作成します",
+        "file_path": "package.json",
+        "line_number": None,
+        "original_code": None,
+        "suggested_code": """{
+  "name": "test-project",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {}
+}""",
+        "priority": "HIGH",
+        "estimated_effort": "5分",
+        "confidence": 0.95
     },
-    "cost_limits": {
-        "monthly_usd": 50.0,
-        "daily_usd": 5.0,
-        "per_request_usd": 1.0,
-    },
-    "prompts": {
-        "analysis": "templates/analysis.txt",
-        "fix_suggestion": "templates/fix.txt",
-        "interactive": "templates/interactive.txt",
-    },
+    {
+        "title": "npm installステップの追加",
+        "description": "GitHub Actionsワークフローにnpm installステップを追加します",
+        "file_path": ".github/workflows/test.yml",
+        "line_number": 12,
+        "original_code": "      - name: Run tests\n        run: npm test",
+        "suggested_code": """      - name: Install dependencies
+        run: npm install
+      - name: Run tests
+        run: npm test""",
+        "priority": "HIGH",
+        "estimated_effort": "2分",
+        "confidence": 0.90
+    }
+]
+
+# 対話セッションのモック
+MOCK_INTERACTIVE_RESPONSES = {
+    "/help": """利用可能なコマンド:
+/help - このヘルプを表示
+/analyze - 詳細分析を実行
+/fix - 修正提案を生成
+/exit - セッションを終了""",
+    
+    "/analyze": """詳細分析を実行中...
+
+追加の分析結果:
+- エラーの発生頻度: 過去7日間で3回
+- 影響範囲: テストスイート全体
+- 類似エラー: 他のプロジェクトでも同様の問題が報告されています
+
+推奨アクション:
+1. 緊急度: 高 - package.json問題の即座の修正
+2. 緊急度: 中 - CI/CDパイプラインの見直し""",
+    
+    "/fix": """修正提案を生成中...
+
+以下の修正を提案します:
+
+1. **package.json作成** (優先度: 高)
+   - 実行時間: 5分
+   - 成功確率: 95%
+
+2. **ワークフロー修正** (優先度: 高)  
+   - 実行時間: 10分
+   - 成功確率: 90%
+
+これらの修正を適用しますか？ (y/n)""",
+    
+    "default": "申し訳ありませんが、その質問は理解できませんでした。/help でコマンド一覧を確認してください。"
 }
 
-# プロンプトテンプレートのモック
-MOCK_PROMPT_TEMPLATES = {
-    "analysis": """あなたはCI/CDエラー分析の専門家です。以下のログを分析して、根本原因と修正提案を提供してください。
 
-ログ内容:
-{log_content}
+def create_mock_analysis_result(
+    summary: str = "テスト分析結果",
+    confidence: float = 0.85,
+    provider: str = "openai",
+    model: str = "gpt-4o"
+) -> Dict[str, Any]:
+    """
+    分析結果のモックデータを作成
+    
+    Args:
+        summary: 分析結果の要約
+        confidence: 信頼度スコア
+        provider: AIプロバイダー名
+        model: 使用モデル名
+        
+    Returns:
+        Dict[str, Any]: 分析結果のモックデータ
+    """
+    return {
+        "summary": summary,
+        "root_causes": [
+            {
+                "category": "dependency_error",
+                "description": "package.jsonファイルが見つからない",
+                "severity": "HIGH",
+                "confidence": 0.95
+            },
+            {
+                "category": "test_failure", 
+                "description": "認証テストの失敗",
+                "severity": "MEDIUM",
+                "confidence": 0.80
+            }
+        ],
+        "fix_suggestions": MOCK_FIX_SUGGESTIONS,
+        "related_errors": [
+            "npm ERR! code ENOENT",
+            "AssertionError: Expected status code 401, got 200"
+        ],
+        "confidence_score": confidence,
+        "analysis_time": 2.5,
+        "tokens_used": {
+            "input_tokens": 150,
+            "output_tokens": 200,
+            "total_tokens": 350,
+            "estimated_cost": 0.0175
+        },
+        "status": "COMPLETED",
+        "provider": provider,
+        "model": model,
+        "timestamp": datetime.now().isoformat(),
+        "cache_hit": False
+    }
 
-以下の形式で回答してください:
-1. 概要
-2. 根本原因
-3. 修正提案
-4. 関連エラー
-5. 信頼度スコア""",
-    "fix_suggestion": """以下の分析結果に基づいて、具体的な修正提案を生成してください。
 
-分析結果:
-{analysis_result}
+def create_mock_streaming_response(chunks: List[str] = None) -> List[str]:
+    """
+    ストリーミングレスポンスのモックデータを作成
+    
+    Args:
+        chunks: カスタムチャンクリスト（Noneの場合はデフォルトを使用）
+        
+    Returns:
+        List[str]: ストリーミングチャンクのリスト
+    """
+    return chunks if chunks is not None else MOCK_STREAMING_CHUNKS
 
-各修正提案には以下を含めてください:
-- タイトル
-- 詳細説明
-- 優先度
-- 推定工数
-- 信頼度""",
-    "interactive": """あなたはCI/CDトラブルシューティングのアシスタントです。
-ユーザーと対話しながら問題を解決してください。
 
-初期ログ:
-{initial_log}
-
-会話履歴:
-{conversation_history}
-
-ユーザーの質問に対して、建設的で実用的な回答を提供してください。""",
-}
+def create_mock_error_response(error_type: str) -> Dict[str, Any]:
+    """
+    エラーレスポンスのモックデータを作成
+    
+    Args:
+        error_type: エラータイプ（api_key_error, rate_limit_error, token_limit_error）
+        
+    Returns:
+        Dict[str, Any]: エラーレスポンスのモックデータ
+    """
+    return MOCK_ERROR_RESPONSES.get(error_type, MOCK_ERROR_RESPONSES["api_key_error"])

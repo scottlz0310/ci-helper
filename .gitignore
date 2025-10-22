@@ -15,6 +15,7 @@ ci-helper.toml
 .env
 uv.lock
 logs/
+test_results/
 
 # Auto-generated entries from templates
 $RECYCLE.BIN/
