@@ -1,1 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="0.033" timestamp="2025-10-22T13:43:07.020177+09:00" hostname="SUGAWARA-PC2"><testcase classname="tests.unit.ai.test_integration.TestAIIntegrationCore" name="test_initialization_with_config" time="0.004" /></testsuite></testsuites>
