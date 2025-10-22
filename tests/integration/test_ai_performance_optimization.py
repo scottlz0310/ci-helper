@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, Mock, patch
 # import psutil  # Optional dependency for memory monitoring
 import pytest
 
-from src.ci_helper.ai.exceptions import TokenLimitError, ProviderError
+from src.ci_helper.ai.exceptions import ProviderError, TokenLimitError
 from src.ci_helper.ai.integration import AIIntegration
 from src.ci_helper.ai.models import AnalysisResult, AnalysisStatus, AnalyzeOptions
 
@@ -652,8 +652,23 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
                 mock_client.chat.completions.create = AsyncMock(side_effect=mock_api_call)
                 mock_openai.return_value = mock_client
 
-                with patch(
-                    "src.ci_helper.ai.providers.openai.OpenAIProvider.validate_connection", new_callable=AsyncMock
+                # プロバイダーの初期化を成功させるためのモック
+                with (
+                    patch(
+                        "src.ci_helper.ai.providers.openai.OpenAIProvider.validate_connection",
+                        new_callable=AsyncMock,
+                        return_value=True,
+                    ),
+                    patch(
+                        "src.ci_helper.ai.providers.anthropic.AnthropicProvider.validate_connection",
+                        new_callable=AsyncMock,
+                        return_value=True,
+                    ),
+                    patch(
+                        "src.ci_helper.ai.providers.local.LocalLLMProvider.validate_connection",
+                        new_callable=AsyncMock,
+                        return_value=True,
+                    ),
                 ):
                     ai_integration = AIIntegration(mock_ai_config)
                     await ai_integration.initialize()
@@ -668,13 +683,13 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
                     # エラー復旧のパフォーマンス測定
                     start_time = time.time()
 
-                    # 最初の2回は失敗するはず
-                    from src.ci_helper.ai.exceptions import NetworkError
+                    # 最初の2回は失敗するはず（プロバイダーがNetworkErrorをProviderErrorでラップする）
+                    from src.ci_helper.ai.exceptions import ProviderError
 
-                    with pytest.raises(NetworkError):
+                    with pytest.raises(ProviderError):
                         await ai_integration.analyze_log(large_log_content, options)
 
-                    with pytest.raises(NetworkError):
+                    with pytest.raises(ProviderError):
                         await ai_integration.analyze_log(large_log_content, options)
 
                     # 3回目で成功

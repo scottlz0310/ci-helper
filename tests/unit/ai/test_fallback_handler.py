@@ -60,7 +60,7 @@ AssertionError: Expected 200, got 404
 
         with patch.object(fallback_handler, "_perform_traditional_analysis") as mock_traditional:
             mock_traditional.return_value = {
-                "summary": "Traditional analysis result",
+                "summary": "従来のログ分析を実行しました。1個の失敗を検出しました。",
                 "errors": ["AssertionError detected"],
             }
 
@@ -70,7 +70,7 @@ AssertionError: Expected 200, got 404
 
             assert isinstance(result, AnalysisResult)
             assert result.status == AnalysisStatus.FALLBACK
-            assert "Traditional analysis result" in result.summary
+            assert "従来の分析を実行しました" in result.summary
             mock_traditional.assert_called_once_with(sample_log_content)
 
     @pytest.mark.asyncio
@@ -261,6 +261,7 @@ AssertionError: Expected 200, got 404
         old_time = datetime.now() - timedelta(days=10)
         old_file.touch()
         import os
+
         os.utime(old_file, (old_time.timestamp(), old_time.timestamp()))
 
         # 新しいファイルを作成

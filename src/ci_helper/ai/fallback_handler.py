@@ -293,9 +293,20 @@ class FallbackHandler:
         Returns:
             リトライ成功時の結果、失敗時はNone
         """
+        # リトライ回数を初期化
+        if operation_id not in self.retry_attempts:
+            self.retry_attempts[operation_id] = 0
+
+        # 最大リトライ回数をチェック
+        if self.retry_attempts[operation_id] >= 3:
+            logger.info("最大リトライ回数に達しました (3回)")
+            return None
+
+        self.retry_attempts[operation_id] += 1
+
         retry_delay = min(2**error.retry_count, 30)  # 指数バックオフ、最大30秒
 
-        logger.info("自動リトライを %d秒後に実行します (試行 %d/3)", retry_delay, error.retry_count + 1)
+        logger.info("自動リトライを %d秒後に実行します (試行 %d/3)", retry_delay, self.retry_attempts[operation_id])
         await asyncio.sleep(retry_delay)
 
         try:
@@ -388,8 +399,14 @@ class FallbackHandler:
                     related_errors.extend(failure.context_after)
 
             return {
+                "summary": f"従来のログ分析を実行しました。{len(failures)}個の失敗を検出しました。",
+                "errors": list(set(related_errors)),  # 重複を除去
+                "patterns": [cause["category"] for cause in root_causes],
+                "suggestions": [
+                    f"{cause['category']}エラーを確認してください: {cause['description']}" for cause in root_causes
+                ],
                 "root_causes": root_causes,
-                "related_errors": list(set(related_errors)),  # 重複を除去
+                "related_errors": list(set(related_errors)),
                 "failure_count": len(failures),
                 "analysis_method": "traditional",
             }
@@ -397,6 +414,10 @@ class FallbackHandler:
         except Exception as e:
             logger.error("従来のログ分析に失敗: %s", e)
             return {
+                "summary": "ログ分析中にエラーが発生しました。",
+                "errors": [],
+                "patterns": ["unknown"],
+                "suggestions": ["ログ内容を確認してください"],
                 "root_causes": [
                     {
                         "category": "unknown",
@@ -506,6 +527,7 @@ class FallbackHandler:
             "alternative_providers": partial_result.get("alternative_providers", []),
             "retry_after": partial_result.get("retry_after"),
             "timestamp": partial_result.get("timestamp"),
+            "retry_info": partial_result.get("retry_info", {}),
         }
 
     def cleanup_old_partial_results(self, max_age_days: int = 7) -> int:
@@ -548,6 +570,11 @@ class FallbackHandler:
             total_files = len(list(self.fallback_dir.glob("*.json")))
             memory_results = len(self.partial_results)
 
+            # リトライ統計の計算
+            total_operations = len(self.retry_attempts)
+            total_retries = sum(self.retry_attempts.values())
+            average_retries = total_retries / total_operations if total_operations > 0 else 0.0
+
             # エラータイプ別の統計
             error_types = {}
             for data in self.partial_results.values():
@@ -555,6 +582,10 @@ class FallbackHandler:
                 error_types[error_type] = error_types.get(error_type, 0) + 1
 
             return {
+                "total_operations": total_operations,
+                "total_retries": total_retries,
+                "average_retries": average_retries,
+                "partial_results_count": memory_results,
                 "total_fallback_results": total_files,
                 "memory_cached_results": memory_results,
                 "error_type_breakdown": error_types,

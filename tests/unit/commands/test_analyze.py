@@ -641,30 +641,28 @@ class TestAnalyzeFallbackAndRecovery:
         result = _offer_interactive_recovery(mock_console)
         assert result == "exit"
 
-    @patch("src.ci_helper.commands.analyze.AIConfigManager")
-    def test_validate_analysis_environment_success(self, mock_config_manager_class, mock_config, mock_console):
+    def test_validate_analysis_environment_success(self, mock_config, mock_console):
         """分析環境検証成功のテスト"""
         from src.ci_helper.commands.analyze import _validate_analysis_environment
 
-        # モック設定
-        mock_config_manager = Mock()
-        mock_config_manager_class.return_value = mock_config_manager
-        mock_config_manager.validate_ai_config.return_value = True
+        # モック設定 - configオブジェクトのメソッドを適切に設定
+        mock_config.get_ai_config.return_value = {"default_provider": "openai"}
+        mock_config.get_available_ai_providers.return_value = ["openai"]
+        mock_config.get_ai_provider_api_key.return_value = "sk-test-key-123456789"
 
         result = _validate_analysis_environment(mock_config, mock_console)
 
         assert result is True
-        mock_config_manager.validate_ai_config.assert_called_once()
+        mock_config.get_ai_config.assert_called_once()
+        mock_config.get_available_ai_providers.assert_called_once()
 
-    @patch("src.ci_helper.commands.analyze.AIConfigManager")
-    def test_validate_analysis_environment_failure(self, mock_config_manager_class, mock_config, mock_console):
+    def test_validate_analysis_environment_failure(self, mock_config, mock_console):
         """分析環境検証失敗のテスト"""
         from src.ci_helper.commands.analyze import _validate_analysis_environment
 
-        # モック設定
-        mock_config_manager = Mock()
-        mock_config_manager_class.return_value = mock_config_manager
-        mock_config_manager.validate_ai_config.return_value = False
+        # モック設定 - AI設定が存在しない場合
+        mock_config.get_ai_config.return_value = None
+        mock_config.get_available_ai_providers.return_value = []
 
         result = _validate_analysis_environment(mock_config, mock_console)
 

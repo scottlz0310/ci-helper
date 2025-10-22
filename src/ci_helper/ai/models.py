@@ -207,6 +207,23 @@ class ProviderConfig:
     cost_per_input_token: float = 0.0  # 入力トークンあたりのコスト
     cost_per_output_token: float = 0.0  # 出力トークンあたりのコスト
 
+    def __eq__(self, other: object) -> bool:
+        """等価性比較"""
+        if not isinstance(other, ProviderConfig):
+            return False
+        return (
+            self.name == other.name
+            and self.api_key == other.api_key
+            and self.base_url == other.base_url
+            and self.default_model == other.default_model
+            and self.available_models == other.available_models
+            and self.timeout_seconds == other.timeout_seconds
+            and self.max_retries == other.max_retries
+            and self.rate_limit_per_minute == other.rate_limit_per_minute
+            and self.cost_per_input_token == other.cost_per_input_token
+            and self.cost_per_output_token == other.cost_per_output_token
+        )
+
 
 @dataclass
 class AIConfig:
@@ -223,6 +240,24 @@ class AIConfig:
     streaming_enabled: bool = True  # ストリーミング有効化
     security_checks_enabled: bool = True  # セキュリティチェック有効化
     cache_dir: str = ".ci-helper/cache"  # キャッシュディレクトリ
+
+    def __eq__(self, other: object) -> bool:
+        """等価性比較"""
+        if not isinstance(other, AIConfig):
+            return False
+        return (
+            self.default_provider == other.default_provider
+            and self.providers == other.providers
+            and self.cache_enabled == other.cache_enabled
+            and self.cache_ttl_hours == other.cache_ttl_hours
+            and self.cache_max_size_mb == other.cache_max_size_mb
+            and self.cost_limits == other.cost_limits
+            and self.prompt_templates == other.prompt_templates
+            and self.interactive_timeout == other.interactive_timeout
+            and self.streaming_enabled == other.streaming_enabled
+            and self.security_checks_enabled == other.security_checks_enabled
+            and self.cache_dir == other.cache_dir
+        )
 
     def get_path(self, path_name: str) -> Path:
         """パスを取得"""

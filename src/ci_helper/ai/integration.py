@@ -87,6 +87,8 @@ class AIIntegration:
             from ci_helper.utils.config import Config
 
             self.config = Config(project_root=Path.cwd())
+            # 辞書から作成した場合はAIConfigManagerを作成しない
+            self.ai_config_manager = None
 
         elif isinstance(config, AIConfig):
             # AIConfigオブジェクトの場合
@@ -97,6 +99,8 @@ class AIIntegration:
             from ci_helper.utils.config import Config
 
             self.config = Config(project_root=Path.cwd())
+            # AIConfigが直接渡された場合はAIConfigManagerを作成しない
+            self.ai_config_manager = None
 
         else:
             # Configオブジェクトの場合
@@ -119,13 +123,15 @@ class AIIntegration:
                 )
 
         # 他のコンポーネントを初期化
-        if hasattr(self, "config"):
+        if hasattr(self, "config") and self.ai_config_manager is None:
+            # AIConfigが直接渡されていない場合のみAIConfigManagerを作成
             self.ai_config_manager = AIConfigManager(self.config)
+
+        if hasattr(self, "config"):
             self.error_handler = AIErrorHandler(self.config)
             self.fallback_handler = FallbackHandler(self.config)
         else:
             # テスト用の最小限の初期化
-            self.ai_config_manager = None
             self.error_handler = None
             self.fallback_handler = None
 
@@ -156,6 +162,10 @@ class AIIntegration:
             # AI設定を読み込み（まだ設定されていない場合のみ）
             if self.ai_config is None and self.ai_config_manager is not None:
                 self.ai_config = self.ai_config_manager.get_ai_config()
+
+            # AI設定が初期化されているかチェック
+            if self.ai_config is None:
+                raise ConfigurationError("AI設定が初期化されていません")
 
             # プロンプト管理を初期化
             self.prompt_manager = PromptManager()
@@ -723,18 +733,19 @@ class AIIntegration:
             検出されたエラータイプ
         """
         # 簡単なパターンマッチングでエラータイプを検出
+        # より具体的なパターンを先にチェック
         log_lower = log_content.lower()
 
-        if "test" in log_lower and ("fail" in log_lower or "error" in log_lower):
-            return "test_failure"
-        elif "build" in log_lower and ("fail" in log_lower or "error" in log_lower):
-            return "build_failure"
-        elif "syntax" in log_lower or "syntaxerror" in log_lower:
+        if "syntax" in log_lower or "syntaxerror" in log_lower:
             return "syntax_error"
         elif "import" in log_lower and "error" in log_lower:
             return "import_error"
         elif "timeout" in log_lower:
             return "timeout_error"
+        elif "build" in log_lower and ("fail" in log_lower or "error" in log_lower):
+            return "build_failure"
+        elif "test" in log_lower and ("fail" in log_lower or "error" in log_lower):
+            return "test_failure"
         else:
             return "general_error"
 

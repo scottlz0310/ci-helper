@@ -75,7 +75,7 @@ def cache(ctx: click.Context, pull: bool, list_images: bool, clean: bool, image:
             ctx.exit(1)
 
         if pull:
-            _pull_images(image if image else DEFAULT_IMAGES, timeout)
+            _pull_images(image if image else DEFAULT_IMAGES, timeout=timeout)
         elif list_images:
             _list_cached_images()
         elif clean:
@@ -97,7 +97,7 @@ def _check_docker_available() -> bool:
     try:
         result = subprocess.run(["docker", "info"], capture_output=True, text=True, timeout=10)
         return result.returncode == 0
-    except (subprocess.TimeoutExpired, FileNotFoundError):
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
         return False
 
 

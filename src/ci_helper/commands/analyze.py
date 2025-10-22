@@ -402,7 +402,16 @@ async def _run_standard_analysis(
 
             # 修正提案の処理
             if options.generate_fixes and result.fix_suggestions:
-                await _handle_fix_suggestions(ai_integration, result, console)
+                _display_fix_suggestions(result, console)
+
+                # 修正適用の確認
+                # テスト環境やCI環境では適切にハンドリング
+                fixes_applied = await _handle_fix_application(ai_integration, result, console)
+
+                # 修正が拒否された場合は終了コード1で終了
+                if not fixes_applied:
+                    console.print("\n[yellow]修正が適用されませんでした。[/yellow]")
+                    sys.exit(1)
 
         except Exception as e:
             progress.stop()
@@ -507,15 +516,10 @@ async def _run_interactive_mode(
             pass
 
 
-async def _handle_fix_suggestions(
-    ai_integration: AIIntegration,
-    result: AnalysisResult,
-    console: Console,
-) -> None:
-    """修正提案の処理
+def _display_fix_suggestions(result: AnalysisResult, console: Console) -> None:
+    """修正提案の表示
 
     Args:
-        ai_integration: AI統合インスタンス
         result: 分析結果
         console: Richコンソール
     """
@@ -523,30 +527,79 @@ async def _handle_fix_suggestions(
 
     for i, suggestion in enumerate(result.fix_suggestions, 1):
         console.print(f"\n[bold]修正案 {i}:[/bold]")
-        console.print(f"ファイル: {suggestion.file_path}")
+        console.print(f"タイトル: {suggestion.title}")
         console.print(f"説明: {suggestion.description}")
 
-        # 修正の適用確認
-        if click.confirm(f"修正案 {i} を適用しますか？"):
-            try:
-                await ai_integration.apply_fix(suggestion)
-                console.print(f"[green]修正案 {i} を適用しました。[/green]")
-            except Exception as e:
-                console.print(f"[red]修正案 {i} の適用に失敗しました:[/red] {e}")
+        # コード変更がある場合はファイルパスを表示
+        if suggestion.code_changes:
+            files = set(change.file_path for change in suggestion.code_changes)
+            console.print(f"対象ファイル: {', '.join(files)}")
 
-                # 修正失敗の詳細なガイダンス
-                console.print("[blue]💡 修正失敗の対処法:[/blue]")
-                console.print("  • ファイルの権限を確認してください")
-                console.print("  • ファイルが他のプロセスで使用されていないか確認")
-                console.print("  • 手動で修正を適用することも可能です")
-                console.print("  • バックアップから復元: [cyan]ci-run analyze --restore-backup[/cyan]")
+        console.print(f"優先度: {suggestion.priority.value}")
+        console.print(f"推定作業時間: {suggestion.estimated_effort}")
+        console.print(f"信頼度: {suggestion.confidence:.1%}")
 
-                # 続行するかユーザーに確認
-                if i < len(result.fix_suggestions):
-                    continue_applying = click.confirm("他の修正案の適用を続けますか？")
-                    if not continue_applying:
-                        console.print("[yellow]修正案の適用を中止しました。[/yellow]")
-                        break
+
+async def _handle_fix_application(
+    ai_integration: AIIntegration,
+    result: AnalysisResult,
+    console: Console,
+) -> bool:
+    """修正提案の適用処理
+
+    Args:
+        ai_integration: AI統合インスタンス
+        result: 分析結果
+        console: Richコンソール
+
+    Returns:
+        bool: 少なくとも1つの修正が適用された場合True、そうでなければFalse
+    """
+    console.print("\n[bold yellow]修正提案を適用しますか？[/bold yellow]")
+
+    applied_count = 0
+    user_rejected = False
+
+    for i, suggestion in enumerate(result.fix_suggestions, 1):
+        try:
+            # 修正の適用確認
+            if click.confirm(f"修正案 {i} ({suggestion.title}) を適用しますか？"):
+                try:
+                    await ai_integration.apply_fix(suggestion)
+                    console.print(f"[green]修正案 {i} を適用しました。[/green]")
+                    applied_count += 1
+                except Exception as e:
+                    console.print(f"[red]修正案 {i} の適用に失敗しました:[/red] {e}")
+
+                    # 修正失敗の詳細なガイダンス
+                    console.print("[blue]💡 修正失敗の対処法:[/blue]")
+                    console.print("  • ファイルの権限を確認してください")
+                    console.print("  • ファイルが他のプロセスで使用されていないか確認")
+                    console.print("  • 手動で修正を適用することも可能です")
+                    console.print("  • バックアップから復元: [cyan]ci-run analyze --restore-backup[/cyan]")
+
+                    # 続行するかユーザーに確認
+                    if i < len(result.fix_suggestions):
+                        try:
+                            continue_applying = click.confirm("他の修正案の適用を続けますか？")
+                            if not continue_applying:
+                                console.print("[yellow]修正案の適用を中止しました。[/yellow]")
+                                user_rejected = True
+                                break
+                        except (EOFError, KeyboardInterrupt, click.exceptions.Abort):
+                            console.print("[yellow]修正案の適用を中止しました。[/yellow]")
+                            break
+            else:
+                console.print(f"[yellow]修正案 {i} をスキップしました。[/yellow]")
+                user_rejected = True
+        except (EOFError, KeyboardInterrupt, click.exceptions.Abort):
+            # 入力が利用できない場合（テスト環境など）やユーザーがキャンセルした場合
+            console.print("\n[dim]対話的入力が利用できません。修正提案のみ表示されました。[/dim]")
+            # 入力が利用できない場合は拒否とは見なさない
+            break
+
+    # 修正が適用されたか、またはユーザーが明示的に拒否していない場合は成功
+    return applied_count > 0 or not user_rejected
 
 
 def _display_analysis_result(result: AnalysisResult, output_format: str, console: Console) -> None:
@@ -918,10 +971,10 @@ def _determine_error_severity(error: Exception) -> str:
 
     if isinstance(error, (APIKeyError, SecurityError, ConfigurationError)):
         return "critical"
-    elif isinstance(error, (ProviderError, TokenLimitError)):
-        return "high"
     elif isinstance(error, (RateLimitError, NetworkError)):
         return "medium"
+    elif isinstance(error, (ProviderError, TokenLimitError)):
+        return "high"
     else:
         return "low"
 

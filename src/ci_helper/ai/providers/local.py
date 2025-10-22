@@ -55,6 +55,10 @@ class LocalLLMProvider(AIProvider):
             await self.validate_connection()
 
         except Exception as e:
+            # 初期化に失敗した場合はセッションをクリーンアップ
+            if self._session:
+                await self._session.close()
+                self._session = None
             raise ProviderError("local", f"ローカルLLM プロバイダーの初期化に失敗しました: {e}") from e
 
     async def validate_connection(self) -> bool:

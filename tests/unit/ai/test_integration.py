@@ -45,28 +45,6 @@ class TestAIIntegrationCore:
         return config
 
     @pytest.fixture
-    def ai_config(self):
-        """AI設定オブジェクト"""
-        provider_config = ProviderConfig(
-            name="openai",
-            api_key="sk-test-key-123",
-            default_model="gpt-4o",
-            available_models=["gpt-4o", "gpt-4o-mini"],
-            timeout_seconds=30,
-            max_retries=3,
-        )
-
-        return AIConfig(
-            default_provider="openai",
-            providers={"openai": provider_config},
-            cache_enabled=True,
-            cache_ttl_hours=24,
-            cache_max_size_mb=100,
-            cost_limits={"monthly_usd": 50.0},
-            interactive_timeout=300,
-        )
-
-    @pytest.fixture
     def ai_integration(self, mock_config):
         """AIIntegrationインスタンス"""
         return AIIntegration(mock_config)
@@ -110,11 +88,11 @@ class TestAIIntegrationCore:
     @patch("src.ci_helper.ai.integration.CacheManager")
     @pytest.mark.asyncio
     async def test_provider_factory_integration(
-        self, mock_cache_manager, mock_prompt_manager, mock_provider_factory, ai_integration, ai_config
+        self, mock_cache_manager, mock_prompt_manager, mock_provider_factory, ai_integration, mock_ai_config
     ):
         """プロバイダーファクトリー統合のテスト"""
         # AI設定を設定
-        ai_integration.ai_config = ai_config
+        ai_integration.ai_config = mock_ai_config
 
         # モックプロバイダーを作成
         mock_provider = Mock()
@@ -340,16 +318,12 @@ class TestAsyncProcessing:
         integration.cache_manager = Mock()
         integration.cost_manager = Mock()
         integration.cost_manager.check_usage_limits.return_value = {"over_limit": False, "usage_percentage": 10.0}
-        
+
         # 非同期メソッドをAsyncMockで設定
         integration.error_handler = Mock()
-        error_info = {
-            "can_retry": True,
-            "auto_retry": False,
-            "message": "タイムアウトエラーが発生しました"
-        }
+        error_info = {"can_retry": True, "auto_retry": False, "message": "タイムアウトエラーが発生しました"}
         integration.error_handler.handle_error_with_retry = AsyncMock(return_value=error_info)
-        
+
         # フォールバックハンドラーを適切に設定
         integration.fallback_handler = Mock()
         fallback_result = AnalysisResult(
@@ -357,10 +331,10 @@ class TestAsyncProcessing:
             status=AnalysisStatus.FALLBACK,
             analysis_time=1.0,
             provider="fallback",
-            model="fallback"
+            model="fallback",
         )
         integration.fallback_handler.handle_analysis_failure = AsyncMock(return_value=fallback_result)
-        
+
         integration.session_manager = Mock()
         integration.fix_generator = Mock()
         integration.fix_applier = Mock()
@@ -642,6 +616,13 @@ AssertionError: Expected 200, got 404
 
         # モックプロバイダーを設定
         integration.providers = {"mock": mock_ai_provider}
+
+        # 必要なコンポーネントを初期化
+        from src.ci_helper.ai.prompts import PromptManager
+
+        integration.prompt_manager = Mock(spec=PromptManager)
+        integration.prompt_manager.get_analysis_prompt.return_value = "Mock analysis prompt"
+
         integration._initialized = True
 
         # E2Eシナリオ: ログファイル読み込み → 分析 → 結果検証
@@ -744,10 +725,10 @@ AssertionError: Expected 200, got 404
         assert "test-session" in integration.active_sessions
 
     @pytest.mark.asyncio
-    async def test_cost_limit_checking(self, mock_config, ai_config):
+    async def test_cost_limit_checking(self, mock_config, mock_ai_config):
         """コスト制限チェックのテスト"""
         integration = AIIntegration(mock_config)
-        integration.ai_config = ai_config
+        integration.ai_config = mock_ai_config
         integration._initialized = True
 
         # モックコストマネージャーを設定
@@ -768,10 +749,10 @@ AssertionError: Expected 200, got 404
             )
 
     @pytest.mark.asyncio
-    async def test_usage_stats_retrieval(self, mock_config, ai_config):
+    async def test_usage_stats_retrieval(self, mock_config, mock_ai_config):
         """使用統計取得のテスト"""
         integration = AIIntegration(mock_config)
-        integration.ai_config = ai_config
+        integration.ai_config = mock_ai_config
         integration.providers = {"openai": Mock(), "anthropic": Mock()}
         integration.active_sessions = {"session1": Mock()}
 
@@ -796,10 +777,10 @@ AssertionError: Expected 200, got 404
         assert stats["cache_enabled"] is True
 
     @pytest.mark.asyncio
-    async def test_retry_failed_operation(self, mock_config, ai_config):
+    async def test_retry_failed_operation(self, mock_config, mock_ai_config):
         """失敗した操作のリトライテスト"""
         integration = AIIntegration(mock_config)
-        integration.ai_config = ai_config
+        integration.ai_config = mock_ai_config
         integration._initialized = True
 
         # モックフォールバックハンドラーを設定
@@ -816,7 +797,7 @@ AssertionError: Expected 200, got 404
         # モックプロバイダーを設定
         mock_provider = Mock()
         mock_provider.name = "openai"
-        mock_provider.config = ai_config.providers["openai"]
+        mock_provider.config = mock_ai_config.providers["openai"]
         mock_provider.count_tokens.return_value = 100
         mock_provider.estimate_cost.return_value = 0.01
         mock_provider.analyze = AsyncMock(
@@ -857,10 +838,10 @@ AssertionError: Expected 200, got 404
         assert "APIキーと設定を確認してください" in suggestions
 
     @pytest.mark.asyncio
-    async def test_interactive_session_management(self, mock_config, ai_config):
+    async def test_interactive_session_management(self, mock_config, mock_ai_config):
         """対話セッション管理のテスト"""
         integration = AIIntegration(mock_config)
-        integration.ai_config = ai_config
+        integration.ai_config = mock_ai_config
         integration._initialized = True
 
         # セッション管理を設定
@@ -884,7 +865,7 @@ AssertionError: Expected 200, got 404
         # プロバイダーを設定
         mock_provider = Mock()
         mock_provider.name = "openai"
-        mock_provider.config = ai_config.providers["openai"]
+        mock_provider.config = mock_ai_config.providers["openai"]
         integration.providers = {"openai": mock_provider}
 
         # セッション開始
@@ -900,10 +881,10 @@ AssertionError: Expected 200, got 404
         assert "test-session" not in integration.active_sessions
 
     @pytest.mark.asyncio
-    async def test_fix_suggestion_workflow(self, mock_config, ai_config):
+    async def test_fix_suggestion_workflow(self, mock_config, mock_ai_config):
         """修正提案ワークフローのテスト"""
         integration = AIIntegration(mock_config)
-        integration.ai_config = ai_config
+        integration.ai_config = mock_ai_config
         integration._initialized = True
 
         # モック修正生成器を設定
@@ -945,16 +926,23 @@ AssertionError: Expected 200, got 404
         assert rollback_result["restored_count"] == 1
 
     @pytest.mark.asyncio
-    async def test_analyze_and_fix_workflow(self, mock_config, ai_config):
+    async def test_analyze_and_fix_workflow(self, mock_config, mock_ai_config):
         """分析と修正の一括ワークフローテスト"""
         integration = AIIntegration(mock_config)
-        integration.ai_config = ai_config
+        integration.ai_config = mock_ai_config
+
+        # 必要なコンポーネントを初期化
+        from src.ci_helper.ai.prompts import PromptManager
+
+        integration.prompt_manager = Mock(spec=PromptManager)
+        integration.prompt_manager.get_analysis_prompt.return_value = "Mock analysis prompt"
+
         integration._initialized = True
 
         # モックプロバイダーを設定
         mock_provider = Mock()
         mock_provider.name = "openai"
-        mock_provider.config = ai_config.providers["openai"]
+        mock_provider.config = mock_ai_config.providers["openai"]
         mock_provider.count_tokens.return_value = 100
         mock_provider.estimate_cost.return_value = 0.01
 
@@ -1028,16 +1016,23 @@ AssertionError: Expected 200, got 404
         assert error_type == "general_error"
 
     @pytest.mark.asyncio
-    async def test_streaming_analysis_fallback(self, mock_config, ai_config):
+    async def test_streaming_analysis_fallback(self, mock_config, mock_ai_config):
         """ストリーミング分析フォールバックのテスト"""
         integration = AIIntegration(mock_config)
-        integration.ai_config = ai_config
+        integration.ai_config = mock_ai_config
+
+        # 必要なコンポーネントを初期化
+        from src.ci_helper.ai.prompts import PromptManager
+
+        integration.prompt_manager = Mock(spec=PromptManager)
+        integration.prompt_manager.get_analysis_prompt.return_value = "Mock analysis prompt"
+
         integration._initialized = True
 
         # モックプロバイダーを設定（ストリーミング無効）
         mock_provider = Mock()
         mock_provider.name = "openai"
-        mock_provider.config = ai_config.providers["openai"]
+        mock_provider.config = mock_ai_config.providers["openai"]
         mock_provider.count_tokens.return_value = 100
         mock_provider.estimate_cost.return_value = 0.01
 
@@ -1058,10 +1053,10 @@ AssertionError: Expected 200, got 404
         assert chunks[0] == "通常分析結果"
 
     @pytest.mark.asyncio
-    async def test_interactive_input_processing(self, mock_config, ai_config):
+    async def test_interactive_input_processing(self, mock_config, mock_ai_config):
         """対話入力処理のテスト"""
         integration = AIIntegration(mock_config)
-        integration.ai_config = ai_config
+        integration.ai_config = mock_ai_config
         integration._initialized = True
 
         # セッションを設定
@@ -1102,10 +1097,10 @@ AssertionError: Expected 200, got 404
         assert chunks == ["応答", "チャンク"]
 
     @pytest.mark.asyncio
-    async def test_session_timeout_handling(self, mock_config, ai_config):
+    async def test_session_timeout_handling(self, mock_config, mock_ai_config):
         """セッションタイムアウト処理のテスト"""
         integration = AIIntegration(mock_config)
-        integration.ai_config = ai_config
+        integration.ai_config = mock_ai_config
         integration._initialized = True
 
         # セッション管理を設定
@@ -1116,7 +1111,7 @@ AssertionError: Expected 200, got 404
         # プロバイダーを設定
         mock_provider = Mock()
         mock_provider.name = "openai"
-        mock_provider.config = ai_config.providers["openai"]
+        mock_provider.config = mock_ai_config.providers["openai"]
         integration.providers = {"openai": mock_provider}
 
         options = AnalyzeOptions(provider="openai")
@@ -1126,10 +1121,10 @@ AssertionError: Expected 200, got 404
             await integration.start_interactive_session("initial log", options)
 
     @pytest.mark.asyncio
-    async def test_memory_error_handling(self, mock_config, ai_config):
+    async def test_memory_error_handling(self, mock_config, mock_ai_config):
         """メモリエラー処理のテスト"""
         integration = AIIntegration(mock_config)
-        integration.ai_config = ai_config
+        integration.ai_config = mock_ai_config
         integration._initialized = True
 
         # セッション管理を設定
@@ -1140,7 +1135,7 @@ AssertionError: Expected 200, got 404
         # プロバイダーを設定
         mock_provider = Mock()
         mock_provider.name = "openai"
-        mock_provider.config = ai_config.providers["openai"]
+        mock_provider.config = mock_ai_config.providers["openai"]
         integration.providers = {"openai": mock_provider}
 
         options = AnalyzeOptions(provider="openai")

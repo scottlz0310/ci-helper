@@ -352,12 +352,19 @@ class TestLocalLLMProvider:
     @pytest.mark.asyncio
     async def test_initialize_connection_failure(self, local_provider):
         """接続失敗時の初期化テスト"""
+        # 非同期モックセッションを作成
+        mock_session = AsyncMock()
+        mock_session.close = AsyncMock()
+
         with patch.object(
             local_provider, "validate_connection", side_effect=ProviderError("local", "Connection failed")
         ):
-            with patch("aiohttp.ClientSession"):
+            with patch("aiohttp.ClientSession", return_value=mock_session):
                 with pytest.raises(ProviderError):
                     await local_provider.initialize()
+
+                # セッションのクローズが呼ばれたことを確認
+                mock_session.close.assert_called_once()
 
 
 class TestTemplateLoader:
@@ -607,10 +614,11 @@ key = "value"
         from src.ci_helper.ai.exceptions import ConfigurationError
 
         # テンプレートファイルを作成
-        (temp_template_dir / "error_test.txt").write_text("内容", encoding="utf-8")
+        template_file = temp_template_dir / "error_test.txt"
+        template_file.write_text("内容", encoding="utf-8")
 
-        # stat()でエラーが発生するようにモック
-        with patch("pathlib.Path.stat", side_effect=OSError("Stat error")):
+        # load_template_fileでエラーが発生するようにモック
+        with patch.object(template_loader, "load_template_file", side_effect=OSError("File read error")):
             with pytest.raises(ConfigurationError) as exc_info:
                 template_loader.get_template_info("error_test")
 

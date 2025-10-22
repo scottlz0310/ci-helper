@@ -19,24 +19,24 @@ from ci_helper.utils.config import Config
 def setup_test_environment():
     """
     テスト環境のセットアップ
-    
+
     並列テスト実行時のリソース競合を防ぐため、テスト環境を適切に設定します。
     セッション開始時に一度だけ実行され、全テストで共有されます。
     """
     import os
     import tempfile
-    
+
     # テスト専用の一時ディレクトリを設定
     original_tmpdir = os.environ.get("TMPDIR")
     test_tmpdir = tempfile.mkdtemp(prefix="ci_helper_test_session_")
     os.environ["TMPDIR"] = test_tmpdir
-    
+
     # テスト用の環境変数を設定
     os.environ["CI_HELPER_TEST_MODE"] = "1"
     os.environ["CI_HELPER_LOG_LEVEL"] = "WARNING"
-    
+
     yield
-    
+
     # クリーンアップ
     if original_tmpdir:
         os.environ["TMPDIR"] = original_tmpdir
@@ -44,9 +44,10 @@ def setup_test_environment():
         os.environ.pop("TMPDIR", None)
     os.environ.pop("CI_HELPER_TEST_MODE", None)
     os.environ.pop("CI_HELPER_LOG_LEVEL", None)
-    
+
     # テスト用一時ディレクトリをクリーンアップ
     import shutil
+
     try:
         shutil.rmtree(test_tmpdir, ignore_errors=True)
     except Exception:
@@ -57,29 +58,30 @@ def setup_test_environment():
 def isolated_test_resources(monkeypatch):
     """
     テストリソースの分離（オプション）
-    
+
     並列テスト実行時にリソース競合が発生する可能性があるテストで使用します。
     このフィクスチャを明示的に使用するテストのみが分離されます。
     """
     import os
     import uuid
-    
+
     # テスト固有の識別子を生成
     test_id = f"{os.getpid()}_{uuid.uuid4().hex[:8]}"
-    
+
     # 環境変数でテスト識別子を設定
     monkeypatch.setenv("CI_HELPER_TEST_ID", test_id)
-    
+
     # ログファイルの競合を避けるため、テスト固有のログディレクトリを設定
     monkeypatch.setenv("CI_HELPER_LOG_DIR", f".ci-helper-test-{test_id}/logs")
-    
+
     # キャッシュディレクトリの競合を避ける
     monkeypatch.setenv("CI_HELPER_CACHE_DIR", f".ci-helper-test-{test_id}/cache")
-    
+
     yield test_id
-    
+
     # テスト終了後のクリーンアップ
     import shutil
+
     for cleanup_dir in [f".ci-helper-test-{test_id}"]:
         try:
             shutil.rmtree(cleanup_dir, ignore_errors=True)
@@ -91,17 +93,17 @@ def isolated_test_resources(monkeypatch):
 def temp_dir() -> Generator[Path, None, None]:
     """
     一時ディレクトリを提供するフィクスチャ
-    
+
     テスト実行時に一時的なディレクトリを作成し、テスト終了後に自動的にクリーンアップします。
     ファイル操作のテストで使用され、テスト間の独立性を保証します。
     並列テスト実行時の競合を避けるため、プロセス固有の一意なディレクトリを作成します。
-    
+
     Returns:
         Path: 一時ディレクトリのパス
     """
     import os
     import uuid
-    
+
     # 並列テスト実行時の競合を避けるため、プロセス固有の一意なディレクトリを作成
     unique_suffix = f"{os.getpid()}_{uuid.uuid4().hex[:8]}"
     with TemporaryDirectory(prefix=f"ci_helper_test_{unique_suffix}_") as tmp_dir:
@@ -112,13 +114,13 @@ def temp_dir() -> Generator[Path, None, None]:
 def sample_config(temp_dir: Path) -> Config:
     """
     テスト用の設定を提供するフィクスチャ
-    
+
     一時ディレクトリをプロジェクトルートとする設定オブジェクトを作成します。
     設定関連のテストで使用され、実際の設定ファイルに影響を与えません。
-    
+
     Args:
         temp_dir: 一時ディレクトリのパス
-        
+
     Returns:
         Config: テスト用設定オブジェクト
     """
@@ -129,13 +131,13 @@ def sample_config(temp_dir: Path) -> Config:
 def sample_workflow_dir(temp_dir: Path) -> Path:
     """
     サンプルワークフローディレクトリを作成するフィクスチャ
-    
+
     GitHub Actionsワークフローファイルを含むディレクトリ構造を作成します。
     CI/CD関連のテストで使用され、実際のワークフローファイルの構造を模擬します。
-    
+
     Args:
         temp_dir: 一時ディレクトリのパス
-        
+
     Returns:
         Path: ワークフローディレクトリのパス
     """
@@ -166,14 +168,14 @@ jobs:
 def mock_ai_config():
     """
     AI設定のモック
-    
+
     AI機能のテストで使用する標準的な設定オブジェクトを提供します。
     実際のAPIキーを使用せず、テスト環境で安全に実行できます。
-    
+
     Returns:
         AIConfig: テスト用AI設定オブジェクト
     """
-    from ci_helper.ai.models import AIConfig, ProviderConfig
+    from src.ci_helper.ai.models import AIConfig, ProviderConfig
 
     return AIConfig(
         default_provider="openai",
@@ -228,10 +230,10 @@ def mock_anthropic_response():
 def sample_log_content():
     """
     サンプルログ内容
-    
+
     CI/CDの失敗ログを模擬したテストデータを提供します。
     ログ解析機能のテストで使用され、実際のCI失敗パターンを再現します。
-    
+
     Returns:
         str: サンプルログの内容
     """
@@ -256,20 +258,20 @@ TimeoutError: Database connection timed out after 30 seconds
 def ai_test_log_file(temp_dir):
     """
     AI分析テスト用のログファイル
-    
+
     AI分析機能のテストで使用するサンプルログファイルを作成します。
     実際のCI/CD失敗パターンを模擬したログ内容を提供します。
-    
+
     Args:
         temp_dir: 一時ディレクトリフィクスチャ
-        
+
     Returns:
         Path: 作成されたログファイルのパス
     """
     from tests.fixtures.sample_logs import get_log_by_type
-    
+
     log_file = temp_dir / "ai_test.log"
-    
+
     # 基本的なテスト失敗ログを使用
     log_content = get_log_by_type("basic_test_failure")
     log_file.write_text(log_content, encoding="utf-8")
@@ -281,14 +283,15 @@ def ai_test_log_file(temp_dir):
 def mock_ai_integration():
     """
     AI統合のモック
-    
+
     AIIntegrationクラスの完全なモックを提供します。
     全てのメソッドが適切にモック化され、テスト時に実際のAI APIを呼び出しません。
-    
+
     Returns:
         Mock: AI統合のモックオブジェクト
     """
     from unittest.mock import AsyncMock
+
     from tests.fixtures.ai_responses import create_mock_analysis_result
 
     mock_integration = Mock()
@@ -300,7 +303,7 @@ def mock_ai_integration():
     mock_integration.close_interactive_session = AsyncMock()
     mock_integration.apply_fix = AsyncMock()
     mock_integration.generate_fix_suggestions = AsyncMock()
-    
+
     # デフォルトの戻り値を設定
     mock_integration.analyze_log.return_value = create_mock_analysis_result()
 
@@ -311,10 +314,10 @@ def mock_ai_integration():
 def mock_cost_manager():
     """
     コストマネージャーのモック
-    
+
     AI使用コストの管理機能をモック化します。
     実際のコスト計算や制限チェックを行わずにテストできます。
-    
+
     Returns:
         Mock: コストマネージャーのモックオブジェクト
     """
@@ -323,12 +326,9 @@ def mock_cost_manager():
     mock_manager.validate_request_cost = Mock(return_value=True)
     mock_manager.record_usage = Mock()
     mock_manager.check_limits = Mock(return_value={"over_limit": False, "usage_percentage": 25.0})
-    mock_manager.get_usage_summary = Mock(return_value={
-        "total_requests": 10,
-        "total_cost": 0.50,
-        "monthly_limit": 50.0,
-        "usage_percentage": 1.0
-    })
+    mock_manager.get_usage_summary = Mock(
+        return_value={"total_requests": 10, "total_cost": 0.50, "monthly_limit": 50.0, "usage_percentage": 1.0}
+    )
 
     return mock_manager
 
@@ -337,27 +337,28 @@ def mock_cost_manager():
 def mock_cache_manager():
     """
     キャッシュマネージャーのモック
-    
+
     AI分析結果のキャッシュ機能をモック化します。
     実際のファイルI/Oを行わずにキャッシュ動作をテストできます。
-    
+
     Returns:
         Mock: キャッシュマネージャーのモックオブジェクト
     """
     from unittest.mock import AsyncMock
-    from tests.fixtures.ai_responses import create_mock_analysis_result
 
     mock_manager = Mock()
     mock_manager.get_or_set = AsyncMock()
     mock_manager.invalidate_by_provider = AsyncMock()
     mock_manager.cleanup_cache = AsyncMock()
-    mock_manager.get_cache_summary = Mock(return_value={
-        "total_entries": 5,
-        "cache_size_mb": 2.5,
-        "hit_rate": 0.75,
-        "oldest_entry": "2024-01-15T10:30:00Z"
-    })
-    
+    mock_manager.get_cache_summary = Mock(
+        return_value={
+            "total_entries": 5,
+            "cache_size_mb": 2.5,
+            "hit_rate": 0.75,
+            "oldest_entry": "2024-01-15T10:30:00Z",
+        }
+    )
+
     # デフォルトでキャッシュミスを返す（テストで明示的に設定可能）
     mock_manager.get_or_set.return_value = None
 
@@ -400,26 +401,45 @@ def mock_config(temp_dir):
 
 
 @pytest.fixture
+def mock_console():
+    """
+    Rich Console オブジェクトのモック
+
+    analyzeコマンドのテストで使用するRich Consoleのモックを提供します。
+    実際のコンソール出力を行わず、テスト環境で安全に実行できます。
+    Rich内部の問題を避けるため、実際のConsoleインスタンスを使用しますが、
+    出力は無効化されています。
+
+    Returns:
+        Console: テスト用Consoleオブジェクト
+    """
+    from rich.console import Console
+
+    # Use a real Console instance instead of a Mock to avoid Rich internal issues
+    return Console(file=Mock(), force_terminal=False, no_color=True)
+
+
+@pytest.fixture
 async def async_ai_integration_with_cleanup(mock_config, mock_ai_config):
     """
     非同期リソースクリーンアップ付きのAIIntegration
-    
+
     aiohttp.ClientSessionなどの非同期リソースを適切にクリーンアップする
     AIIntegrationフィクスチャを提供します。
-    
+
     Args:
         mock_config: モック設定オブジェクト
         mock_ai_config: モックAI設定オブジェクト
-        
+
     Yields:
         AIIntegration: 適切にセットアップされたAIIntegrationインスタンス
     """
     from ci_helper.ai.integration import AIIntegration
-    
+
     integration = AIIntegration(mock_config)
     integration.ai_config = mock_ai_config
     integration._initialized = True
-    
+
     # 必要なコンポーネントをモック化
     integration.prompt_manager = Mock()
     integration.cache_manager = Mock()
@@ -427,7 +447,7 @@ async def async_ai_integration_with_cleanup(mock_config, mock_ai_config):
     integration.cost_manager = Mock()
     integration.cost_manager.check_usage_limits.return_value = {"over_limit": False, "usage_percentage": 10.0}
     integration.cost_manager.record_ai_usage = AsyncMock()
-    
+
     # 非同期メソッドをAsyncMockで設定
     integration.error_handler = Mock()
     integration.error_handler.handle_error_with_retry = AsyncMock()
@@ -436,7 +456,7 @@ async def async_ai_integration_with_cleanup(mock_config, mock_ai_config):
     integration.session_manager = Mock()
     integration.fix_generator = Mock()
     integration.fix_applier = Mock()
-    
+
     # モックプロバイダーを設定（cleanup メソッド付き）
     mock_provider = Mock()
     mock_provider.name = "openai"
@@ -444,9 +464,9 @@ async def async_ai_integration_with_cleanup(mock_config, mock_ai_config):
     mock_provider.count_tokens.return_value = 100
     mock_provider.estimate_cost.return_value = 0.01
     mock_provider.cleanup = AsyncMock()  # 非同期クリーンアップメソッド
-    
+
     integration.providers = {"openai": mock_provider}
-    
+
     try:
         yield integration
     finally:
@@ -456,4 +476,5 @@ async def async_ai_integration_with_cleanup(mock_config, mock_ai_config):
         except Exception as e:
             # クリーンアップエラーは警告として記録
             import logging
+
             logging.warning(f"テスト終了時のクリーンアップに失敗: {e}")

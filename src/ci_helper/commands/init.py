@@ -88,8 +88,8 @@ def init(force: bool) -> None:
                 console.print("[yellow]初期化をキャンセルしました。[/yellow]")
                 return
 
-        # テンプレートファイルを作成（既存ファイルは保護）
-        _create_template_files(project_root)
+        # テンプレートファイルを作成
+        _create_template_files(project_root, force)
 
         # 実際の設定ファイルを作成
         _create_actual_config_files(project_root, force)
@@ -117,8 +117,8 @@ def init(force: bool) -> None:
         ) from e
 
 
-def _create_template_files(project_root: Path) -> None:
-    """テンプレートファイルを作成（参考用、既存ファイルは保護）"""
+def _create_template_files(project_root: Path, force: bool = False) -> None:
+    """テンプレートファイルを作成（参考用）"""
     template_files = [
         (".actrc.example", ACTRC_TEMPLATE),
         ("ci-helper.toml.example", CI_HELPER_TOML_TEMPLATE),
@@ -127,20 +127,23 @@ def _create_template_files(project_root: Path) -> None:
 
     for filename, template_content in template_files:
         file_path = project_root / filename
-        
-        # 既存のテンプレートファイルは保護
-        if file_path.exists():
+
+        # 既存のテンプレートファイルの処理
+        if file_path.exists() and not force:
             console.print(f"[dim]✓ {filename} は既に存在します（保持）[/dim]")
             continue
-            
+
         try:
             file_path.write_text(template_content, encoding="utf-8")
-            console.print(f"[green]✓[/green] {filename} を作成しました")
+            if file_path.exists() and force:
+                console.print(f"[green]✓[/green] {filename} を上書きしました")
+            else:
+                console.print(f"[green]✓[/green] {filename} を作成しました")
         except OSError as e:
             console.print(f"[red]✗[/red] {filename} の作成に失敗しました: {e}")
 
 
-def _create_actual_config_files(project_root: Path, _force: bool) -> None:
+def _create_actual_config_files(project_root: Path, force: bool) -> None:
     """テンプレートから実際の設定ファイルを作成"""
     # テンプレートから実際の設定ファイルを生成
     config_mappings = [
@@ -152,13 +155,18 @@ def _create_actual_config_files(project_root: Path, _force: bool) -> None:
     for template_name, actual_name, description in config_mappings:
         template_path = project_root / template_name
         actual_path = project_root / actual_name
-        
+
         if template_path.exists():
+            # 既存ファイルがある場合の処理
+            if actual_path.exists() and not force:
+                console.print(f"[dim]✓ {actual_name} は既に存在します（保持）[/dim]")
+                continue
+
             try:
                 # テンプレートを読み込み、環境固有の値で置換
                 template_content = template_path.read_text(encoding="utf-8")
                 actual_content = _customize_template_content(template_content, actual_name)
-                _write_config_file(actual_path, actual_content, description)
+                _write_config_file(actual_path, actual_content, description, force)
             except OSError as e:
                 console.print(f"[red]✗[/red] {actual_name} の作成に失敗しました: {e}")
         else:
@@ -192,12 +200,10 @@ def _ensure_sample_workflows(project_root: Path) -> None:
 
 def _customize_template_content(template_content: str, filename: str) -> str:
     """テンプレート内容を環境固有の値でカスタマイズ"""
-    import os
-    import platform
-    
+
     # 環境情報を収集
     env_info = _collect_environment_info()
-    
+
     # ファイル種別に応じたカスタマイズ
     if filename == ".env":
         return _customize_env_template(template_content, env_info)
@@ -205,7 +211,7 @@ def _customize_template_content(template_content: str, filename: str) -> str:
         return _customize_toml_template(template_content, env_info)
     elif filename == ".actrc":
         return _customize_actrc_template(template_content, env_info)
-    
+
     return template_content
 
 
@@ -213,13 +219,15 @@ def _collect_environment_info() -> dict:
     """環境情報を収集"""
     import os
     import platform
-    
+
     return {
         "os": platform.system().lower(),
-        "arch": platform.machine().lower(), 
+        "arch": platform.machine().lower(),
         "user": os.getenv("USER", "user"),
         "home": os.getenv("HOME", str(Path.home())),
-        "github_token_exists": any(key in os.environ for key in ["GITHUB_TOKEN", "GITHUB_PERSONAL_ACCESS_TOKEN", "GH_TOKEN"]),
+        "github_token_exists": any(
+            key in os.environ for key in ["GITHUB_TOKEN", "GITHUB_PERSONAL_ACCESS_TOKEN", "GH_TOKEN"]
+        ),
         "openai_key_exists": "OPENAI_API_KEY" in os.environ,
         "anthropic_key_exists": "ANTHROPIC_API_KEY" in os.environ,
         "ollama_url": os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
@@ -229,32 +237,28 @@ def _collect_environment_info() -> dict:
 def _customize_env_template(template_content: str, env_info: dict) -> str:
     """.env テンプレートをカスタマイズ"""
     content = template_content
-    
+
     # 既存の環境変数に応じてコメントを調整
     if env_info["github_token_exists"]:
         content = content.replace(
-            "# GITHUB_TOKEN=your_github_token_here",
-            "# GitHub token is already set in system environment variables"
+            "# GITHUB_TOKEN=your_github_token_here", "# GitHub token is already set in system environment variables"
         )
-    
+
     if env_info["openai_key_exists"]:
         content = content.replace(
             "# OPENAI_API_KEY=sk-proj-your-openai-api-key-here",
-            "# OpenAI API key is already set in system environment variables"
+            "# OpenAI API key is already set in system environment variables",
         )
-    
+
     if env_info["anthropic_key_exists"]:
         content = content.replace(
             "# ANTHROPIC_API_KEY=sk-ant-your-anthropic-api-key-here",
-            "# Anthropic API key is already set in system environment variables"
+            "# Anthropic API key is already set in system environment variables",
         )
-    
+
     # Ollama URLを環境変数から取得
-    content = content.replace(
-        "# OLLAMA_BASE_URL=http://localhost:11434",
-        f"# OLLAMA_BASE_URL={env_info['ollama_url']}"
-    )
-    
+    content = content.replace("# OLLAMA_BASE_URL=http://localhost:11434", f"# OLLAMA_BASE_URL={env_info['ollama_url']}")
+
     return content
 
 
@@ -475,11 +479,15 @@ def _show_environment_status() -> None:
         console.print("[dim]ℹ[/dim] Docker 認証情報は設定されていません（必要に応じて設定）")
 
 
-def _write_config_file(file_path: Path, content: str, description: str) -> None:
+def _write_config_file(file_path: Path, content: str, description: str, force: bool = False) -> None:
     """設定ファイルを書き込み"""
     try:
+        if file_path.exists() and force:
+            console.print(f"[green]✓[/green] {file_path.name} を上書きしました ({description})")
+        else:
+            console.print(f"[green]✓[/green] {file_path.name} を作成しました ({description})")
+
         file_path.write_text(content, encoding="utf-8")
-        console.print(f"[green]✓[/green] {file_path.name} を作成しました ({description})")
     except OSError as e:
         console.print(f"[red]✗[/red] {file_path.name} の作成に失敗しました: {e}")
 
