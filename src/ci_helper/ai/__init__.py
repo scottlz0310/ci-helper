@@ -15,7 +15,7 @@ __version__ = "1.0.0"
 from . import provider_registry  # noqa: F401
 from .cache import ResponseCache
 from .cache_manager import CacheManager
-from .config_manager import AIConfigManager
+from .config_manager import AIConfigManager, PatternRecognitionConfigManager
 from .cost_manager import CostManager
 from .cost_tracker import CostTracker
 from .exceptions import (
@@ -45,6 +45,7 @@ __all__ = [
     "AIConfig",
     # 設定管理
     "AIConfigManager",
+    "PatternRecognitionConfigManager",
     # 例外
     "AIError",
     # メイン統合クラス

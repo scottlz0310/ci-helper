@@ -93,6 +93,16 @@ class FixSuggestion:
     confidence: float = 0.0  # 信頼度 (0.0-1.0)
     references: list[str] = field(default_factory=list)  # 参考リンク
 
+    # 詳細表示用の新しいフィールド
+    background_reason: str = ""  # 修正提案の背景理由
+    impact_assessment: str = ""  # 影響評価
+    risk_level: str = "medium"  # リスクレベル (low/medium/high)
+    estimated_time_minutes: int = 0  # 推定時間（分）
+    safety_score: float = 0.5  # 安全性スコア (0.0-1.0)
+    effectiveness_score: float = 0.5  # 効果スコア (0.0-1.0)
+    prerequisites: list[str] = field(default_factory=list)  # 前提条件
+    validation_steps: list[str] = field(default_factory=list)  # 検証ステップ
+
 
 @dataclass
 class AnalysisResult:
@@ -114,6 +124,7 @@ class AnalysisResult:
     retry_available: bool = False  # リトライ可能かどうか
     retry_after: int | None = None  # リトライまでの秒数
     alternative_providers: list[str] = field(default_factory=list)  # 代替プロバイダー
+    pattern_matches: list[PatternMatch] = field(default_factory=list)  # パターンマッチ結果
 
     @property
     def has_high_confidence(self) -> bool:
@@ -164,8 +175,28 @@ class AnalysisResult:
                     "estimated_effort": fix.estimated_effort,
                     "confidence": fix.confidence,
                     "references": fix.references,
+                    "background_reason": fix.background_reason,
+                    "impact_assessment": fix.impact_assessment,
+                    "risk_level": fix.risk_level,
+                    "estimated_time_minutes": fix.estimated_time_minutes,
+                    "safety_score": fix.safety_score,
+                    "effectiveness_score": fix.effectiveness_score,
+                    "prerequisites": fix.prerequisites,
+                    "validation_steps": fix.validation_steps,
                 }
                 for fix in self.fix_suggestions
+            ],
+            "pattern_matches": [
+                {
+                    "pattern_id": match.pattern.id,
+                    "pattern_name": match.pattern.name,
+                    "category": match.pattern.category,
+                    "confidence": match.confidence,
+                    "match_strength": match.match_strength,
+                    "extracted_context": match.extracted_context,
+                    "supporting_evidence": match.supporting_evidence,
+                }
+                for match in self.pattern_matches
             ],
             "related_errors": self.related_errors,
             "confidence_score": self.confidence_score,
@@ -241,6 +272,28 @@ class AIConfig:
     security_checks_enabled: bool = True  # セキュリティチェック有効化
     cache_dir: str = ".ci-helper/cache"  # キャッシュディレクトリ
 
+    # パターン認識設定
+    pattern_recognition_enabled: bool = True  # パターン認識有効化
+    pattern_confidence_threshold: float = 0.7  # パターン信頼度閾値
+    pattern_database_path: str = "data/patterns"  # パターンデータベースパス
+    custom_patterns_enabled: bool = True  # カスタムパターン有効化
+    enabled_pattern_categories: list[str] = field(
+        default_factory=lambda: ["permission", "network", "config", "dependency", "build", "test"]
+    )  # 有効なパターンカテゴリ
+
+    # 自動修正設定
+    auto_fix_enabled: bool = False  # 自動修正有効化
+    auto_fix_confidence_threshold: float = 0.8  # 自動修正信頼度閾値
+    auto_fix_risk_tolerance: str = "low"  # リスク許容度 (low/medium/high)
+    backup_retention_days: int = 30  # バックアップ保持日数
+    backup_before_fix: bool = True  # 修正前バックアップ作成
+
+    # 学習設定
+    learning_enabled: bool = True  # 学習機能有効化
+    feedback_collection_enabled: bool = True  # フィードバック収集有効化
+    pattern_discovery_enabled: bool = True  # パターン発見有効化
+    min_pattern_occurrences: int = 3  # パターン認識最小出現回数
+
     def __eq__(self, other: object) -> bool:
         """等価性比較"""
         if not isinstance(other, AIConfig):
@@ -257,6 +310,20 @@ class AIConfig:
             and self.streaming_enabled == other.streaming_enabled
             and self.security_checks_enabled == other.security_checks_enabled
             and self.cache_dir == other.cache_dir
+            and self.pattern_recognition_enabled == other.pattern_recognition_enabled
+            and self.pattern_confidence_threshold == other.pattern_confidence_threshold
+            and self.pattern_database_path == other.pattern_database_path
+            and self.custom_patterns_enabled == other.custom_patterns_enabled
+            and self.enabled_pattern_categories == other.enabled_pattern_categories
+            and self.auto_fix_enabled == other.auto_fix_enabled
+            and self.auto_fix_confidence_threshold == other.auto_fix_confidence_threshold
+            and self.auto_fix_risk_tolerance == other.auto_fix_risk_tolerance
+            and self.backup_retention_days == other.backup_retention_days
+            and self.backup_before_fix == other.backup_before_fix
+            and self.learning_enabled == other.learning_enabled
+            and self.feedback_collection_enabled == other.feedback_collection_enabled
+            and self.pattern_discovery_enabled == other.pattern_discovery_enabled
+            and self.min_pattern_occurrences == other.min_pattern_occurrences
         )
 
     def get_path(self, path_name: str) -> Path:

@@ -354,6 +354,9 @@ class AIIntegration:
 
             # パターン認識結果を追加
             if pattern_matches:
+                # パターンマッチ結果をAnalysisResultに保存
+                result.pattern_matches = pattern_matches
+
                 # パターン情報をサマリーに追加
                 pattern_info = []
                 for match in pattern_matches:

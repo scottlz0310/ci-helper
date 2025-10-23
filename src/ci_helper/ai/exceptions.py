@@ -158,3 +158,15 @@ class CostLimitError(AIError):
         self.current_cost = current_cost
         self.limit = limit
         self.provider = provider
+
+
+class FixApplicationError(AIError):
+    """修正適用関連のエラー"""
+
+    def __init__(self, message: str, rollback_info: dict | None = None):
+        super().__init__(
+            message,
+            f"ロールバック情報: {rollback_info}" if rollback_info else None,
+            "バックアップからロールバックを実行してください",
+        )
+        self.rollback_info = rollback_info

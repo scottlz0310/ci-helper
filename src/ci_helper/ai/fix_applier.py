@@ -480,6 +480,179 @@ class FixApplier:
             ],
         }
 
+    def apply_pattern_based_fixes(
+        self, pattern_matches: list[PatternMatch], fix_templates: dict[str, FixTemplate], auto_approve: bool = False
+    ) -> dict[str, Any]:
+        """パターンベースの修正提案を適用
+
+        Args:
+            pattern_matches: パターンマッチ結果のリスト
+            fix_templates: 修正テンプレート辞書（パターンID -> テンプレート）
+            auto_approve: 自動承認フラグ
+
+        Returns:
+            適用結果の辞書
+        """
+        logger.info("パターンベースの修正適用を開始 (パターン数: %d)", len(pattern_matches))
+
+        results = {
+            "total_patterns": len(pattern_matches),
+            "applied_count": 0,
+            "skipped_count": 0,
+            "failed_count": 0,
+            "applied_fixes": [],
+            "failed_fixes": [],
+            "backups_created": [],
+        }
+
+        for i, pattern_match in enumerate(pattern_matches, 1):
+            pattern_id = pattern_match.pattern.id
+
+            # 対応する修正テンプレートを取得
+            if pattern_id not in fix_templates:
+                logger.warning("パターンに対応する修正テンプレートが見つかりません: %s", pattern_id)
+                results["skipped_count"] += 1
+                continue
+
+            fix_template = fix_templates[pattern_id]
+
+            logger.info(
+                "パターンベース修正 %d/%d を処理中: %s (信頼度: %.2f)",
+                i,
+                len(pattern_matches),
+                pattern_match.pattern.name,
+                pattern_match.confidence,
+            )
+
+            try:
+                # 修正テンプレートをFixSuggestionに変換
+                fix_suggestion = self._convert_template_to_suggestion(fix_template, pattern_match)
+
+                # 承認を確認
+                if not auto_approve and self.interactive:
+                    approval = self._request_pattern_approval(pattern_match, fix_template)
+                    if not approval.approved:
+                        logger.info("パターンベース修正をスキップ: %s", approval.reason)
+                        results["skipped_count"] += 1
+                        continue
+
+                # 修正を適用
+                apply_result = self._apply_single_fix(fix_suggestion)
+
+                if apply_result["success"]:
+                    results["applied_count"] += 1
+                    results["applied_fixes"].append(apply_result)
+                    results["backups_created"].extend(apply_result.get("backups", []))
+                    logger.info("パターンベース修正を適用しました: %s", fix_template.name)
+                else:
+                    results["failed_count"] += 1
+                    results["failed_fixes"].append(apply_result)
+                    logger.error("パターンベース修正の適用に失敗: %s", apply_result.get("error", "不明なエラー"))
+
+            except Exception as e:
+                logger.error("パターンベース修正の処理中にエラー: %s", e)
+                results["failed_count"] += 1
+                results["failed_fixes"].append(
+                    {
+                        "pattern": pattern_match.pattern.name,
+                        "template": fix_template.name,
+                        "error": str(e),
+                        "success": False,
+                    }
+                )
+
+        logger.info(
+            "パターンベース修正適用完了 - 適用: %d, スキップ: %d, 失敗: %d",
+            results["applied_count"],
+            results["skipped_count"],
+            results["failed_count"],
+        )
+
+        return results
+
+    def _convert_template_to_suggestion(self, fix_template: FixTemplate, pattern_match: PatternMatch) -> FixSuggestion:
+        """修正テンプレートをFixSuggestionに変換
+
+        Args:
+            fix_template: 修正テンプレート
+            pattern_match: パターンマッチ結果
+
+        Returns:
+            修正提案
+        """
+        # FixStepをCodeChangeに変換
+        code_changes = []
+        for step in fix_template.fix_steps:
+            if step.type == "file_modification" and step.file_path:
+                code_change = CodeChange(
+                    file_path=step.file_path,
+                    line_start=1,  # テンプレートベースの場合は全体を置換
+                    line_end=1,
+                    old_code="",  # 既存コードは自動検出
+                    new_code=step.content or "",
+                    description=step.description,
+                )
+                code_changes.append(code_change)
+
+        # 信頼度を計算（パターンマッチの信頼度とテンプレートの成功率を組み合わせ）
+        confidence = pattern_match.confidence * fix_template.success_rate
+
+        return FixSuggestion(
+            title=fix_template.name,
+            description=fix_template.description,
+            code_changes=code_changes,
+            confidence=confidence,
+            estimated_effort=fix_template.estimated_time,
+        )
+
+    def _request_pattern_approval(self, pattern_match: PatternMatch, fix_template: FixTemplate) -> FixApprovalResult:
+        """パターンベース修正の承認を要求
+
+        Args:
+            pattern_match: パターンマッチ結果
+            fix_template: 修正テンプレート
+
+        Returns:
+            承認結果
+        """
+        print(f"\n🔍 検出されたパターン: {pattern_match.pattern.name}")
+        print(f"📊 信頼度: {pattern_match.confidence:.1%}")
+        print(f"🔧 提案される修正: {fix_template.name}")
+        print(f"⚠️  リスクレベル: {fix_template.risk_level}")
+        print(f"⏱️  推定時間: {fix_template.estimated_time}")
+        print(f"📝 説明: {fix_template.description}")
+
+        if fix_template.fix_steps:
+            print("\n📋 修正ステップ:")
+            for i, step in enumerate(fix_template.fix_steps, 1):
+                print(f"  {i}. {step.description}")
+                if step.file_path:
+                    print(f"     ファイル: {step.file_path}")
+
+        while True:
+            try:
+                response = (
+                    input("\nこのパターンベース修正を適用しますか? [y/n/s/q] (y=はい, n=いいえ, s=スキップ, q=終了): ")
+                    .lower()
+                    .strip()
+                )
+
+                if response in ["y", "yes"]:
+                    return FixApprovalResult(True, "ユーザーが承認")
+                elif response in ["n", "no"]:
+                    return FixApprovalResult(False, "ユーザーが拒否")
+                elif response in ["s", "skip"]:
+                    return FixApprovalResult(False, "ユーザーがスキップ")
+                elif response in ["q", "quit"]:
+                    raise KeyboardInterrupt("ユーザーが終了を選択")
+                else:
+                    print("無効な入力です。y, n, s, q のいずれかを入力してください。")
+
+            except KeyboardInterrupt:
+                return FixApprovalResult(False, "ユーザーが中断")
+            except EOFError:
+                return FixApprovalResult(False, "入力エラー")
+
     def cleanup_old_backups(self, keep_count: int = 20) -> None:
         """古いバックアップをクリーンアップ
 

@@ -641,6 +641,9 @@ def _display_result_as_markdown(result: AnalysisResult, console: Console) -> Non
     console.print(Panel.fit("🔍 AI分析結果", style="blue"))
     console.print()
 
+    # パターン認識結果を表示（新機能）
+    _display_pattern_recognition_results(result, console)
+
     # 要約
     if result.summary:
         console.print("[bold]要約:[/bold]")
@@ -656,15 +659,14 @@ def _display_result_as_markdown(result: AnalysisResult, console: Console) -> Non
                 console.print(f"   ファイル: {cause.file_path}")
             if cause.line_number:
                 console.print(f"   行番号: {cause.line_number}")
+            # 信頼度を表示（新機能）
+            if hasattr(cause, "confidence") and cause.confidence > 0:
+                console.print(f"   信頼度: {cause.confidence:.1%}")
         console.print()
 
-    # 修正提案
+    # 修正提案（詳細表示に拡張）
     if result.fix_suggestions:
-        console.print("[bold]修正提案:[/bold]")
-        for i, fix in enumerate(result.fix_suggestions, 1):
-            console.print(f"{i}. {fix.title}")
-            console.print(f"   {fix.description}")
-        console.print()
+        _display_detailed_fix_suggestions(result.fix_suggestions, console)
 
     # 関連エラー
     if result.related_errors:
@@ -825,6 +827,294 @@ async def _handle_retry_operation(ai_integration: AIIntegration, operation_id: s
             console.print("\n[yellow]提案:[/yellow]")
             for i, suggestion in enumerate(suggestions, 1):
                 console.print(f"  {i}. {suggestion}")
+
+
+def _display_pattern_recognition_results(result: AnalysisResult, console: Console) -> None:
+    """パターン認識結果を詳細表示
+
+    Args:
+        result: 分析結果
+        console: Richコンソール
+    """
+    # パターンマッチ情報がある場合のみ表示
+    pattern_matches = getattr(result, "pattern_matches", None)
+    if not pattern_matches:
+        return
+
+    from rich.table import Table
+
+    console.print(Panel.fit("🎯 検出されたパターン", style="green"))
+    console.print()
+
+    # パターンマッチテーブルを作成
+    pattern_table = Table(title="パターン認識結果", show_header=True, header_style="bold green")
+    pattern_table.add_column("パターン名", style="cyan", width=25)
+    pattern_table.add_column("カテゴリ", style="yellow", width=12)
+    pattern_table.add_column("信頼度", style="green", width=10)
+    pattern_table.add_column("マッチ理由", style="white", width=35)
+
+    for match in pattern_matches:
+        # 信頼度を色分け
+        confidence_color = "green" if match.confidence >= 0.8 else "yellow" if match.confidence >= 0.6 else "red"
+        confidence_text = f"[{confidence_color}]{match.confidence:.1%}[/{confidence_color}]"
+
+        # マッチ理由を構築
+        match_reasons = []
+        if hasattr(match, "supporting_evidence") and match.supporting_evidence:
+            match_reasons.extend(match.supporting_evidence[:2])  # 最初の2つの証拠のみ
+        if not match_reasons:
+            match_reasons = ["パターンマッチ検出"]
+
+        reason_text = ", ".join(match_reasons)
+        if len(reason_text) > 30:
+            reason_text = reason_text[:27] + "..."
+
+        pattern_table.add_row(match.pattern.name, match.pattern.category, confidence_text, reason_text)
+
+    console.print(pattern_table)
+    console.print()
+
+    # 詳細なパターンマッチ情報を表示
+    for i, match in enumerate(pattern_matches[:3], 1):  # 上位3つのみ詳細表示
+        console.print(f"[bold cyan]パターン {i}: {match.pattern.name}[/bold cyan]")
+        console.print(f"  カテゴリ: {match.pattern.category}")
+        console.print(f"  信頼度: {match.confidence:.1%}")
+
+        if hasattr(match, "extracted_context") and match.extracted_context:
+            context_preview = match.extracted_context[:100]
+            if len(match.extracted_context) > 100:
+                context_preview += "..."
+            console.print(f"  コンテキスト: [dim]{context_preview}[/dim]")
+
+        if hasattr(match, "supporting_evidence") and match.supporting_evidence:
+            console.print("  検出根拠:")
+            for evidence in match.supporting_evidence[:3]:  # 最初の3つの証拠
+                console.print(f"    • {evidence}")
+
+        console.print()
+
+
+def _display_detailed_fix_suggestions(fix_suggestions: list, console: Console) -> None:
+    """修正提案を詳細表示
+
+    Args:
+        fix_suggestions: 修正提案のリスト
+        console: Richコンソール
+    """
+
+    console.print("[bold]修正提案:[/bold]")
+
+    # 修正提案をランキング形式で表示
+    for i, fix in enumerate(fix_suggestions, 1):
+        # 優先度に応じた色分け
+        priority_colors = {"urgent": "red", "high": "yellow", "medium": "blue", "low": "dim"}
+        priority_color = priority_colors.get(getattr(fix, "priority", "medium").lower(), "blue")
+
+        console.print(f"\n[bold {priority_color}]修正案 {i}: {fix.title}[/bold {priority_color}]")
+        console.print(f"  説明: {fix.description}")
+
+        # 信頼度表示
+        if hasattr(fix, "confidence") and fix.confidence > 0:
+            confidence_color = "green" if fix.confidence >= 0.8 else "yellow" if fix.confidence >= 0.6 else "red"
+            console.print(f"  信頼度: [{confidence_color}]{fix.confidence:.1%}[/{confidence_color}]")
+
+        # 背景理由（新機能）
+        if hasattr(fix, "background_reason") and fix.background_reason:
+            console.print(f"  [bold cyan]背景理由:[/bold cyan] {fix.background_reason}")
+
+        # 影響評価（新機能）
+        if hasattr(fix, "impact_assessment") and fix.impact_assessment:
+            console.print(f"  [bold yellow]影響評価:[/bold yellow] {fix.impact_assessment}")
+
+        # リスク評価と推定時間（詳細表示）
+        _display_risk_and_time_details(fix, console)
+
+        # 影響ファイル
+        if hasattr(fix, "code_changes") and fix.code_changes:
+            files = {change.file_path for change in fix.code_changes}
+            console.print(f"  影響ファイル: {', '.join(list(files)[:3])}")
+            if len(files) > 3:
+                console.print(f"    ... 他 {len(files) - 3} ファイル")
+
+        # 前提条件（新機能）
+        if hasattr(fix, "prerequisites") and fix.prerequisites:
+            console.print("  [bold magenta]前提条件:[/bold magenta]")
+            for prereq in fix.prerequisites[:3]:  # 最初の3つ
+                console.print(f"    • {prereq}")
+
+        # 検証ステップ（新機能）
+        if hasattr(fix, "validation_steps") and fix.validation_steps:
+            console.print("  [bold green]検証ステップ:[/bold green]")
+            for step in fix.validation_steps[:3]:  # 最初の3つ
+                console.print(f"    • {step}")
+
+        # 参考リンク
+        if hasattr(fix, "references") and fix.references:
+            console.print("  参考:")
+            for ref in fix.references[:2]:  # 最初の2つのみ
+                console.print(f"    • {ref}")
+
+    # 修正提案のランキング表示（効果と安全性による）
+    if len(fix_suggestions) > 1:
+        _display_fix_suggestions_ranking(fix_suggestions, console)
+
+
+def _display_risk_and_time_details(fix_suggestion, console: Console) -> None:
+    """リスク評価と推定時間の詳細表示
+
+    Args:
+        fix_suggestion: 修正提案
+        console: Richコンソール
+    """
+    from rich.table import Table
+
+    # リスクレベルの表示
+    risk_level = getattr(fix_suggestion, "risk_level", "medium")
+    risk_colors = {"low": "green", "medium": "yellow", "high": "red"}
+    risk_color = risk_colors.get(risk_level, "yellow")
+    console.print(f"  リスクレベル: [{risk_color}]{risk_level.upper()}[/{risk_color}]")
+
+    # 推定時間の詳細表示
+    estimated_time_minutes = getattr(fix_suggestion, "estimated_time_minutes", 0)
+    if estimated_time_minutes > 0:
+        if estimated_time_minutes < 60:
+            time_str = f"{estimated_time_minutes}分"
+        else:
+            hours = estimated_time_minutes // 60
+            minutes = estimated_time_minutes % 60
+            time_str = f"{hours}時間{minutes}分" if minutes > 0 else f"{hours}時間"
+        console.print(f"  推定時間: {time_str}")
+    elif hasattr(fix_suggestion, "estimated_effort") and fix_suggestion.estimated_effort != "不明":
+        console.print(f"  推定時間: {fix_suggestion.estimated_effort}")
+
+    # 効果と安全性のスコア表示
+    effectiveness_score = getattr(fix_suggestion, "effectiveness_score", 0.0)
+    safety_score = getattr(fix_suggestion, "safety_score", 0.0)
+
+    if effectiveness_score > 0 or safety_score > 0:
+        # 小さなテーブルでスコアを表示
+        score_table = Table(show_header=False, box=None, padding=(0, 1))
+        score_table.add_column("項目", style="dim")
+        score_table.add_column("スコア", style="bold")
+
+        if effectiveness_score > 0:
+            eff_color = "green" if effectiveness_score >= 0.8 else "yellow" if effectiveness_score >= 0.6 else "red"
+            score_table.add_row("効果", f"[{eff_color}]{effectiveness_score:.1%}[/{eff_color}]")
+
+        if safety_score > 0:
+            safety_color = "green" if safety_score >= 0.8 else "yellow" if safety_score >= 0.6 else "red"
+            score_table.add_row("安全性", f"[{safety_color}]{safety_score:.1%}[/{safety_color}]")
+
+        console.print("  評価スコア:")
+        console.print(score_table)
+
+
+def _display_fix_suggestions_ranking(fix_suggestions: list, console: Console) -> None:
+    """修正提案のランキング表示（効果と安全性による）
+
+    Args:
+        fix_suggestions: 修正提案のリスト
+        console: Richコンソール
+    """
+    from rich.table import Table
+
+    console.print("\n[bold blue]修正提案ランキング (効果・安全性順):[/bold blue]")
+
+    ranking_table = Table(show_header=True, header_style="bold blue")
+    ranking_table.add_column("順位", style="cyan", width=4)
+    ranking_table.add_column("修正案", style="white", width=25)
+    ranking_table.add_column("効果", style="green", width=8)
+    ranking_table.add_column("安全性", style="yellow", width=8)
+    ranking_table.add_column("リスク", style="red", width=8)
+    ranking_table.add_column("総合評価", style="blue", width=10)
+
+    # 修正提案をスコアでソート
+    scored_fixes = []
+    for fix in fix_suggestions:
+        effectiveness = getattr(fix, "effectiveness_score", getattr(fix, "confidence", 0.5))
+        safety = getattr(fix, "safety_score", 1.0 - _calculate_risk_score(fix))
+        risk_score = _calculate_risk_score(fix)
+        overall = effectiveness * 0.4 + safety * 0.4 + (1.0 - risk_score) * 0.2
+
+        scored_fixes.append((fix, effectiveness, safety, risk_score, overall))
+
+    # 総合評価でソート（降順）
+    scored_fixes.sort(key=lambda x: x[4], reverse=True)
+
+    for i, (fix, effectiveness, safety, risk_score, overall) in enumerate(scored_fixes[:5], 1):
+        # 色分け
+        eff_color = "green" if effectiveness >= 0.8 else "yellow" if effectiveness >= 0.6 else "red"
+        safety_color = "green" if safety >= 0.8 else "yellow" if safety >= 0.6 else "red"
+        risk_color = "green" if risk_score <= 0.3 else "yellow" if risk_score <= 0.6 else "red"
+        overall_color = "green" if overall >= 0.8 else "yellow" if overall >= 0.6 else "red"
+
+        ranking_table.add_row(
+            str(i),
+            fix.title[:22] + "..." if len(fix.title) > 25 else fix.title,
+            f"[{eff_color}]{effectiveness:.1%}[/{eff_color}]",
+            f"[{safety_color}]{safety:.1%}[/{safety_color}]",
+            f"[{risk_color}]{risk_score:.1%}[/{risk_color}]",
+            f"[{overall_color}]{overall:.1%}[/{overall_color}]",
+        )
+
+    console.print(ranking_table)
+
+    # 推奨修正案の表示
+    if scored_fixes:
+        best_fix = scored_fixes[0][0]
+        console.print(f"\n[bold green]🎯 推奨修正案: {best_fix.title}[/bold green]")
+
+        # 推奨理由を表示
+        reasons = []
+        if scored_fixes[0][1] >= 0.8:  # 効果が高い
+            reasons.append("高い効果が期待できます")
+        if scored_fixes[0][2] >= 0.8:  # 安全性が高い
+            reasons.append("安全性が高く低リスクです")
+        if scored_fixes[0][3] <= 0.3:  # リスクが低い
+            reasons.append("実装リスクが低いです")
+
+        if reasons:
+            console.print(f"  理由: {', '.join(reasons)}")
+
+    console.print()
+
+
+def _calculate_risk_score(fix_suggestion) -> float:
+    """修正提案のリスクスコアを計算
+
+    Args:
+        fix_suggestion: 修正提案
+
+    Returns:
+        リスクスコア (0.0-1.0, 高いほどリスキー)
+    """
+    risk_score = 0.0
+
+    # リスクレベルによる直接的なリスク（新機能）
+    risk_level = getattr(fix_suggestion, "risk_level", "medium")
+    risk_level_scores = {"low": 0.2, "medium": 0.5, "high": 0.8}
+    risk_score += risk_level_scores.get(risk_level, 0.5)
+
+    # 優先度によるリスク
+    priority_risks = {"urgent": 0.8, "high": 0.6, "medium": 0.3, "low": 0.1}
+    priority = getattr(fix_suggestion, "priority", "medium")
+    if hasattr(priority, "value"):
+        priority = priority.value
+    risk_score += priority_risks.get(str(priority).lower(), 0.3) * 0.3  # 重み付けを調整
+
+    # ファイル変更数によるリスク
+    if hasattr(fix_suggestion, "code_changes") and fix_suggestion.code_changes:
+        file_count = len({change.file_path for change in fix_suggestion.code_changes})
+        risk_score += min(file_count * 0.05, 0.2)  # 重み付けを調整
+
+    # 推定時間によるリスク
+    estimated_time_minutes = getattr(fix_suggestion, "estimated_time_minutes", 0)
+    if estimated_time_minutes > 0:
+        # 長時間の作業ほどリスクが高い
+        time_risk = min(estimated_time_minutes / 480.0, 0.3)  # 8時間で最大リスク
+        risk_score += time_risk
+
+    return min(risk_score, 1.0)
 
 
 def _display_fallback_info(result: AnalysisResult, console: Console) -> None:

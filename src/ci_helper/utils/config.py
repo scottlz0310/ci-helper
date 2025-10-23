@@ -87,6 +87,23 @@ class Config:
             "fix_suggestion": "templates/fix.txt",
             "interactive": "templates/interactive.txt",
         },
+        # パターン認識設定
+        "pattern_recognition_enabled": True,
+        "pattern_confidence_threshold": 0.7,
+        "pattern_database_path": "data/patterns",
+        "custom_patterns_enabled": True,
+        "enabled_pattern_categories": ["permission", "network", "config", "dependency", "build", "test"],
+        # 自動修正設定
+        "auto_fix_enabled": False,
+        "auto_fix_confidence_threshold": 0.8,
+        "auto_fix_risk_tolerance": "low",
+        "backup_retention_days": 30,
+        "backup_before_fix": True,
+        # 学習設定
+        "learning_enabled": True,
+        "feedback_collection_enabled": True,
+        "pattern_discovery_enabled": True,
+        "min_pattern_occurrences": 3,
     }
 
     def __init__(self, project_root: Path | None = None, validate_security: bool = True):
@@ -187,6 +204,20 @@ class Config:
                         "interactive_timeout",
                         "streaming_enabled",
                         "security_checks_enabled",
+                        "pattern_recognition_enabled",
+                        "pattern_confidence_threshold",
+                        "pattern_database_path",
+                        "custom_patterns_enabled",
+                        "enabled_pattern_categories",
+                        "auto_fix_enabled",
+                        "auto_fix_confidence_threshold",
+                        "auto_fix_risk_tolerance",
+                        "backup_retention_days",
+                        "backup_before_fix",
+                        "learning_enabled",
+                        "feedback_collection_enabled",
+                        "pattern_discovery_enabled",
+                        "min_pattern_occurrences",
                     ]:
                         if key in ai_section:
                             ai_config[key] = ai_section[key]
@@ -229,20 +260,54 @@ class Config:
             "CI_HELPER_AI_CACHE_ENABLED": "cache_enabled",
             "CI_HELPER_AI_STREAMING_ENABLED": "streaming_enabled",
             "CI_HELPER_AI_INTERACTIVE_TIMEOUT": "interactive_timeout",
+            "CI_HELPER_AI_PATTERN_RECOGNITION_ENABLED": "pattern_recognition_enabled",
+            "CI_HELPER_AI_PATTERN_CONFIDENCE_THRESHOLD": "pattern_confidence_threshold",
+            "CI_HELPER_AI_PATTERN_DATABASE_PATH": "pattern_database_path",
+            "CI_HELPER_AI_CUSTOM_PATTERNS_ENABLED": "custom_patterns_enabled",
+            "CI_HELPER_AI_AUTO_FIX_ENABLED": "auto_fix_enabled",
+            "CI_HELPER_AI_AUTO_FIX_CONFIDENCE_THRESHOLD": "auto_fix_confidence_threshold",
+            "CI_HELPER_AI_AUTO_FIX_RISK_TOLERANCE": "auto_fix_risk_tolerance",
+            "CI_HELPER_AI_BACKUP_RETENTION_DAYS": "backup_retention_days",
+            "CI_HELPER_AI_BACKUP_BEFORE_FIX": "backup_before_fix",
+            "CI_HELPER_AI_LEARNING_ENABLED": "learning_enabled",
+            "CI_HELPER_AI_FEEDBACK_COLLECTION_ENABLED": "feedback_collection_enabled",
+            "CI_HELPER_AI_PATTERN_DISCOVERY_ENABLED": "pattern_discovery_enabled",
+            "CI_HELPER_AI_MIN_PATTERN_OCCURRENCES": "min_pattern_occurrences",
         }
 
         for env_key, config_key in ai_env_mappings.items():
             env_value = os.getenv(env_key)
             if env_value is not None:
                 # 型変換
-                if config_key in ["cache_enabled", "streaming_enabled"]:
+                boolean_keys = [
+                    "cache_enabled",
+                    "streaming_enabled",
+                    "pattern_recognition_enabled",
+                    "custom_patterns_enabled",
+                    "auto_fix_enabled",
+                    "backup_before_fix",
+                    "learning_enabled",
+                    "feedback_collection_enabled",
+                    "pattern_discovery_enabled",
+                ]
+                integer_keys = ["interactive_timeout", "backup_retention_days", "min_pattern_occurrences"]
+                float_keys = ["pattern_confidence_threshold", "auto_fix_confidence_threshold"]
+
+                if config_key in boolean_keys:
                     env_config[config_key] = env_value.lower() in ("true", "1", "yes", "on")
-                elif config_key == "interactive_timeout":
+                elif config_key in integer_keys:
                     try:
                         env_config[config_key] = int(env_value)
                     except ValueError as e:
                         raise ConfigurationError(
                             f"環境変数 {env_key} の値が無効です: {env_value}", "整数値を指定してください"
+                        ) from e
+                elif config_key in float_keys:
+                    try:
+                        env_config[config_key] = float(env_value)
+                    except ValueError as e:
+                        raise ConfigurationError(
+                            f"環境変数 {env_key} の値が無効です: {env_value}", "数値を指定してください"
                         ) from e
                 else:
                     env_config[config_key] = env_value
@@ -551,6 +616,47 @@ class Config:
                     "正の数値を指定してください",
                 )
 
+        # パターン認識設定の検証
+        pattern_confidence_threshold = self.get_pattern_confidence_threshold()
+        if not isinstance(pattern_confidence_threshold, int | float) or not (
+            0.0 <= pattern_confidence_threshold <= 1.0
+        ):
+            raise ConfigurationError(
+                f"パターン信頼度閾値が無効です: {pattern_confidence_threshold}",
+                "0.0から1.0の間の数値を指定してください",
+            )
+
+        auto_fix_confidence_threshold = self.get_auto_fix_confidence_threshold()
+        if not isinstance(auto_fix_confidence_threshold, int | float) or not (
+            0.0 <= auto_fix_confidence_threshold <= 1.0
+        ):
+            raise ConfigurationError(
+                f"自動修正信頼度閾値が無効です: {auto_fix_confidence_threshold}",
+                "0.0から1.0の間の数値を指定してください",
+            )
+
+        auto_fix_risk_tolerance = self.get_auto_fix_risk_tolerance()
+        valid_risk_levels = ["low", "medium", "high"]
+        if auto_fix_risk_tolerance not in valid_risk_levels:
+            raise ConfigurationError(
+                f"自動修正リスク許容度が無効です: {auto_fix_risk_tolerance}",
+                f"有効な値: {', '.join(valid_risk_levels)}",
+            )
+
+        backup_retention_days = self.get_backup_retention_days()
+        if not isinstance(backup_retention_days, int) or backup_retention_days < 0:
+            raise ConfigurationError(
+                f"バックアップ保持日数が無効です: {backup_retention_days}",
+                "0以上の整数を指定してください",
+            )
+
+        min_pattern_occurrences = self.get_min_pattern_occurrences()
+        if not isinstance(min_pattern_occurrences, int) or min_pattern_occurrences < 1:
+            raise ConfigurationError(
+                f"パターン認識最小出現回数が無効です: {min_pattern_occurrences}",
+                "1以上の整数を指定してください",
+            )
+
     def get_ai_provider_api_key(self, provider_name: str) -> str | None:
         """環境変数からAIプロバイダーのAPIキーを取得
 
@@ -600,3 +706,136 @@ class Config:
             full_config["api_key"] = api_key
 
         return full_config
+
+    # パターン認識設定関連のメソッド
+    def is_pattern_recognition_enabled(self) -> bool:
+        """パターン認識が有効かどうかを確認
+
+        Returns:
+            パターン認識が有効かどうか
+        """
+        return self.get_ai_config("pattern_recognition_enabled", True)
+
+    def get_pattern_confidence_threshold(self) -> float:
+        """パターン信頼度閾値を取得
+
+        Returns:
+            パターン信頼度閾値
+        """
+        return self.get_ai_config("pattern_confidence_threshold", 0.7)
+
+    def get_pattern_database_path(self) -> Path:
+        """パターンデータベースパスを取得
+
+        Returns:
+            パターンデータベースの絶対パス
+        """
+        path_str = self.get_ai_config("pattern_database_path", "data/patterns")
+        path = Path(path_str)
+        if not path.is_absolute():
+            path = self.project_root / path
+        return path
+
+    def is_custom_patterns_enabled(self) -> bool:
+        """カスタムパターンが有効かどうかを確認
+
+        Returns:
+            カスタムパターンが有効かどうか
+        """
+        return self.get_ai_config("custom_patterns_enabled", True)
+
+    def get_enabled_pattern_categories(self) -> list[str]:
+        """有効なパターンカテゴリを取得
+
+        Returns:
+            有効なパターンカテゴリのリスト
+        """
+        return self.get_ai_config(
+            "enabled_pattern_categories", ["permission", "network", "config", "dependency", "build", "test"]
+        )
+
+    def is_pattern_category_enabled(self, category: str) -> bool:
+        """指定されたパターンカテゴリが有効かどうかを確認
+
+        Args:
+            category: パターンカテゴリ
+
+        Returns:
+            カテゴリが有効かどうか
+        """
+        enabled_categories = self.get_enabled_pattern_categories()
+        return category in enabled_categories
+
+    # 自動修正設定関連のメソッド
+    def is_auto_fix_enabled(self) -> bool:
+        """自動修正が有効かどうかを確認
+
+        Returns:
+            自動修正が有効かどうか
+        """
+        return self.get_ai_config("auto_fix_enabled", False)
+
+    def get_auto_fix_confidence_threshold(self) -> float:
+        """自動修正信頼度閾値を取得
+
+        Returns:
+            自動修正信頼度閾値
+        """
+        return self.get_ai_config("auto_fix_confidence_threshold", 0.8)
+
+    def get_auto_fix_risk_tolerance(self) -> str:
+        """自動修正リスク許容度を取得
+
+        Returns:
+            リスク許容度 (low/medium/high)
+        """
+        return self.get_ai_config("auto_fix_risk_tolerance", "low")
+
+    def get_backup_retention_days(self) -> int:
+        """バックアップ保持日数を取得
+
+        Returns:
+            バックアップ保持日数
+        """
+        return self.get_ai_config("backup_retention_days", 30)
+
+    def is_backup_before_fix_enabled(self) -> bool:
+        """修正前バックアップが有効かどうかを確認
+
+        Returns:
+            修正前バックアップが有効かどうか
+        """
+        return self.get_ai_config("backup_before_fix", True)
+
+    # 学習設定関連のメソッド
+    def is_learning_enabled(self) -> bool:
+        """学習機能が有効かどうかを確認
+
+        Returns:
+            学習機能が有効かどうか
+        """
+        return self.get_ai_config("learning_enabled", True)
+
+    def is_feedback_collection_enabled(self) -> bool:
+        """フィードバック収集が有効かどうかを確認
+
+        Returns:
+            フィードバック収集が有効かどうか
+        """
+        return self.get_ai_config("feedback_collection_enabled", True)
+
+    def is_pattern_discovery_enabled(self) -> bool:
+        """パターン発見が有効かどうかを確認
+
+        Returns:
+            パターン発見が有効かどうか
+        """
+        return self.get_ai_config("pattern_discovery_enabled", True)
+
+    def get_min_pattern_occurrences(self) -> int:
+        """パターン認識最小出現回数を取得
+
+        Returns:
+            パターン認識最小出現回数
+        """
+        return self.get_ai_config("min_pattern_occurrences", 3)
