@@ -458,27 +458,36 @@ class TestAnalyzeDisplayFunctions:
         # 関数実行（例外が発生しないことを確認）
         _display_analysis_result(result, "json", mock_console)
 
-    @patch("src.ci_helper.commands.analyze.CostTracker")
-    def test_display_stats(self, mock_cost_tracker_class, mock_config, mock_console):
+    @patch("src.ci_helper.ai.cost_manager.CostManager")
+    def test_display_stats(self, mock_cost_manager_class, mock_config, mock_console):
         """統計表示のテスト"""
         from src.ci_helper.commands.analyze import _display_stats
 
-        # モックコストトラッカーの設定
-        mock_cost_tracker = Mock()
-        mock_cost_tracker_class.return_value = mock_cost_tracker
-        mock_cost_tracker.get_usage_stats.return_value = {
-            "total_requests": 10,
-            "total_tokens": 1000,
-            "total_cost": 0.05,
-            "providers": {"openai": {"requests": 10, "tokens": 1000, "cost": 0.05}},
+        # モックコストマネージャーの設定
+        mock_cost_manager = Mock()
+        mock_cost_manager_class.return_value = mock_cost_manager
+        mock_cost_manager.get_monthly_report.return_value = {
+            "stats": {
+                "total_tokens": 1000,
+                "total_cost": 0.05,
+                "total_requests": 10,
+                "success_rate": 0.95,
+            },
+            "provider_breakdown": {
+                "openai": {"total_tokens": 1000, "total_cost": 0.05}
+            },
         }
+
+        # モック設定の追加設定
+        mock_config.get_path.return_value = Path("/mock/cache")
+        mock_config.get_ai_cost_limits.return_value = {}
 
         # 関数実行（例外が発生しないことを確認）
         _display_stats(mock_config, mock_console)
 
-        # コストトラッカーが呼び出されたことを確認
-        mock_cost_tracker_class.assert_called_once_with(mock_config)
-        mock_cost_tracker.get_usage_stats.assert_called_once()
+        # コストマネージャーが呼び出されたことを確認
+        mock_cost_manager_class.assert_called_once()
+        mock_cost_manager.get_monthly_report.assert_called_once()
 
 
 class TestAnalyzeErrorHandling:
@@ -622,24 +631,24 @@ class TestAnalyzeFallbackAndRecovery:
         # 関数実行（例外が発生しないことを確認）
         _suggest_fallback_options(mock_console, None)
 
-    @patch("builtins.input", return_value="1")
-    def test_offer_interactive_recovery(self, mock_input, mock_console):
+    @patch("rich.prompt.Prompt.ask", return_value="A")
+    def test_offer_interactive_recovery(self, mock_prompt, mock_console):
         """対話的復旧オプション提供のテスト"""
         from src.ci_helper.commands.analyze import _offer_interactive_recovery
 
         result = _offer_interactive_recovery(mock_console)
 
         # 選択肢が返されることを確認
-        assert result in ["retry", "fallback", "manual", "exit"]
+        assert result in ["auto", "manual", "skip"]
 
-    @patch("builtins.input", return_value="invalid")
-    def test_offer_interactive_recovery_invalid_input(self, mock_input, mock_console):
+    @patch("rich.prompt.Prompt.ask", return_value="X")
+    def test_offer_interactive_recovery_invalid_input(self, mock_prompt, mock_console):
         """無効な入力での対話的復旧オプションテスト"""
         from src.ci_helper.commands.analyze import _offer_interactive_recovery
 
-        # 無効な入力の場合はexitが返される
+        # 無効な入力の場合はデフォルト値（auto）が返される
         result = _offer_interactive_recovery(mock_console)
-        assert result == "exit"
+        assert result == "auto"
 
     def test_validate_analysis_environment_success(self, mock_config, mock_console):
         """分析環境検証成功のテスト"""

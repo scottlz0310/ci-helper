@@ -673,6 +673,10 @@ AssertionError: Expected 200, got 404
         integration.providers = {"mock": mock_ai_provider}
         integration._initialized = True
 
+        # プロンプト管理を初期化（必須）
+        from src.ci_helper.ai.prompts import PromptManager
+        integration.prompt_manager = PromptManager()
+
         options = AnalyzeOptions(provider="mock", streaming=True)
 
         # ストリーミング分析を実行
@@ -782,6 +786,10 @@ AssertionError: Expected 200, got 404
         integration = AIIntegration(mock_config)
         integration.ai_config = mock_ai_config
         integration._initialized = True
+
+        # プロンプト管理を初期化（必須）
+        from src.ci_helper.ai.prompts import PromptManager
+        integration.prompt_manager = PromptManager()
 
         # モックフォールバックハンドラーを設定
         mock_fallback_handler = Mock()
