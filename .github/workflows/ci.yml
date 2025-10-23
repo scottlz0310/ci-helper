@@ -63,7 +63,7 @@ jobs:
         run: uv sync --group lint
 
       - name: Run security scan
-        run: uv run bandit -r src/ci_helper
+        run: uv run bandit -c pyproject.toml -r src/ci_helper
 
   build:
     runs-on: ubuntu-latest
