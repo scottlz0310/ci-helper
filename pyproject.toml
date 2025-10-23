@@ -131,6 +131,9 @@ skip-magic-trailing-comma = false
 
 [tool.mypy]
 python_version = "3.13"
+# 緩和された設定でCI/pre-commitの整合性を保つ
+# CI設定(.github/workflows/ci.yml)とpre-commit設定(.pre-commit-config.yaml)は
+# このpyproject.tomlの設定を参照するため、設定変更はここで一元管理する
 strict = false
 warn_return_any = false
 warn_unused_configs = false
@@ -149,7 +152,25 @@ strict_equality = false
 explicit_package_bases = true
 mypy_path = "src"
 ignore_missing_imports = true
-disable_error_code = "import-untyped,no-any-return,attr-defined,operator,arg-type,assignment,override,call-arg,return-value,var-annotated,index,dict-item,valid-type,no-untyped-def,unreachable,union-attr"
+# 大量のエラーコードを無効化（CI/pre-commit統一）
+disable_error_code = [
+    "import-untyped",
+    "no-any-return",
+    "attr-defined",
+    "operator",
+    "arg-type",
+    "assignment",
+    "override",
+    "call-arg",
+    "return-value",
+    "var-annotated",
+    "index",
+    "dict-item",
+    "valid-type",
+    "no-untyped-def",
+    "unreachable",
+    "union-attr",
+]
 
 [[tool.mypy.overrides]]
 module = "tests.*"

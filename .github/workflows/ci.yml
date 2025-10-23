@@ -33,7 +33,8 @@ jobs:
           uv run ruff format --check
 
       - name: Run type checking
-        run: uv run mypy --ignore-missing-imports --no-strict-optional --disable-error-code=import-untyped --disable-error-code=no-any-return --disable-error-code=attr-defined --disable-error-code=operator --disable-error-code=arg-type --disable-error-code=assignment --disable-error-code=override --disable-error-code=call-arg --disable-error-code=return-value --disable-error-code=var-annotated --disable-error-code=index --disable-error-code=dict-item --disable-error-code=valid-type --disable-error-code=no-untyped-def --disable-error-code=unreachable --disable-error-code=union-attr src/ci_helper
+        # pyproject.tomlの[tool.mypy]設定を使用
+        run: uv run mypy src/ci_helper
 
       - name: Run tests
         run: uv run pytest --cov=ci_helper --cov-report=xml --cov-report=term-missing
