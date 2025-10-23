@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..core.models import FailureType
 from ..utils.config import Config
@@ -18,6 +18,9 @@ from .cache_manager import CacheManager
 from .config_manager import AIConfigManager
 from .cost_manager import CostManager
 from .error_handler import AIErrorHandler
+
+if TYPE_CHECKING:
+    from .models import FixSuggestion
 from .exceptions import (
     AIError,
     APIKeyError,

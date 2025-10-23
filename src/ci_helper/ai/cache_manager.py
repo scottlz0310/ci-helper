@@ -8,9 +8,13 @@ AIレスポンスキャッシュの高レベル管理機能を提供します。
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 # ResponseCacheは遅延インポートしてテストのパッチが正しく適用されるようにする
 from .models import AnalysisResult
+
+if TYPE_CHECKING:
+    from .cache import ResponseCache
 
 
 class CacheManager:

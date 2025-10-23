@@ -9,11 +9,14 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .cost_tracker import CostTracker
 from .exceptions import ConfigurationError
 from .models import LimitStatus
+
+if TYPE_CHECKING:
+    from .models import CostEstimate
 
 
 class CostManager:

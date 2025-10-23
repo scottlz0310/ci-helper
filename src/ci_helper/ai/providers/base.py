@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
+from typing import ClassVar
 
-from ..exceptions import ProviderError
+from ..exceptions import NetworkError, ProviderError, RateLimitError, TokenLimitError
 from ..models import AnalysisResult, AnalyzeOptions, ProviderConfig, TokenUsage
 
 

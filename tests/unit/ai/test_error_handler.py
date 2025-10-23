@@ -194,7 +194,7 @@ class TestErrorTypeHandling:
 
     def test_handle_cache_error(self, error_handler):
         """キャッシュエラーハンドリングのテスト"""
-        error = CacheError("Permission denied", cache_path="/tmp/cache")
+        error = CacheError("Permission denied", cache_path="./test_cache")
 
         result = error_handler.handle_cache_error(error)
 
@@ -757,7 +757,7 @@ class TestRecoveryProcesses:
 
     def test_recovery_success_validation_cache_error(self, error_handler):
         """キャッシュエラー復旧成功検証のテスト"""
-        error = CacheError("Permission denied", cache_path="/tmp/cache")
+        error = CacheError("Permission denied", cache_path="./test_cache")
         result = error_handler.handle_cache_error(error)
 
         # 復旧成功の条件を確認

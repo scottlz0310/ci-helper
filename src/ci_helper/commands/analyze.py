@@ -20,6 +20,14 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 if TYPE_CHECKING:
     from ..ai.models import AnalysisResult
 
+from ..ai.exceptions import (
+    APIKeyError,
+    ConfigurationError,
+    NetworkError,
+    ProviderError,
+    RateLimitError,
+    TokenLimitError,
+)
 from ..ai.integration import AIIntegration
 from ..ai.models import AnalyzeOptions
 from ..core.error_handler import ErrorHandler
@@ -49,6 +57,8 @@ class AnalysisErrorContext:
             duration = (datetime.now() - self.start_time).total_seconds()
 
             # エラー統計をログに記録
+            import logging
+
             logger = logging.getLogger(__name__)
             logger.error("操作 '%s' が %.2f秒後にエラーで終了: %s", self.operation_name, duration, exc_val)
 
@@ -59,9 +69,6 @@ class AnalysisErrorContext:
         elapsed = (datetime.now() - self.start_time).total_seconds()
         if self.verbose:
             self.console.print(f"[dim][{elapsed:.1f}s] {message}[/dim]")
-
-
-import logging
 
 
 @click.command()
