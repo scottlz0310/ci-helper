@@ -21,6 +21,7 @@ from .error_handler import AIErrorHandler
 
 if TYPE_CHECKING:
     from .models import FixSuggestion
+
 from .exceptions import (
     AIError,
     APIKeyError,
@@ -187,6 +188,15 @@ class AIIntegration:
             # 修正適用器を初期化
             self.fix_applier = FixApplier(self.config, interactive=True)
 
+            # パターン認識エンジンを初期化
+            from .pattern_engine import PatternRecognitionEngine
+
+            pattern_data_dir = self.config.get_path("cache_dir").parent / "test_data"
+            self.pattern_engine = PatternRecognitionEngine(
+                data_directory=pattern_data_dir,
+                confidence_threshold=0.7,  # デフォルト信頼度閾値
+            )
+
             # キャッシュ管理を初期化
             if self.ai_config.cache_enabled:
                 cache_dir = self.config.get_path("cache_dir") / "ai"
@@ -203,6 +213,10 @@ class AIIntegration:
 
             # 利用可能なプロバイダーを初期化
             await self._initialize_providers()
+
+            # パターン認識エンジンを初期化
+            if hasattr(self, "pattern_engine"):
+                await self.pattern_engine.initialize()
 
             self._initialized = True
             logger.info("AI統合システムの初期化完了 (プロバイダー: %d個)", len(self.providers))
@@ -292,6 +306,16 @@ class AIIntegration:
             # ログ内容を前処理
             formatted_log = await self._preprocess_log(log_content)
 
+            # パターン認識を実行
+            pattern_matches = []
+            if hasattr(self, "pattern_engine") and self.pattern_engine:
+                try:
+                    pattern_matches = await self.pattern_engine.analyze_log(formatted_log)
+                    if pattern_matches:
+                        logger.info("パターン認識で %d 個のパターンを検出", len(pattern_matches))
+                except Exception as pattern_error:
+                    logger.warning("パターン認識中にエラー: %s", pattern_error)
+
             # キャッシュをチェック
             cached_result = None
             if options.use_cache and self.cache_manager:
@@ -327,6 +351,17 @@ class AIIntegration:
             result.provider = provider.name
             result.model = options.model or provider.config.default_model
             result.status = AnalysisStatus.COMPLETED
+
+            # パターン認識結果を追加
+            if pattern_matches:
+                # パターン情報をサマリーに追加
+                pattern_info = []
+                for match in pattern_matches:
+                    pattern_info.append(f"- {match.pattern.name} (信頼度: {match.confidence:.1%})")
+
+                if pattern_info:
+                    pattern_summary = "\n\n## 検出されたパターン\n" + "\n".join(pattern_info)
+                    result.summary += pattern_summary
 
             # 使用量を記録
             if result.tokens_used and self.cost_manager:
@@ -943,6 +978,13 @@ class AIIntegration:
             self.fallback_handler.cleanup_old_partial_results()
         except Exception as e:
             logger.warning("フォールバック結果のクリーンアップに失敗: %s", e)
+
+        # パターン認識エンジンをクリーンアップ
+        if hasattr(self, "pattern_engine") and self.pattern_engine:
+            try:
+                await self.pattern_engine.cleanup()
+            except Exception as e:
+                logger.warning("パターン認識エンジンのクリーンアップに失敗: %s", e)
 
         logger.info("AI統合システムのクリーンアップ完了")
 

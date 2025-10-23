@@ -1,0 +1,58 @@
+{
+    "templates": [
+        {
+            "id": "python_dependency_fix",
+            "name": "Python依存関係エラー修正",
+            "description": "Pythonパッケージの依存関係エラーを修正",
+            "pattern_ids": [
+                "python_module_not_found",
+                "python_import_error"
+            ],
+            "fix_steps": [
+                {
+                    "type": "command",
+                    "description": "依存関係をインストール",
+                    "command": "uv add {package_name}",
+                    "validation": "uv run python -c 'import {package_name}'"
+                }
+            ],
+            "risk_level": "medium",
+            "estimated_time": "5分",
+            "success_rate": 0.85,
+            "prerequisites": [
+                "uvがインストールされていること",
+                "pyproject.tomlファイルが存在すること"
+            ],
+            "validation_steps": [
+                "パッケージがインポート可能であることを確認"
+            ]
+        },
+        {
+            "id": "node_dependency_fix",
+            "name": "Node.js依存関係エラー修正",
+            "description": "Node.jsパッケージの依存関係エラーを修正",
+            "pattern_ids": [
+                "node_module_not_found",
+                "npm_install_error"
+            ],
+            "fix_steps": [
+                {
+                    "type": "command",
+                    "description": "依存関係をインストール",
+                    "command": "npm install {package_name}",
+                    "validation": "npm list {package_name}"
+                }
+            ],
+            "risk_level": "medium",
+            "estimated_time": "3分",
+            "success_rate": 0.80,
+            "prerequisites": [
+                "package.jsonファイルが存在すること",
+                "npmがインストールされていること"
+            ],
+            "validation_steps": [
+                "パッケージがnode_modulesに存在することを確認"
+            ]
+        }
+    ]
+}

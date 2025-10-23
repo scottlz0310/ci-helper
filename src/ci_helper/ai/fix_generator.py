@@ -11,8 +11,10 @@ import re
 from typing import Any
 
 from .exceptions import AIError
-from .models import AnalysisResult, CodeChange, FixSuggestion, Priority, Severity
+from .fix_templates import FixTemplateManager
+from .models import AnalysisResult, CodeChange, FixSuggestion, PatternMatch, Priority, Severity
 from .prompts import PromptManager
+from .risk_calculator import RiskCalculator, TimeEstimator
 
 logger = logging.getLogger(__name__)
 
@@ -23,13 +25,25 @@ class FixSuggestionGenerator:
     AI分析結果から具体的な修正提案を生成し、コード差分や優先度を判定します。
     """
 
-    def __init__(self, prompt_manager: PromptManager):
+    def __init__(
+        self,
+        prompt_manager: PromptManager,
+        template_manager: FixTemplateManager | None = None,
+        risk_calculator: RiskCalculator | None = None,
+        time_estimator: TimeEstimator | None = None,
+    ):
         """修正提案生成器を初期化
 
         Args:
             prompt_manager: プロンプト管理インスタンス
+            template_manager: 修正テンプレート管理インスタンス
+            risk_calculator: リスク計算器インスタンス
+            time_estimator: 時間推定器インスタンス
         """
         self.prompt_manager = prompt_manager
+        self.template_manager = template_manager or FixTemplateManager()
+        self.risk_calculator = risk_calculator or RiskCalculator()
+        self.time_estimator = time_estimator or TimeEstimator()
         self.priority_weights = {
             "critical": 1.0,
             "high": 0.8,
@@ -509,6 +523,391 @@ class FixSuggestionGenerator:
             logger.warning("差分の解析に失敗: %s", e)
 
         return changes
+
+    def generate_pattern_based_fixes(
+        self, pattern_matches: list[PatternMatch], log_content: str, project_context: dict[str, Any] | None = None
+    ) -> list[FixSuggestion]:
+        """パターンマッチ結果から修正提案を生成
+
+        Args:
+            pattern_matches: パターンマッチ結果のリスト
+            log_content: 元のログ内容
+            project_context: プロジェクトコンテキスト
+
+        Returns:
+            修正提案のリスト
+        """
+        logger.info("パターンベースの修正提案を生成中...")
+
+        suggestions = []
+        context = project_context or {}
+
+        # ログ内容からコンテキスト情報を抽出
+        extracted_context = self._extract_context_from_log(log_content)
+        context.update(extracted_context)
+
+        for pattern_match in pattern_matches:
+            try:
+                # パターンに対応するテンプレートを取得
+                templates = self.template_manager.get_templates_for_pattern(pattern_match.pattern)
+
+                for template in templates:
+                    # テンプレートをカスタマイズして修正提案を生成
+                    suggestion = self.customize_fix_for_context(template, pattern_match, context)
+                    if suggestion:
+                        suggestions.append(suggestion)
+
+            except Exception as e:
+                logger.warning("パターン %s の修正提案生成に失敗: %s", pattern_match.pattern.id, e)
+
+        # 信頼度でソート
+        suggestions.sort(key=lambda x: x.confidence, reverse=True)
+
+        logger.info("パターンベースの修正提案を %d 個生成しました", len(suggestions))
+        return suggestions
+
+    def customize_fix_for_context(
+        self, template: Any, pattern_match: PatternMatch, context: dict[str, Any]
+    ) -> FixSuggestion | None:
+        """テンプレートをコンテキストに応じてカスタマイズ
+
+        Args:
+            template: 修正テンプレート
+            pattern_match: パターンマッチ結果
+            context: コンテキスト情報
+
+        Returns:
+            カスタマイズされた修正提案
+        """
+        try:
+            # パターンマッチから追加のコンテキストを抽出
+            pattern_context = self._extract_pattern_context(pattern_match)
+            context.update(pattern_context)
+
+            # テンプレートマネージャーを使用してカスタマイズ
+            suggestion = self.template_manager.customize_template(template, context)
+
+            # 信頼度を調整（パターンマッチの信頼度を考慮）
+            suggestion.confidence = min(suggestion.confidence * pattern_match.confidence, 1.0)
+
+            # コード変更を生成
+            suggestion.code_changes = self._generate_code_changes_from_template(template, context)
+
+            # リスクレベルと推定時間を計算
+            suggestion = self._enhance_suggestion_with_risk_and_time(suggestion, template, context)
+
+            return suggestion
+
+        except Exception as e:
+            logger.warning("テンプレートのカスタマイズに失敗: %s", e)
+            return None
+
+    def _extract_context_from_log(self, log_content: str) -> dict[str, Any]:
+        """ログ内容からコンテキスト情報を抽出
+
+        Args:
+            log_content: ログ内容
+
+        Returns:
+            抽出されたコンテキスト情報
+        """
+        context = {}
+
+        # ファイルパスを抽出
+        file_patterns = [
+            r"(?:File|file)\s+[\"']([^\"']+)[\"']",
+            r"(?:in|at)\s+([^\s:]+\.(?:py|js|ts|json|yaml|yml|toml))",
+            r"([^\s]+\.(?:py|js|ts|json|yaml|yml|toml)):\d+",
+        ]
+
+        for pattern in file_patterns:
+            matches = re.findall(pattern, log_content, re.IGNORECASE)
+            if matches:
+                context["file_path"] = matches[0]
+                break
+
+        # パッケージ名を抽出
+        package_patterns = [
+            r"ModuleNotFoundError: No module named [\"']([^\"']+)[\"']",
+            r"ImportError: cannot import name [\"']([^\"']+)[\"']",
+            r"Error: Cannot find module [\"']([^\"']+)[\"']",
+            r"Package [\"']([^\"']+)[\"'] not found",
+        ]
+
+        for pattern in package_patterns:
+            matches = re.findall(pattern, log_content, re.IGNORECASE)
+            if matches:
+                context["package_name"] = matches[0]
+                break
+
+        # 環境変数名を抽出
+        env_patterns = [
+            r"Environment variable [\"']([^\"']+)[\"'] not set",
+            r"KeyError: [\"']([^\"']+)[\"']",
+            r"Missing environment variable: ([A-Z_]+)",
+        ]
+
+        for pattern in env_patterns:
+            matches = re.findall(pattern, log_content, re.IGNORECASE)
+            if matches:
+                context["env_var_name"] = matches[0]
+                context["env_var_value"] = "your_value_here"
+                break
+
+        # ワークフローファイルを抽出
+        workflow_patterns = [
+            r"\.github/workflows/([^/\s]+\.ya?ml)",
+            r"workflow file: ([^\s]+\.ya?ml)",
+        ]
+
+        for pattern in workflow_patterns:
+            matches = re.findall(pattern, log_content, re.IGNORECASE)
+            if matches:
+                context["workflow_file"] = f".github/workflows/{matches[0]}"
+                break
+
+        return context
+
+    def _extract_pattern_context(self, pattern_match: PatternMatch) -> dict[str, Any]:
+        """パターンマッチ結果からコンテキストを抽出
+
+        Args:
+            pattern_match: パターンマッチ結果
+
+        Returns:
+            抽出されたコンテキスト情報
+        """
+        context = {}
+
+        # 抽出されたコンテキストから情報を取得
+        extracted_context = pattern_match.extracted_context
+
+        # パターンカテゴリに基づく処理
+        category = pattern_match.pattern.category
+
+        if category == "permission":
+            # 権限エラーの場合、影響を受けるファイルやディレクトリを特定
+            if "docker" in extracted_context.lower():
+                context["container_runtime"] = "docker"
+            if "file" in extracted_context.lower():
+                # ファイルパスを抽出する処理
+                pass
+
+        elif category == "dependency":
+            # 依存関係エラーの場合、パッケージマネージャーを特定
+            if "npm" in extracted_context.lower() or "package.json" in extracted_context.lower():
+                context["package_manager"] = "npm"
+            elif "pip" in extracted_context.lower() or "requirements.txt" in extracted_context.lower():
+                context["package_manager"] = "pip"
+            elif "uv" in extracted_context.lower() or "pyproject.toml" in extracted_context.lower():
+                context["package_manager"] = "uv"
+
+        elif category == "config":
+            # 設定エラーの場合、設定ファイルの種類を特定
+            if "yaml" in extracted_context.lower() or ".yml" in extracted_context.lower():
+                context["config_format"] = "yaml"
+            elif "json" in extracted_context.lower():
+                context["config_format"] = "json"
+            elif "toml" in extracted_context.lower():
+                context["config_format"] = "toml"
+
+        return context
+
+    def _generate_code_changes_from_template(self, template: Any, context: dict[str, Any]) -> list[CodeChange]:
+        """テンプレートからコード変更を生成
+
+        Args:
+            template: 修正テンプレート
+            context: コンテキスト情報
+
+        Returns:
+            コード変更のリスト
+        """
+        code_changes = []
+
+        for step in template.fix_steps:
+            if step.type == "file_modification" and step.file_path and step.content:
+                # ファイル変更のコード変更を生成
+                file_path = self._substitute_variables(step.file_path, context) or step.file_path
+                content = self._substitute_variables(step.content, context) or step.content
+
+                if step.action == "append":
+                    old_code = "# 既存の内容"
+                    new_code = f"# 既存の内容\n{content}"
+                elif step.action == "replace":
+                    old_code = "# 置換対象の内容"
+                    new_code = content
+                elif step.action == "create":
+                    old_code = ""
+                    new_code = content
+                else:
+                    continue
+
+                code_change = CodeChange(
+                    file_path=file_path,
+                    line_start=1,
+                    line_end=1,
+                    old_code=old_code,
+                    new_code=new_code,
+                    description=step.description,
+                )
+                code_changes.append(code_change)
+
+        return code_changes
+
+    def _substitute_variables(self, text: str | None, context: dict[str, Any]) -> str | None:
+        """テキスト内の変数を置換
+
+        Args:
+            text: 置換対象のテキスト
+            context: コンテキスト情報
+
+        Returns:
+            置換後のテキスト
+        """
+        if not text:
+            return text
+
+        # {variable_name} 形式の変数を置換
+        def replace_var(match: re.Match[str]) -> str:
+            var_name = match.group(1)
+            return str(context.get(var_name, match.group(0)))
+
+        return re.sub(r"\{([^}]+)\}", replace_var, text)
+
+    def _enhance_suggestion_with_risk_and_time(
+        self, suggestion: FixSuggestion, template: Any, context: dict[str, Any]
+    ) -> FixSuggestion:
+        """修正提案にリスクレベルと推定時間を追加
+
+        Args:
+            suggestion: 修正提案
+            template: 修正テンプレート
+            context: コンテキスト情報
+
+        Returns:
+            拡張された修正提案
+        """
+        try:
+            # リスクレベルを計算
+            risk_level = self.risk_calculator.calculate_risk_level(suggestion, template, context)
+
+            # 推定時間を計算
+            estimated_time = self.time_estimator.estimate_fix_time(suggestion, template, context)
+
+            # 修正提案を更新
+            suggestion.estimated_effort = estimated_time
+
+            # リスクレベルに基づいて優先度を調整
+            suggestion.priority = self._adjust_priority_by_risk(suggestion.priority, risk_level)
+
+            return suggestion
+
+        except Exception as e:
+            logger.warning("リスクレベル・推定時間の計算に失敗: %s", e)
+            return suggestion
+
+    def _adjust_priority_by_risk(self, current_priority: Priority, risk_level: str) -> Priority:
+        """リスクレベルに基づいて優先度を調整
+
+        Args:
+            current_priority: 現在の優先度
+            risk_level: リスクレベル
+
+        Returns:
+            調整された優先度
+        """
+        # 高リスクの場合は優先度を下げる（慎重に対応）
+        if risk_level == "high":
+            if current_priority == Priority.URGENT:
+                return Priority.HIGH
+            elif current_priority == Priority.HIGH:
+                return Priority.MEDIUM
+        # 低リスクの場合は優先度を上げる（安全に実行可能）
+        elif risk_level == "low":
+            if current_priority == Priority.MEDIUM:
+                return Priority.HIGH
+            elif current_priority == Priority.LOW:
+                return Priority.MEDIUM
+
+        return current_priority
+
+    def calculate_fix_risk_and_time(
+        self, fix_suggestion: FixSuggestion, context: dict[str, Any] | None = None
+    ) -> tuple[str, str]:
+        """修正提案のリスクレベルと推定時間を計算
+
+        Args:
+            fix_suggestion: 修正提案
+            context: コンテキスト情報
+
+        Returns:
+            (リスクレベル, 推定時間) のタプル
+        """
+        risk_level = self.risk_calculator.calculate_risk_level(fix_suggestion, None, context)
+        estimated_time = self.time_estimator.estimate_fix_time(fix_suggestion, None, context)
+
+        return risk_level, estimated_time
+
+    def assess_file_importance(self, file_path: str) -> str:
+        """ファイルの重要度を評価
+
+        Args:
+            file_path: ファイルパス
+
+        Returns:
+            重要度レベル（"low", "medium", "high", "critical"）
+        """
+        # RiskCalculatorの機能を使用
+        if self.risk_calculator._is_critical_file(file_path):
+            return "critical"
+        elif self.risk_calculator._is_important_directory(file_path):
+            return "high"
+        elif self.risk_calculator._is_system_file(file_path):
+            return "critical"
+        else:
+            return "medium"
+
+    def calculate_change_impact(self, fix_suggestion: FixSuggestion) -> dict[str, Any]:
+        """コード変更の影響範囲を計算
+
+        Args:
+            fix_suggestion: 修正提案
+
+        Returns:
+            影響範囲の情報
+        """
+        impact = {
+            "file_count": len(fix_suggestion.code_changes),
+            "affected_files": [],
+            "critical_files": [],
+            "total_lines_changed": 0,
+            "risk_assessment": "low",
+        }
+
+        for code_change in fix_suggestion.code_changes:
+            file_path = code_change.file_path
+            impact["affected_files"].append(file_path)
+
+            # ファイルの重要度を評価
+            importance = self.assess_file_importance(file_path)
+            if importance in ["critical", "high"]:
+                impact["critical_files"].append(file_path)
+
+            # 変更行数を計算
+            old_lines = len(code_change.old_code.split("\n")) if code_change.old_code else 0
+            new_lines = len(code_change.new_code.split("\n")) if code_change.new_code else 0
+            impact["total_lines_changed"] += max(old_lines, new_lines)
+
+        # 全体的なリスク評価
+        if impact["critical_files"]:
+            impact["risk_assessment"] = "high"
+        elif impact["file_count"] > 3 or impact["total_lines_changed"] > 50:
+            impact["risk_assessment"] = "medium"
+        else:
+            impact["risk_assessment"] = "low"
+
+        return impact
 
     def estimate_fix_effort(self, fix_suggestion: FixSuggestion) -> str:
         """修正提案の工数を推定

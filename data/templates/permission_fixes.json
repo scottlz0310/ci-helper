@@ -1,0 +1,56 @@
+{
+    "templates": [
+        {
+            "id": "docker_permission_fix",
+            "name": "Docker権限エラー修正",
+            "description": "Dockerコンテナ実行時の権限不足エラーを修正",
+            "pattern_ids": [
+                "docker_permission_denied"
+            ],
+            "fix_steps": [
+                {
+                    "type": "file_modification",
+                    "description": ".actrcファイルに--privilegedオプションを追加",
+                    "file_path": ".actrc",
+                    "action": "append",
+                    "content": "--privileged",
+                    "validation": "grep -q '\\-\\-privileged' .actrc"
+                }
+            ],
+            "risk_level": "low",
+            "estimated_time": "2分",
+            "success_rate": 0.95,
+            "prerequisites": [
+                ".actrcファイルが存在すること"
+            ],
+            "validation_steps": [
+                "act --dryrun でエラーが発生しないことを確認"
+            ]
+        },
+        {
+            "id": "file_permission_fix",
+            "name": "ファイル権限エラー修正",
+            "description": "ファイルアクセス権限エラーを修正",
+            "pattern_ids": [
+                "file_permission_denied"
+            ],
+            "fix_steps": [
+                {
+                    "type": "command",
+                    "description": "ファイル権限を修正",
+                    "command": "chmod +x {file_path}",
+                    "validation": "test -x {file_path}"
+                }
+            ],
+            "risk_level": "low",
+            "estimated_time": "1分",
+            "success_rate": 0.90,
+            "prerequisites": [
+                "対象ファイルが存在すること"
+            ],
+            "validation_steps": [
+                "ファイルが実行可能であることを確認"
+            ]
+        }
+    ]
+}

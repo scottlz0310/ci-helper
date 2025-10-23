@@ -1,0 +1,61 @@
+{
+    "templates": [
+        {
+            "id": "github_actions_syntax_fix",
+            "name": "GitHub Actions構文エラー修正",
+            "description": "GitHub Actionsワークフローファイルの構文エラーを修正",
+            "pattern_ids": [
+                "yaml_syntax_error",
+                "github_actions_invalid_syntax"
+            ],
+            "fix_steps": [
+                {
+                    "type": "file_modification",
+                    "description": "YAMLファイルのインデントを修正",
+                    "file_path": "{workflow_file}",
+                    "action": "replace",
+                    "content": "{corrected_yaml}",
+                    "validation": "yamllint {workflow_file}"
+                }
+            ],
+            "risk_level": "medium",
+            "estimated_time": "10分",
+            "success_rate": 0.75,
+            "prerequisites": [
+                "ワークフローファイルが存在すること"
+            ],
+            "validation_steps": [
+                "YAML構文が正しいことを確認",
+                "act --dryrun でエラーが発生しないことを確認"
+            ]
+        },
+        {
+            "id": "environment_variable_fix",
+            "name": "環境変数設定エラー修正",
+            "description": "不足している環境変数を設定",
+            "pattern_ids": [
+                "env_var_not_set",
+                "missing_environment_variable"
+            ],
+            "fix_steps": [
+                {
+                    "type": "file_modification",
+                    "description": ".envファイルに環境変数を追加",
+                    "file_path": ".env",
+                    "action": "append",
+                    "content": "{env_var_name}={env_var_value}",
+                    "validation": "grep -q '{env_var_name}=' .env"
+                }
+            ],
+            "risk_level": "low",
+            "estimated_time": "2分",
+            "success_rate": 0.90,
+            "prerequisites": [
+                "環境変数の値が分かっていること"
+            ],
+            "validation_steps": [
+                "環境変数が正しく設定されていることを確認"
+            ]
+        }
+    ]
+}

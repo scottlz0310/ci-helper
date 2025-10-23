@@ -421,6 +421,107 @@ class InteractiveSession:
 
 
 @dataclass
+class Pattern:
+    """エラーパターン定義"""
+
+    id: str  # パターンID
+    name: str  # パターン名
+    category: str  # カテゴリ（permission/network/config等）
+    regex_patterns: list[str]  # 正規表現パターン
+    keywords: list[str]  # キーワードリスト
+    context_requirements: list[str]  # コンテキスト要件
+    confidence_base: float  # 基本信頼度
+    success_rate: float  # 過去の成功率
+    created_at: datetime  # 作成日時
+    updated_at: datetime  # 更新日時
+    user_defined: bool = False  # ユーザー定義フラグ
+
+
+@dataclass
+class PatternMatch:
+    """パターンマッチ結果"""
+
+    pattern: Pattern  # マッチしたパターン
+    confidence: float  # 信頼度スコア
+    match_positions: list[int]  # マッチ位置
+    extracted_context: str  # 抽出されたコンテキスト
+    match_strength: float  # マッチ強度
+    supporting_evidence: list[str]  # 裏付け証拠
+
+
+@dataclass
+class FixStep:
+    """修正ステップ"""
+
+    type: str  # ステップタイプ（file_modification/command/config_change）
+    description: str  # ステップ説明
+    file_path: str | None = None  # 対象ファイルパス
+    action: str | None = None  # アクション（append/replace/create）
+    content: str | None = None  # 変更内容
+    command: str | None = None  # 実行コマンド
+    validation: str | None = None  # 検証方法
+
+
+@dataclass
+class FixTemplate:
+    """修正テンプレート"""
+
+    id: str  # テンプレートID
+    name: str  # テンプレート名
+    description: str  # 説明
+    pattern_ids: list[str]  # 対応パターンID
+    fix_steps: list[FixStep]  # 修正ステップ
+    risk_level: str  # リスクレベル
+    estimated_time: str  # 推定時間
+    success_rate: float  # 成功率
+    prerequisites: list[str] = field(default_factory=list)  # 前提条件
+    validation_steps: list[str] = field(default_factory=list)  # 検証ステップ
+
+
+@dataclass
+class FixResult:
+    """修正結果"""
+
+    success: bool  # 成功フラグ
+    applied_steps: list[FixStep]  # 適用されたステップ
+    backup_info: BackupInfo | None = None  # バックアップ情報
+    error_message: str | None = None  # エラーメッセージ
+    verification_passed: bool = False  # 検証結果
+    rollback_available: bool = False  # ロールバック可能フラグ
+
+
+@dataclass
+class BackupFile:
+    """バックアップファイル"""
+
+    original_path: str  # 元のファイルパス
+    backup_path: str  # バックアップファイルパス
+    checksum: str  # チェックサム
+
+
+@dataclass
+class BackupInfo:
+    """バックアップ情報"""
+
+    backup_id: str  # バックアップID
+    created_at: datetime  # 作成日時
+    files: list[BackupFile]  # バックアップファイル
+    description: str  # 説明
+
+
+@dataclass
+class UserFeedback:
+    """ユーザーフィードバック"""
+
+    pattern_id: str  # パターンID
+    fix_suggestion_id: str  # 修正提案ID
+    rating: int  # 評価（1-5）
+    success: bool  # 修正成功フラグ
+    comments: str | None = None  # コメント
+    timestamp: datetime = field(default_factory=datetime.now)  # 分析時刻
+
+
+@dataclass
 class AnalyzeOptions:
     """分析オプション"""
 

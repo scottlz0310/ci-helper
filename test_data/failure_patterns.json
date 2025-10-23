@@ -63,5 +63,215 @@
     ],
     "frequency": 0,
     "last_occurrence": "2025-10-22T16:34:15.610631"
+  },
+  "docker_permission_denied": {
+    "pattern_id": "docker_permission_denied",
+    "pattern_name": "Docker権限エラー",
+    "description": "カテゴリ: permission",
+    "error_signature": "permission denied.*docker",
+    "fix_strategy": "パターンベースの修正提案を参照",
+    "examples": [
+      "permission",
+      "denied",
+      "docker"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-23T00:00:00.000000"
+  },
+  "setup_uv_permission": {
+    "pattern_id": "setup_uv_permission",
+    "pattern_name": "setup-uv権限エラー",
+    "description": "カテゴリ: permission",
+    "error_signature": "setup-uv.*permission denied",
+    "fix_strategy": "パターンベースの修正提案を参照",
+    "examples": [
+      "setup-uv",
+      "permission",
+      "denied"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-23T00:00:00.000000"
+  },
+  "dependency_not_found": {
+    "pattern_id": "dependency_not_found",
+    "pattern_name": "依存関係不足エラー",
+    "description": "カテゴリ: dependency",
+    "error_signature": "ModuleNotFoundError: No module named",
+    "fix_strategy": "パターンベースの修正提案を参照",
+    "examples": [
+      "module",
+      "not",
+      "found"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-23T00:00:00.000000"
+  },
+  "network_timeout": {
+    "pattern_id": "network_timeout",
+    "pattern_name": "ネットワークタイムアウト",
+    "description": "カテゴリ: network",
+    "error_signature": "TimeoutError.*connection",
+    "fix_strategy": "パターンベースの修正提案を参照",
+    "examples": [
+      "timeout",
+      "connection",
+      "network"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-23T00:00:00.000000"
+  },
+  "config_file_missing": {
+    "pattern_id": "config_file_missing",
+    "pattern_name": "設定ファイル不足",
+    "description": "カテゴリ: configuration",
+    "error_signature": "FileNotFoundError.*config",
+    "fix_strategy": "パターンベースの修正提案を参照",
+    "examples": [
+      "file",
+      "not",
+      "found"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-23T00:00:00.000000"
+  },
+  "python_syntax_error": {
+    "pattern_id": "python_syntax_error",
+    "pattern_name": "Python構文エラー",
+    "description": "カテゴリ: syntax",
+    "error_signature": "SyntaxError.*invalid syntax",
+    "fix_strategy": "パターンベースの修正提案を参照",
+    "examples": [
+      "syntax",
+      "error",
+      "invalid"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-23T00:00:00.000000"
+  },
+  "github_actions_checkout": {
+    "pattern_id": "github_actions_checkout",
+    "pattern_name": "GitHub Actions チェックアウトエラー",
+    "description": "カテゴリ: ci_cd",
+    "error_signature": "Error.*checkout.*failed",
+    "fix_strategy": "パターンベースの修正提案を参照",
+    "examples": [
+      "checkout",
+      "failed",
+      "error"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-23T00:00:00.000000"
+  },
+  "npm_install_failure": {
+    "pattern_id": "npm_install_failure",
+    "pattern_name": "npm インストール失敗",
+    "description": "カテゴリ: dependency",
+    "error_signature": "npm ERR!.*install",
+    "fix_strategy": "パターンベースの修正提案を参照",
+    "examples": [
+      "npm",
+      "err",
+      "install"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-23T00:00:00.000000"
+  },
+  "python_import_error": {
+    "pattern_id": "python_import_error",
+    "pattern_name": "Pythonインポートエラー",
+    "description": "カテゴリ: dependency",
+    "error_signature": "ImportError.*cannot import",
+    "fix_strategy": "パターンベースの修正提案を参照",
+    "examples": [
+      "import",
+      "error",
+      "cannot"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-23T00:00:00.000000"
+  },
+  "disk_space_full": {
+    "pattern_id": "disk_space_full",
+    "pattern_name": "ディスク容量不足",
+    "description": "カテゴリ: system",
+    "error_signature": "No space left on device",
+    "fix_strategy": "パターンベースの修正提案を参照",
+    "examples": [
+      "no",
+      "space",
+      "left"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-23T00:00:00.000000"
+  },
+  "memory_limit_exceeded": {
+    "pattern_id": "memory_limit_exceeded",
+    "pattern_name": "メモリ制限超過",
+    "description": "カテゴリ: system",
+    "error_signature": "MemoryError|Out of memory",
+    "fix_strategy": "パターンベースの修正提案を参照",
+    "examples": [
+      "memory",
+      "error",
+      "out"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-23T00:00:00.000000"
+  },
+  "ssl_certificate_error": {
+    "pattern_id": "ssl_certificate_error",
+    "pattern_name": "SSL証明書エラー",
+    "description": "カテゴリ: network",
+    "error_signature": "SSL.*certificate.*verify failed",
+    "fix_strategy": "パターンベースの修正提案を参照",
+    "examples": [
+      "ssl",
+      "certificate",
+      "verify"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-23T00:00:00.000000"
+  },
+  "environment_variable_missing": {
+    "pattern_id": "environment_variable_missing",
+    "pattern_name": "環境変数不足",
+    "description": "カテゴリ: configuration",
+    "error_signature": "KeyError.*environment variable",
+    "fix_strategy": "パターンベースの修正提案を参照",
+    "examples": [
+      "key",
+      "error",
+      "environment"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-23T00:00:00.000000"
+  },
+  "port_already_in_use": {
+    "pattern_id": "port_already_in_use",
+    "pattern_name": "ポート使用中エラー",
+    "description": "カテゴリ: network",
+    "error_signature": "Address already in use.*port",
+    "fix_strategy": "パターンベースの修正提案を参照",
+    "examples": [
+      "address",
+      "already",
+      "use"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-23T00:00:00.000000"
+  },
+  "database_connection_failed": {
+    "pattern_id": "database_connection_failed",
+    "pattern_name": "データベース接続失敗",
+    "description": "カテゴリ: database",
+    "error_signature": "Connection.*database.*failed",
+    "fix_strategy": "パターンベースの修正提案を参照",
+    "examples": [
+      "connection",
+      "database",
+      "failed"
+    ],
+    "frequency": 0,
+    "last_occurrence": "2025-10-23T00:00:00.000000"
   }
 }
