@@ -28,11 +28,11 @@ def main():
     # CI環境では標準出力を使用
     sys.stdout.write("CI/CD統合検証を開始します...\n")
 
-    # 基本的なコマンドの動作確認（actに依存しないもののみ）
+    # 基本的なコマンドの動作確認
     tests = [
-        ("uv run python -m ci_helper.cli --version", "バージョン確認"),
-        ("uv run python -m ci_helper.cli --help", "ヘルプ表示"),
-        ("uv run python -m ci_helper.cli doctor --help", "doctorヘルプ表示"),
+        ("ci-run --version", "バージョン確認"),
+        ("ci-run --help", "ヘルプ表示"),
+        ("ci-run doctor --help", "doctorヘルプ表示"),
     ]
 
     all_passed = True

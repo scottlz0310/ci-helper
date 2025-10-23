@@ -27,6 +27,13 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
+      - name: Install act
+        run: |
+          curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+
+      - name: Install ci-helper for testing
+        run: uv tool install .
+
       - name: Run linting
         run: |
           uv run ruff check
