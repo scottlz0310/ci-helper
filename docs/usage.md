@@ -497,9 +497,11 @@ ci-run test --workflow test.yml --step "Run tests"
 
 ## AI統合機能
 
-ci-helper にはAI統合機能が含まれており、CI/CDの失敗ログを自動的に分析できます。
+ci-helper にはAI統合機能が含まれており、CI/CDの失敗ログを自動的に分析し、問題の原因特定と修正提案を提供します。
 
 ### AI分析の基本使用方法
+
+#### 基本的なログ分析
 
 ```bash
 # 最新のテスト結果をAI分析
@@ -508,44 +510,282 @@ ci-run analyze
 # 特定のログファイルを分析
 ci-run analyze --log .ci-helper/logs/act_20241019_120000.log
 
-# プロバイダーとモデルを指定
+# 複数のログファイルを比較分析
+ci-run analyze --log log1.txt --log log2.txt --compare
+```
+
+#### プロバイダーとモデルの選択
+
+```bash
+# OpenAI GPT-4を使用
+ci-run analyze --provider openai --model gpt-4
+
+# Anthropic Claudeを使用
 ci-run analyze --provider anthropic --model claude-3-5-sonnet-20241022
 
+# ローカルモデルを使用（Ollama）
+ci-run analyze --provider local --model llama3.1
+```
+
+#### 分析オプション
+
+```bash
 # 修正提案を生成
 ci-run analyze --fix
 
-# 対話モードで詳細分析
+# 詳細な根本原因分析
+ci-run analyze --deep-analysis
+
+# セキュリティ問題に特化した分析
+ci-run analyze --security-focus
+
+# パフォーマンス問題の分析
+ci-run analyze --performance-focus
+```
+
+### 対話モード
+
+対話モードでは、AIとリアルタイムで会話しながら問題を解決できます。
+
+```bash
+# 対話モードを開始
 ci-run analyze --interactive
+
+# 特定のログで対話モード
+ci-run analyze --log failure.log --interactive
+
+# 修正提案付きで対話モード
+ci-run analyze --interactive --fix
+```
+
+**対話モードの使用例:**
+
+```
+$ ci-run analyze --interactive
+
+🤖 AI Assistant: ログを分析しました。テストの失敗原因を特定できます。
+
+主な問題:
+1. Python依存関係の競合
+2. 環境変数の未設定
+3. テストデータベースの接続エラー
+
+どの問題から詳しく調べますか？ (1-3)
+
+> 1
+
+🤖 AI Assistant: 依存関係の競合について詳しく説明します...
+
+修正方法を提案しますか？ (y/n)
+
+> y
+
+🤖 AI Assistant: 以下の修正を提案します:
+
+1. requirements.txtの更新
+2. 仮想環境の再構築
+3. 依存関係の固定
+
+実際のファイルを修正しますか？ (y/n)
 ```
 
 ### AI機能のセットアップ
 
+#### APIキーの設定
+
 ```bash
-# APIキーを設定
+# 環境変数で設定
 export OPENAI_API_KEY="sk-proj-your-openai-key"
 export ANTHROPIC_API_KEY="sk-ant-your-anthropic-key"
 
-# AI環境をチェック
+# .envファイルで設定
+echo "OPENAI_API_KEY=sk-proj-your-key" >> .env
+echo "ANTHROPIC_API_KEY=sk-ant-your-key" >> .env
+
+# 設定ファイルで管理
+ci-run config set ai.openai.api_key "sk-proj-your-key"
+ci-run config set ai.anthropic.api_key "sk-ant-your-key"
+```
+
+#### AI環境の確認
+
+```bash
+# AI機能の動作確認
 ci-run doctor --ai
+
+# 利用可能なプロバイダーを確認
+ci-run analyze --list-providers
+
+# 利用可能なモデルを確認
+ci-run analyze --list-models --provider openai
 
 # 使用統計を確認
 ci-run analyze --stats
 ```
 
-### AI統合ワークフロー例
+### 高度な分析機能
+
+#### カスタムプロンプト
+
+```bash
+# カスタムプロンプトファイルを使用
+ci-run analyze --prompt-file custom_analysis.txt
+
+# インラインプロンプト
+ci-run analyze --prompt "このエラーの原因をセキュリティの観点から分析してください"
+```
+
+#### 分析結果の保存と共有
+
+```bash
+# 分析結果をファイルに保存
+ci-run analyze --output analysis_report.md
+
+# JSON形式で保存
+ci-run analyze --output report.json --format json
+
+# HTMLレポートを生成
+ci-run analyze --output report.html --format html
+```
+
+#### バッチ分析
+
+```bash
+# 複数のログファイルを一括分析
+ci-run analyze --batch .ci-helper/logs/*.log
+
+# 日付範囲で分析
+ci-run analyze --date-range "2024-01-01 to 2024-01-31"
+
+# 失敗パターンの傾向分析
+ci-run analyze --trend-analysis --days 30
+```
+
+### 実用的なAI統合ワークフロー
+
+#### 基本的な問題解決フロー
 
 ```bash
 # 1. テストを実行
 ci-run test --workflow test.yml
 
-# 2. 失敗した場合、AI分析を実行
-ci-run analyze --fix
+# 2. 失敗した場合、即座にAI分析
+ci-run analyze --auto-fix
 
-# 3. 対話モードで詳細調査
-ci-run analyze --interactive
+# 3. 修正提案を確認して適用
+ci-run analyze --apply-fixes
 
-# 4. 修正を適用して再テスト
-ci-run test --workflow test.yml
+# 4. 修正後に再テスト
+ci-run test --workflow test.yml --verify-fix
+```
+
+#### 継続的な改善ワークフロー
+
+```bash
+# 週次の失敗パターン分析
+ci-run analyze --weekly-report
+
+# 改善提案の生成
+ci-run analyze --improvement-suggestions
+
+# テスト品質の評価
+ci-run analyze --quality-assessment
+```
+
+#### チーム共有ワークフロー
+
+```bash
+# チーム向けレポート生成
+ci-run analyze --team-report --output team_analysis.md
+
+# Slack通知付きで分析
+ci-run analyze --notify-slack --channel "#ci-alerts"
+
+# GitHub Issueとして問題を報告
+ci-run analyze --create-issue --repo "owner/repo"
+```
+
+### AI分析の設定カスタマイズ
+
+#### 設定ファイルでの詳細設定
+
+```toml
+# ci-helper.toml
+[ai]
+default_provider = "anthropic"
+default_model = "claude-3-5-sonnet-20241022"
+max_tokens = 4000
+temperature = 0.1
+timeout = 30
+
+[ai.analysis]
+include_context_lines = 10
+focus_on_errors = true
+generate_fixes = true
+deep_analysis = false
+
+[ai.prompts]
+analysis_template = "templates/analysis.txt"
+fix_template = "templates/fix.txt"
+interactive_template = "templates/interactive.txt"
+
+[ai.output]
+default_format = "markdown"
+include_metadata = true
+highlight_code = true
+generate_summary = true
+
+[ai.cost_management]
+max_monthly_cost = 50.0
+warn_at_cost = 40.0
+track_usage = true
+```
+
+#### 環境変数での設定
+
+```bash
+# AI機能の有効/無効
+export CI_HELPER_AI_ENABLED=true
+
+# デフォルトプロバイダー
+export CI_HELPER_AI_PROVIDER=anthropic
+
+# コスト制限
+export CI_HELPER_AI_MAX_COST=50.0
+
+# 分析の詳細レベル
+export CI_HELPER_AI_ANALYSIS_DEPTH=deep
+```
+
+### トラブルシューティング
+
+#### よくある問題
+
+```bash
+# APIキーが無効な場合
+ci-run analyze --validate-keys
+
+# 接続問題の診断
+ci-run doctor --ai --verbose
+
+# キャッシュの問題
+ci-run clean --ai-cache
+
+# 使用量制限に達した場合
+ci-run analyze --check-limits
+```
+
+#### デバッグモード
+
+```bash
+# 詳細なデバッグ情報
+ci-run analyze --debug
+
+# API通信のログ
+ci-run analyze --trace-api
+
+# プロンプトの確認
+ci-run analyze --show-prompt
 ```
 
 詳細については以下のガイドを参照してください：

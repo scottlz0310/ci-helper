@@ -1,0 +1,19 @@
+name: Test Failure
+
+on: [push]
+
+jobs:
+  test-failure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Intentional failure
+        run: |
+          echo "Starting test..."
+          echo "This test will fail intentionally"
+          exit 1
+      
+      - name: This step should not run
+        run: echo "This should not be executed"
