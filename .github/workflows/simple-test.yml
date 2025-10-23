@@ -8,7 +8,7 @@ jobs:
     steps:
       - name: Hello World
         run: echo "Hello, ci-helper!"
-      
+
       - name: Show environment
         run: |
           echo "Current directory: $(pwd)"

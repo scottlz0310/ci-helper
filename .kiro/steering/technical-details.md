@@ -57,7 +57,7 @@ class PatternEngine:
                 "confidence": 0.85
             }
         }
-    
+
     def detect(self, log_content: str) -> List[Pattern]:
         matches = []
         for name, pattern in self.patterns.items():
@@ -99,19 +99,19 @@ class AutoFixer:
     def apply_fix(self, suggestion: FixSuggestion) -> FixResult:
         # 1. バックアップ作成
         backup_path = self.create_backup(suggestion.files)
-        
+
         try:
             # 2. 修正適用
             for file_path in suggestion.files:
                 self.apply_file_fix(file_path, suggestion)
-            
+
             # 3. 検証
             if self.verify_fix(suggestion):
                 return FixResult(success=True, backup=backup_path)
             else:
                 self.rollback(backup_path)
                 return FixResult(success=False, error="検証失敗")
-                
+
         except Exception as e:
             self.rollback(backup_path)
             return FixResult(success=False, error=str(e))
