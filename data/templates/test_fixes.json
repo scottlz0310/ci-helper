@@ -1,0 +1,184 @@
+{
+    "templates": [
+        {
+            "id": "test_assertion_fix",
+            "name": "テストアサーション修正",
+            "description": "テストのアサーションエラーを修正するためのガイダンス",
+            "pattern_ids": [
+                "test_failure_assertion"
+            ],
+            "fix_steps": [
+                {
+                    "type": "command",
+                    "description": "テストを詳細モードで実行して詳細を確認",
+                    "command": "{test_command} --verbose",
+                    "validation": "echo 'Manual verification required'"
+                },
+                {
+                    "type": "file_modification",
+                    "description": "テストファイルのアサーションを確認・修正",
+                    "file_path": "{test_file}",
+                    "action": "replace",
+                    "content": "# Review and fix assertion logic",
+                    "validation": "echo 'Manual code review required'"
+                }
+            ],
+            "risk_level": "high",
+            "estimated_time": "30分",
+            "success_rate": 0.70,
+            "prerequisites": [
+                "テストファイルが存在すること",
+                "テストフレームワークが設定されていること"
+            ],
+            "validation_steps": [
+                "修正後にテストが成功することを確認",
+                "他のテストに影響がないことを確認"
+            ]
+        },
+        {
+            "id": "test_timeout_fix",
+            "name": "テストタイムアウト修正",
+            "description": "テストのタイムアウトエラーを修正",
+            "pattern_ids": [
+                "test_timeout"
+            ],
+            "fix_steps": [
+                {
+                    "type": "file_modification",
+                    "description": "テスト設定でタイムアウト値を増加",
+                    "file_path": "{config_file}",
+                    "action": "replace",
+                    "content": "timeout: 60000",
+                    "validation": "grep -q 'timeout.*60000' {config_file}"
+                },
+                {
+                    "type": "command",
+                    "description": "テストを個別実行してボトルネックを特定",
+                    "command": "{test_command} --timeout=60000 {specific_test}",
+                    "validation": "echo 'Check test execution time'"
+                }
+            ],
+            "risk_level": "low",
+            "estimated_time": "10分",
+            "success_rate": 0.75,
+            "prerequisites": [
+                "テスト設定ファイルが存在すること"
+            ],
+            "validation_steps": [
+                "テストがタイムアウトせずに完了することを確認"
+            ]
+        },
+        {
+            "id": "jest_test_fix",
+            "name": "Jestテスト修正",
+            "description": "Jestテストの失敗を修正",
+            "pattern_ids": [
+                "jest_test_failure"
+            ],
+            "fix_steps": [
+                {
+                    "type": "command",
+                    "description": "Jestキャッシュをクリア",
+                    "command": "npx jest --clearCache",
+                    "validation": "npx jest --showConfig"
+                },
+                {
+                    "type": "command",
+                    "description": "失敗したテストを詳細モードで実行",
+                    "command": "npx jest --verbose {test_file}",
+                    "validation": "echo 'Review test output'"
+                },
+                {
+                    "type": "file_modification",
+                    "description": "jest.config.jsの設定を確認",
+                    "file_path": "jest.config.js",
+                    "action": "create",
+                    "content": "module.exports = {\n  testEnvironment: 'node',\n  collectCoverage: true,\n  coverageDirectory: 'coverage',\n  testMatch: ['**/__tests__/**/*.js', '**/?(*.)+(spec|test).js']\n};",
+                    "validation": "node -e \"require('./jest.config.js')\""
+                }
+            ],
+            "risk_level": "medium",
+            "estimated_time": "15分",
+            "success_rate": 0.72,
+            "prerequisites": [
+                "package.jsonにJestが設定されていること"
+            ],
+            "validation_steps": [
+                "npx jest でテストが成功することを確認"
+            ]
+        },
+        {
+            "id": "pytest_fix",
+            "name": "pytestテスト修正",
+            "description": "pytestテストの失敗を修正",
+            "pattern_ids": [
+                "pytest_failure"
+            ],
+            "fix_steps": [
+                {
+                    "type": "command",
+                    "description": "pytestを詳細モードで実行",
+                    "command": "uv run pytest -v {test_file}",
+                    "validation": "uv run pytest --collect-only"
+                },
+                {
+                    "type": "file_modification",
+                    "description": "pytest.iniまたはpyproject.tomlの設定を確認",
+                    "file_path": "pyproject.toml",
+                    "action": "append",
+                    "content": "\n[tool.pytest.ini_options]\ntestpaths = [\"tests\"]\npython_files = [\"test_*.py\", \"*_test.py\"]\npython_classes = [\"Test*\"]\npython_functions = [\"test_*\"]",
+                    "validation": "uv run pytest --collect-only"
+                }
+            ],
+            "risk_level": "medium",
+            "estimated_time": "12分",
+            "success_rate": 0.74,
+            "prerequisites": [
+                "pytestがインストールされていること",
+                "テストファイルが存在すること"
+            ],
+            "validation_steps": [
+                "uv run pytest でテストが成功することを確認"
+            ]
+        },
+        {
+            "id": "coverage_threshold_fix",
+            "name": "カバレッジ閾値修正",
+            "description": "テストカバレッジ閾値エラーを修正",
+            "pattern_ids": [
+                "coverage_threshold_error"
+            ],
+            "fix_steps": [
+                {
+                    "type": "command",
+                    "description": "現在のカバレッジを確認",
+                    "command": "{coverage_command} --report",
+                    "validation": "echo 'Review coverage report'"
+                },
+                {
+                    "type": "file_modification",
+                    "description": "カバレッジ閾値を調整",
+                    "file_path": "{config_file}",
+                    "action": "replace",
+                    "content": "coverage_threshold: {new_threshold}",
+                    "validation": "grep -q 'coverage_threshold.*{new_threshold}' {config_file}"
+                },
+                {
+                    "type": "command",
+                    "description": "不足しているテストを追加",
+                    "command": "echo 'Add tests for uncovered code paths'",
+                    "validation": "echo 'Manual test addition required'"
+                }
+            ],
+            "risk_level": "medium",
+            "estimated_time": "45分",
+            "success_rate": 0.80,
+            "prerequisites": [
+                "カバレッジツールが設定されていること"
+            ],
+            "validation_steps": [
+                "カバレッジが閾値を満たすことを確認"
+            ]
+        }
+    ]
+}

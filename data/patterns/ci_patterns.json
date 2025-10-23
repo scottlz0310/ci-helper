@@ -1,0 +1,270 @@
+{
+    "patterns": [
+        {
+            "id": "docker_permission_denied",
+            "name": "Docker権限拒否エラー",
+            "category": "permission",
+            "regex_patterns": [
+                "permission denied.*docker",
+                "Got permission denied while trying to connect to the Docker daemon socket",
+                "dial unix /var/run/docker\\.sock: connect: permission denied"
+            ],
+            "keywords": [
+                "permission denied",
+                "docker daemon",
+                "docker.sock",
+                "connect: permission denied"
+            ],
+            "context_requirements": [
+                "docker",
+                "daemon",
+                "socket"
+            ],
+            "confidence_base": 0.9,
+            "success_rate": 0.95,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "file_permission_denied",
+            "name": "ファイル権限拒否エラー",
+            "category": "permission",
+            "regex_patterns": [
+                "Permission denied.*\\.(sh|py|js|ts)$",
+                "bash: .*: Permission denied",
+                "/bin/sh: .*: Permission denied"
+            ],
+            "keywords": [
+                "Permission denied",
+                "bash:",
+                "/bin/sh:",
+                "cannot execute"
+            ],
+            "context_requirements": [
+                "execute",
+                "script",
+                "file"
+            ],
+            "confidence_base": 0.85,
+            "success_rate": 0.90,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "sudo_required_error",
+            "name": "sudo権限必要エラー",
+            "category": "permission",
+            "regex_patterns": [
+                "sudo: .*: command not found",
+                ".*is not in the sudoers file",
+                "sudo: no tty present and no askpass program specified"
+            ],
+            "keywords": [
+                "sudo",
+                "sudoers",
+                "askpass",
+                "tty present"
+            ],
+            "context_requirements": [
+                "sudo",
+                "permission",
+                "root"
+            ],
+            "confidence_base": 0.88,
+            "success_rate": 0.75,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "network_connection_timeout",
+            "name": "ネットワーク接続タイムアウト",
+            "category": "network",
+            "regex_patterns": [
+                "Connection timed out",
+                "connect: connection timed out",
+                "dial tcp.*: i/o timeout",
+                "timeout: failed to connect"
+            ],
+            "keywords": [
+                "connection timed out",
+                "timeout",
+                "failed to connect",
+                "i/o timeout"
+            ],
+            "context_requirements": [
+                "network",
+                "connection",
+                "timeout"
+            ],
+            "confidence_base": 0.82,
+            "success_rate": 0.70,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "dns_resolution_failure",
+            "name": "DNS解決失敗",
+            "category": "network",
+            "regex_patterns": [
+                "could not resolve host",
+                "Name or service not known",
+                "nodename nor servname provided",
+                "Temporary failure in name resolution"
+            ],
+            "keywords": [
+                "resolve host",
+                "name resolution",
+                "service not known",
+                "dns"
+            ],
+            "context_requirements": [
+                "host",
+                "dns",
+                "resolution"
+            ],
+            "confidence_base": 0.85,
+            "success_rate": 0.65,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "ssl_certificate_error",
+            "name": "SSL証明書エラー",
+            "category": "network",
+            "regex_patterns": [
+                "SSL certificate verify failed",
+                "certificate verification failed",
+                "SSL: CERTIFICATE_VERIFY_FAILED",
+                "x509: certificate signed by unknown authority"
+            ],
+            "keywords": [
+                "SSL certificate",
+                "certificate verify",
+                "CERTIFICATE_VERIFY_FAILED",
+                "unknown authority"
+            ],
+            "context_requirements": [
+                "ssl",
+                "certificate",
+                "verify"
+            ],
+            "confidence_base": 0.90,
+            "success_rate": 0.80,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "yaml_syntax_error",
+            "name": "YAML構文エラー",
+            "category": "config",
+            "regex_patterns": [
+                "yaml: line \\d+: .*",
+                "Invalid workflow file",
+                "mapping values are not allowed here",
+                "could not find expected ':'"
+            ],
+            "keywords": [
+                "yaml:",
+                "Invalid workflow",
+                "mapping values",
+                "expected ':'"
+            ],
+            "context_requirements": [
+                "yaml",
+                "syntax",
+                "workflow"
+            ],
+            "confidence_base": 0.92,
+            "success_rate": 0.85,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "github_actions_invalid_syntax",
+            "name": "GitHub Actions無効な構文",
+            "category": "config",
+            "regex_patterns": [
+                "The workflow is not valid",
+                "Invalid workflow file",
+                "unexpected value '.*'",
+                "Required property is missing: .*"
+            ],
+            "keywords": [
+                "workflow is not valid",
+                "Invalid workflow file",
+                "unexpected value",
+                "Required property"
+            ],
+            "context_requirements": [
+                "workflow",
+                "github",
+                "actions"
+            ],
+            "confidence_base": 0.88,
+            "success_rate": 0.75,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "env_var_not_set",
+            "name": "環境変数未設定エラー",
+            "category": "config",
+            "regex_patterns": [
+                ".*: unbound variable",
+                "Environment variable .* is not set",
+                ".*: parameter null or not set"
+            ],
+            "keywords": [
+                "unbound variable",
+                "Environment variable",
+                "not set",
+                "parameter null"
+            ],
+            "context_requirements": [
+                "environment",
+                "variable",
+                "set"
+            ],
+            "confidence_base": 0.87,
+            "success_rate": 0.90,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        }
+    ]
+}

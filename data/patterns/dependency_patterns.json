@@ -1,0 +1,202 @@
+{
+    "patterns": [
+        {
+            "id": "python_module_not_found",
+            "name": "Pythonモジュール未発見",
+            "category": "dependency",
+            "regex_patterns": [
+                "ModuleNotFoundError: No module named '.*'",
+                "ImportError: No module named .*",
+                "ImportError: cannot import name .* from .*"
+            ],
+            "keywords": [
+                "ModuleNotFoundError",
+                "ImportError",
+                "No module named",
+                "cannot import name"
+            ],
+            "context_requirements": [
+                "python",
+                "module",
+                "import"
+            ],
+            "confidence_base": 0.95,
+            "success_rate": 0.85,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "python_import_error",
+            "name": "Pythonインポートエラー",
+            "category": "dependency",
+            "regex_patterns": [
+                "ImportError: .*",
+                "SyntaxError: invalid syntax.*import",
+                "AttributeError: module .* has no attribute"
+            ],
+            "keywords": [
+                "ImportError",
+                "SyntaxError",
+                "AttributeError",
+                "has no attribute"
+            ],
+            "context_requirements": [
+                "python",
+                "import",
+                "module"
+            ],
+            "confidence_base": 0.88,
+            "success_rate": 0.80,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "node_module_not_found",
+            "name": "Node.jsモジュール未発見",
+            "category": "dependency",
+            "regex_patterns": [
+                "Error: Cannot find module '.*'",
+                "MODULE_NOT_FOUND",
+                "Cannot resolve module"
+            ],
+            "keywords": [
+                "Cannot find module",
+                "MODULE_NOT_FOUND",
+                "Cannot resolve module"
+            ],
+            "context_requirements": [
+                "node",
+                "module",
+                "require"
+            ],
+            "confidence_base": 0.92,
+            "success_rate": 0.88,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "npm_install_error",
+            "name": "NPMインストールエラー",
+            "category": "dependency",
+            "regex_patterns": [
+                "npm ERR! peer dep missing",
+                "npm ERR! peerDependencies WARNING",
+                "npm ERR! 404 Not Found"
+            ],
+            "keywords": [
+                "peer dep missing",
+                "peerDependencies WARNING",
+                "404 Not Found"
+            ],
+            "context_requirements": [
+                "npm",
+                "install",
+                "dependency"
+            ],
+            "confidence_base": 0.85,
+            "success_rate": 0.75,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "pip_install_error",
+            "name": "pipインストールエラー",
+            "category": "dependency",
+            "regex_patterns": [
+                "ERROR: Could not find a version that satisfies the requirement",
+                "ERROR: No matching distribution found",
+                "pip: command not found"
+            ],
+            "keywords": [
+                "Could not find a version",
+                "No matching distribution",
+                "pip: command not found"
+            ],
+            "context_requirements": [
+                "pip",
+                "install",
+                "package"
+            ],
+            "confidence_base": 0.90,
+            "success_rate": 0.82,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "gem_install_error",
+            "name": "Gemインストールエラー",
+            "category": "dependency",
+            "regex_patterns": [
+                "Gem::LoadError",
+                "Could not find gem",
+                "bundler: command not found"
+            ],
+            "keywords": [
+                "Gem::LoadError",
+                "Could not find gem",
+                "bundler: command not found"
+            ],
+            "context_requirements": [
+                "gem",
+                "ruby",
+                "bundler"
+            ],
+            "confidence_base": 0.87,
+            "success_rate": 0.78,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "composer_dependency_error",
+            "name": "Composer依存関係エラー",
+            "category": "dependency",
+            "regex_patterns": [
+                "Your requirements could not be resolved",
+                "Package .* is abandoned",
+                "composer: command not found"
+            ],
+            "keywords": [
+                "requirements could not be resolved",
+                "Package .* is abandoned",
+                "composer: command not found"
+            ],
+            "context_requirements": [
+                "composer",
+                "php",
+                "dependency"
+            ],
+            "confidence_base": 0.86,
+            "success_rate": 0.76,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        }
+    ]
+}

@@ -65,6 +65,8 @@ class LearningEngine:
         self.feedback_file = self.learning_data_dir / "feedback.json"
         self.patterns_learned_file = self.learning_data_dir / "patterns_learned.json"
         self.error_frequency_file = self.learning_data_dir / "error_frequency.json"
+        self.unknown_errors_file = self.learning_data_dir / "unknown_errors.json"
+        self.potential_patterns_file = self.learning_data_dir / "potential_patterns.json"
 
         # 学習データ
         self.feedback_history: list[UserFeedback] = []
@@ -1014,3 +1016,403 @@ class LearningEngine:
             logger.error("パターンデータベース動的更新中にエラー: %s", e)
             update_stats["errors"].append(str(e))
             return update_stats
+
+    async def process_unknown_error(self, unknown_error_info: dict[str, Any]) -> dict[str, Any]:
+        """未知エラー情報を処理して学習データに追加
+
+        Args:
+            unknown_error_info: 未知エラー情報
+
+        Returns:
+            処理結果
+        """
+        if not self._initialized:
+            await self.initialize()
+
+        logger.info("未知エラーを処理中: カテゴリ=%s", unknown_error_info.get("error_category"))
+
+        try:
+            # 既存の未知エラーデータを読み込み
+            unknown_errors = []
+            if self.unknown_errors_file.exists():
+                with self.unknown_errors_file.open("r", encoding="utf-8") as f:
+                    unknown_errors = json.load(f)
+
+            # 類似のエラーを検索
+            similar_error = self._find_similar_unknown_error(unknown_error_info, unknown_errors)
+
+            if similar_error:
+                # 既存エラーの発生回数を更新
+                similar_error["occurrence_count"] += 1
+                similar_error["last_seen"] = datetime.now().isoformat()
+                logger.info("既存の未知エラーを更新: %s", similar_error["error_category"])
+            else:
+                # 新しい未知エラーとして追加
+                unknown_errors.append(unknown_error_info)
+                logger.info("新しい未知エラーを追加: %s", unknown_error_info["error_category"])
+
+            # ファイルに保存
+            with self.unknown_errors_file.open("w", encoding="utf-8") as f:
+                json.dump(unknown_errors, f, ensure_ascii=False, indent=2)
+
+            # 頻繁に発生するエラーをチェック
+            frequent_errors = self._get_frequent_unknown_errors(unknown_errors)
+
+            # 潜在的なパターンを生成
+            potential_patterns_created = 0
+            for error in frequent_errors:
+                if error.get("occurrence_count", 0) >= self.min_pattern_occurrences:
+                    if await self._create_potential_pattern(error):
+                        potential_patterns_created += 1
+
+            return {
+                "processed": True,
+                "error_category": unknown_error_info.get("error_category"),
+                "is_new": similar_error is None,
+                "occurrence_count": similar_error["occurrence_count"] if similar_error else 1,
+                "potential_patterns_created": potential_patterns_created,
+                "frequent_errors_count": len(frequent_errors),
+            }
+
+        except Exception as e:
+            logger.error("未知エラー処理中にエラー: %s", e)
+            return {
+                "processed": False,
+                "error": str(e),
+                "error_category": unknown_error_info.get("error_category"),
+            }
+
+    def _find_similar_unknown_error(
+        self, unknown_error_info: dict[str, Any], existing_errors: list[dict[str, Any]]
+    ) -> dict[str, Any] | None:
+        """類似の未知エラーを検索
+
+        Args:
+            unknown_error_info: 新しい未知エラー情報
+            existing_errors: 既存の未知エラーリスト
+
+        Returns:
+            類似のエラー、見つからない場合はNone
+        """
+        new_category = unknown_error_info.get("error_category")
+        new_keywords = set(unknown_error_info.get("error_features", {}).get("error_keywords", []))
+
+        for existing_error in existing_errors:
+            # カテゴリが同じかチェック
+            if existing_error.get("error_category") != new_category:
+                continue
+
+            # キーワードの類似度をチェック
+            existing_keywords = set(existing_error.get("error_features", {}).get("error_keywords", []))
+
+            if existing_keywords and new_keywords:
+                similarity = len(existing_keywords & new_keywords) / len(existing_keywords | new_keywords)
+                if similarity > 0.7:  # 70%以上の類似度
+                    return existing_error
+
+        return None
+
+    def _get_frequent_unknown_errors(
+        self, unknown_errors: list[dict[str, Any]], min_occurrences: int | None = None
+    ) -> list[dict[str, Any]]:
+        """頻繁に発生する未知エラーを取得
+
+        Args:
+            unknown_errors: 未知エラーリスト
+            min_occurrences: 最小発生回数
+
+        Returns:
+            頻繁な未知エラーのリスト
+        """
+        if min_occurrences is None:
+            min_occurrences = self.min_pattern_occurrences
+
+        frequent_errors = [error for error in unknown_errors if error.get("occurrence_count", 1) >= min_occurrences]
+
+        # 発生回数でソート
+        frequent_errors.sort(key=lambda x: x.get("occurrence_count", 1), reverse=True)
+        return frequent_errors
+
+    async def _create_potential_pattern(self, unknown_error_info: dict[str, Any]) -> bool:
+        """未知エラーから潜在的なパターンを作成
+
+        Args:
+            unknown_error_info: 未知エラー情報
+
+        Returns:
+            作成成功の場合True
+        """
+        try:
+            # 潜在的なパターン情報を取得
+            potential_pattern_info = unknown_error_info.get("potential_pattern", {})
+
+            if not potential_pattern_info:
+                logger.warning("潜在的なパターン情報が見つかりません")
+                return False
+
+            # パターンオブジェクトを作成
+            pattern = Pattern(
+                id=potential_pattern_info["id"],
+                name=potential_pattern_info["name"],
+                category=potential_pattern_info["category"],
+                regex_patterns=potential_pattern_info.get("regex_patterns", []),
+                keywords=potential_pattern_info.get("keywords", []),
+                context_requirements=[],
+                confidence_base=potential_pattern_info.get("confidence_base", 0.6),
+                success_rate=0.5,  # 初期成功率
+                created_at=datetime.now(),
+                updated_at=datetime.now(),
+                user_defined=False,
+                auto_generated=True,
+                source="unknown_error_learning",
+                occurrence_count=unknown_error_info.get("occurrence_count", 1),
+            )
+
+            # 潜在的なパターンファイルに保存
+            potential_patterns = []
+            if self.potential_patterns_file.exists():
+                with self.potential_patterns_file.open("r", encoding="utf-8") as f:
+                    potential_patterns = json.load(f)
+
+            # 既存の潜在的なパターンと重複チェック
+            existing_pattern = next((p for p in potential_patterns if p.get("id") == pattern.id), None)
+
+            if existing_pattern:
+                # 既存パターンの発生回数を更新
+                existing_pattern["occurrence_count"] = unknown_error_info.get("occurrence_count", 1)
+                existing_pattern["last_updated"] = datetime.now().isoformat()
+                logger.info("既存の潜在的なパターンを更新: %s", pattern.id)
+            else:
+                # 新しい潜在的なパターンとして追加
+                pattern_data = {
+                    "id": pattern.id,
+                    "name": pattern.name,
+                    "category": pattern.category,
+                    "regex_patterns": pattern.regex_patterns,
+                    "keywords": pattern.keywords,
+                    "confidence_base": pattern.confidence_base,
+                    "success_rate": pattern.success_rate,
+                    "created_at": pattern.created_at.isoformat(),
+                    "auto_generated": True,
+                    "source": "unknown_error_learning",
+                    "occurrence_count": unknown_error_info.get("occurrence_count", 1),
+                    "last_updated": datetime.now().isoformat(),
+                }
+                potential_patterns.append(pattern_data)
+                logger.info("新しい潜在的なパターンを作成: %s", pattern.id)
+
+            # ファイルに保存
+            with self.potential_patterns_file.open("w", encoding="utf-8") as f:
+                json.dump(potential_patterns, f, ensure_ascii=False, indent=2)
+
+            return True
+
+        except Exception as e:
+            logger.error("潜在的なパターン作成中にエラー: %s", e)
+            return False
+
+    async def get_pattern_suggestions_from_unknown_errors(self) -> list[dict[str, Any]]:
+        """未知エラーから新しいパターンの提案を取得
+
+        Returns:
+            パターン提案のリスト
+        """
+        if not self._initialized:
+            await self.initialize()
+
+        try:
+            suggestions = []
+
+            # 潜在的なパターンを読み込み
+            if self.potential_patterns_file.exists():
+                with self.potential_patterns_file.open("r", encoding="utf-8") as f:
+                    potential_patterns = json.load(f)
+
+                # 発生回数が閾値を超えるパターンを提案
+                for pattern_data in potential_patterns:
+                    occurrence_count = pattern_data.get("occurrence_count", 0)
+                    if occurrence_count >= self.min_pattern_occurrences:
+                        suggestion = {
+                            "pattern_id": pattern_data["id"],
+                            "pattern_name": pattern_data["name"],
+                            "category": pattern_data["category"],
+                            "occurrence_count": occurrence_count,
+                            "confidence": min(0.8, 0.5 + (occurrence_count * 0.1)),
+                            "keywords": pattern_data.get("keywords", []),
+                            "regex_patterns": pattern_data.get("regex_patterns", []),
+                            "recommendation": "このパターンを正式なパターンデータベースに追加することを推奨します",
+                            "auto_generated": True,
+                        }
+                        suggestions.append(suggestion)
+
+            # 発生回数でソート
+            suggestions.sort(key=lambda x: x["occurrence_count"], reverse=True)
+
+            logger.info("未知エラーから %d 個のパターン提案を生成", len(suggestions))
+            return suggestions
+
+        except Exception as e:
+            logger.error("パターン提案生成中にエラー: %s", e)
+            return []
+
+    async def promote_potential_pattern_to_official(self, pattern_id: str) -> bool:
+        """潜在的なパターンを正式なパターンデータベースに昇格
+
+        Args:
+            pattern_id: パターンID
+
+        Returns:
+            昇格成功の場合True
+        """
+        if not self._initialized:
+            await self.initialize()
+
+        try:
+            # 潜在的なパターンを検索
+            if not self.potential_patterns_file.exists():
+                logger.warning("潜在的なパターンファイルが存在しません")
+                return False
+
+            with self.potential_patterns_file.open("r", encoding="utf-8") as f:
+                potential_patterns = json.load(f)
+
+            pattern_data = next((p for p in potential_patterns if p["id"] == pattern_id), None)
+            if not pattern_data:
+                logger.warning("潜在的なパターンが見つかりません: %s", pattern_id)
+                return False
+
+            # 正式なパターンオブジェクトを作成
+            pattern = Pattern(
+                id=pattern_data["id"],
+                name=pattern_data["name"],
+                category=pattern_data["category"],
+                regex_patterns=pattern_data.get("regex_patterns", []),
+                keywords=pattern_data.get("keywords", []),
+                context_requirements=[],
+                confidence_base=pattern_data.get("confidence_base", 0.7),
+                success_rate=pattern_data.get("success_rate", 0.6),
+                created_at=datetime.fromisoformat(pattern_data["created_at"]),
+                updated_at=datetime.now(),
+                user_defined=False,
+                auto_generated=True,
+                source="promoted_from_unknown_error",
+            )
+
+            # パターンデータベースに追加
+            success = self.pattern_database.add_pattern(pattern)
+            if success:
+                # パターンデータベースを保存
+                await self.pattern_database.save_patterns()
+
+                # 潜在的なパターンリストから削除
+                potential_patterns = [p for p in potential_patterns if p["id"] != pattern_id]
+                with self.potential_patterns_file.open("w", encoding="utf-8") as f:
+                    json.dump(potential_patterns, f, ensure_ascii=False, indent=2)
+
+                logger.info("潜在的なパターンを正式パターンに昇格: %s", pattern_id)
+                return True
+            else:
+                logger.error("パターンデータベースへの追加に失敗: %s", pattern_id)
+                return False
+
+        except Exception as e:
+            logger.error("パターン昇格中にエラー: %s", e)
+            return False
+
+    def get_unknown_error_statistics(self) -> dict[str, Any]:
+        """未知エラーの統計情報を取得
+
+        Returns:
+            統計情報
+        """
+        try:
+            stats = {
+                "total_unknown_errors": 0,
+                "frequent_unknown_errors": 0,
+                "potential_patterns": 0,
+                "categories": {},
+                "top_categories": [],
+            }
+
+            # 未知エラー統計
+            if self.unknown_errors_file.exists():
+                with self.unknown_errors_file.open("r", encoding="utf-8") as f:
+                    unknown_errors = json.load(f)
+
+                stats["total_unknown_errors"] = len(unknown_errors)
+
+                # カテゴリ別統計
+                category_counts = Counter()
+                for error in unknown_errors:
+                    category = error.get("error_category", "unknown")
+                    occurrence_count = error.get("occurrence_count", 1)
+                    category_counts[category] += occurrence_count
+
+                stats["categories"] = dict(category_counts)
+                stats["top_categories"] = category_counts.most_common(5)
+
+                # 頻繁なエラー数
+                frequent_errors = self._get_frequent_unknown_errors(unknown_errors)
+                stats["frequent_unknown_errors"] = len(frequent_errors)
+
+            # 潜在的なパターン統計
+            if self.potential_patterns_file.exists():
+                with self.potential_patterns_file.open("r", encoding="utf-8") as f:
+                    potential_patterns = json.load(f)
+                stats["potential_patterns"] = len(potential_patterns)
+
+            return stats
+
+        except Exception as e:
+            logger.error("未知エラー統計取得中にエラー: %s", e)
+            return {"error": str(e)}
+
+    async def cleanup_old_unknown_errors(self, max_age_days: int = 30) -> int:
+        """古い未知エラーデータをクリーンアップ
+
+        Args:
+            max_age_days: 保持する最大日数
+
+        Returns:
+            削除されたエラー数
+        """
+        try:
+            if not self.unknown_errors_file.exists():
+                return 0
+
+            with self.unknown_errors_file.open("r", encoding="utf-8") as f:
+                unknown_errors = json.load(f)
+
+            cutoff_date = datetime.now() - timedelta(days=max_age_days)
+
+            # 古いエラーを除外
+            filtered_errors = []
+            deleted_count = 0
+
+            for error in unknown_errors:
+                last_seen_str = error.get("last_seen") or error.get("timestamp")
+                if last_seen_str:
+                    try:
+                        last_seen = datetime.fromisoformat(last_seen_str)
+                        if last_seen >= cutoff_date:
+                            filtered_errors.append(error)
+                        else:
+                            deleted_count += 1
+                    except ValueError:
+                        # 日付解析に失敗した場合は保持
+                        filtered_errors.append(error)
+                else:
+                    # タイムスタンプがない場合は保持
+                    filtered_errors.append(error)
+
+            # ファイルを更新
+            if deleted_count > 0:
+                with self.unknown_errors_file.open("w", encoding="utf-8") as f:
+                    json.dump(filtered_errors, f, ensure_ascii=False, indent=2)
+
+            logger.info("古い未知エラーを %d 個削除しました", deleted_count)
+            return deleted_count
+
+        except Exception as e:
+            logger.error("未知エラークリーンアップ中にエラー: %s", e)
+            return 0

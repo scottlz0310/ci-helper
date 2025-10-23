@@ -1,0 +1,173 @@
+{
+    "patterns": [
+        {
+            "id": "action_not_found",
+            "name": "GitHub Actionが見つからない",
+            "category": "config",
+            "regex_patterns": [
+                "Can't find 'action.yml', 'action.yaml' or 'Dockerfile'",
+                "Unable to resolve action",
+                "Action .* not found"
+            ],
+            "keywords": [
+                "action.yml",
+                "action.yaml",
+                "Unable to resolve action",
+                "Action .* not found"
+            ],
+            "context_requirements": [
+                "action",
+                "github",
+                "workflow"
+            ],
+            "confidence_base": 0.93,
+            "success_rate": 0.85,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "checkout_action_error",
+            "name": "checkoutアクションエラー",
+            "category": "config",
+            "regex_patterns": [
+                "Error: fatal: repository .* not found",
+                "Error: The process '/usr/bin/git' failed with exit code 128",
+                "remote: Repository not found"
+            ],
+            "keywords": [
+                "repository .* not found",
+                "git' failed with exit code 128",
+                "Repository not found"
+            ],
+            "context_requirements": [
+                "checkout",
+                "git",
+                "repository"
+            ],
+            "confidence_base": 0.89,
+            "success_rate": 0.78,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "setup_node_version_error",
+            "name": "setup-nodeバージョンエラー",
+            "category": "config",
+            "regex_patterns": [
+                "Version .* was not found in the local cache",
+                "Unable to find Node version",
+                "Error: The specified node version .* was not found"
+            ],
+            "keywords": [
+                "not found in the local cache",
+                "Unable to find Node version",
+                "node version .* was not found"
+            ],
+            "context_requirements": [
+                "setup-node",
+                "node",
+                "version"
+            ],
+            "confidence_base": 0.91,
+            "success_rate": 0.82,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "setup_python_version_error",
+            "name": "setup-pythonバージョンエラー",
+            "category": "config",
+            "regex_patterns": [
+                "Version .* with arch .* not found",
+                "The version .* of Python is not supported",
+                "Error: The specified python version .* was not found"
+            ],
+            "keywords": [
+                "arch .* not found",
+                "Python is not supported",
+                "python version .* was not found"
+            ],
+            "context_requirements": [
+                "setup-python",
+                "python",
+                "version"
+            ],
+            "confidence_base": 0.90,
+            "success_rate": 0.80,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "cache_action_error",
+            "name": "cacheアクションエラー",
+            "category": "config",
+            "regex_patterns": [
+                "Cache not found for input keys",
+                "Error: Path does not exist",
+                "Failed to restore cache"
+            ],
+            "keywords": [
+                "Cache not found",
+                "Path does not exist",
+                "Failed to restore cache"
+            ],
+            "context_requirements": [
+                "cache",
+                "restore",
+                "path"
+            ],
+            "confidence_base": 0.86,
+            "success_rate": 0.75,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "artifact_upload_error",
+            "name": "アーティファクトアップロードエラー",
+            "category": "config",
+            "regex_patterns": [
+                "Error: No files were found with the provided path",
+                "Failed to upload artifact",
+                "Artifact name is not valid"
+            ],
+            "keywords": [
+                "No files were found",
+                "Failed to upload artifact",
+                "Artifact name is not valid"
+            ],
+            "context_requirements": [
+                "artifact",
+                "upload",
+                "files"
+            ],
+            "confidence_base": 0.88,
+            "success_rate": 0.77,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        }
+    ]
+}

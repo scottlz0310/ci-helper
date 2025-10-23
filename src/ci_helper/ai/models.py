@@ -40,6 +40,7 @@ class AnalysisStatus(Enum):
     FAILED = "failed"
     CACHED = "cached"
     FALLBACK = "fallback"
+    LOW_CONFIDENCE = "low_confidence"
 
 
 @dataclass
@@ -125,6 +126,13 @@ class AnalysisResult:
     retry_after: int | None = None  # リトライまでの秒数
     alternative_providers: list[str] = field(default_factory=list)  # 代替プロバイダー
     pattern_matches: list[PatternMatch] = field(default_factory=list)  # パターンマッチ結果
+    # フォールバック機能用フィールド
+    troubleshooting_steps: list[str] = field(default_factory=list)  # トラブルシューティングステップ
+    manual_investigation_steps: list[str] = field(default_factory=list)  # 手動調査ステップ
+    unknown_error_info: dict[str, Any] = field(default_factory=dict)  # 未知エラー情報
+    pattern_match: PatternMatch | None = None  # 低信頼度パターンマッチ
+    log_info: dict[str, Any] = field(default_factory=dict)  # ログ情報
+    alternative_methods: list[str] = field(default_factory=list)  # 代替分析方法
 
     @property
     def has_high_confidence(self) -> bool:
@@ -294,6 +302,18 @@ class AIConfig:
     pattern_discovery_enabled: bool = True  # パターン発見有効化
     min_pattern_occurrences: int = 3  # パターン認識最小出現回数
 
+    # 高度な設定
+    max_pattern_matches: int = 10  # 最大パターンマッチ数
+    pattern_cache_enabled: bool = True  # パターンキャッシュ有効化
+    pattern_cache_ttl_hours: int = 6  # パターンキャッシュ有効期限（時間）
+    auto_pattern_update_enabled: bool = True  # 自動パターン更新有効化
+    fallback_analysis_enabled: bool = True  # フォールバック分析有効化
+
+    # デバッグ設定
+    debug_pattern_matching: bool = False  # パターンマッチングデバッグ
+    log_pattern_performance: bool = False  # パターン性能ログ
+    verbose_error_reporting: bool = False  # 詳細エラーレポート
+
     def __eq__(self, other: object) -> bool:
         """等価性比較"""
         if not isinstance(other, AIConfig):
@@ -310,27 +330,165 @@ class AIConfig:
             and self.streaming_enabled == other.streaming_enabled
             and self.security_checks_enabled == other.security_checks_enabled
             and self.cache_dir == other.cache_dir
-            and self.pattern_recognition_enabled == other.pattern_recognition_enabled
-            and self.pattern_confidence_threshold == other.pattern_confidence_threshold
+            and (self.pattern_recognition_enabled == other.pattern_recognition_enabled)
+            and (self.pattern_confidence_threshold == other.pattern_confidence_threshold)
             and self.pattern_database_path == other.pattern_database_path
             and self.custom_patterns_enabled == other.custom_patterns_enabled
-            and self.enabled_pattern_categories == other.enabled_pattern_categories
+            and (self.enabled_pattern_categories == other.enabled_pattern_categories)
             and self.auto_fix_enabled == other.auto_fix_enabled
-            and self.auto_fix_confidence_threshold == other.auto_fix_confidence_threshold
-            and self.auto_fix_risk_tolerance == other.auto_fix_risk_tolerance
+            and (self.auto_fix_confidence_threshold == other.auto_fix_confidence_threshold)
+            and (self.auto_fix_risk_tolerance == other.auto_fix_risk_tolerance)
             and self.backup_retention_days == other.backup_retention_days
             and self.backup_before_fix == other.backup_before_fix
             and self.learning_enabled == other.learning_enabled
-            and self.feedback_collection_enabled == other.feedback_collection_enabled
-            and self.pattern_discovery_enabled == other.pattern_discovery_enabled
-            and self.min_pattern_occurrences == other.min_pattern_occurrences
+            and (self.feedback_collection_enabled == other.feedback_collection_enabled)
+            and (self.pattern_discovery_enabled == other.pattern_discovery_enabled)
+            and (self.min_pattern_occurrences == other.min_pattern_occurrences)
+            and self.max_pattern_matches == other.max_pattern_matches
+            and self.pattern_cache_enabled == other.pattern_cache_enabled
+            and self.pattern_cache_ttl_hours == other.pattern_cache_ttl_hours
+            and (self.auto_pattern_update_enabled == other.auto_pattern_update_enabled)
+            and (self.fallback_analysis_enabled == other.fallback_analysis_enabled)
+            and self.debug_pattern_matching == other.debug_pattern_matching
+            and self.log_pattern_performance == other.log_pattern_performance
+            and self.verbose_error_reporting == other.verbose_error_reporting
         )
 
     def get_path(self, path_name: str) -> Path:
         """パスを取得"""
         if path_name == "cache_dir":
             return Path(self.cache_dir)
+        elif path_name == "pattern_database_path":
+            return Path(self.pattern_database_path)
         return Path("")
+
+    def validate_config(self) -> list[str]:
+        """設定の検証を行い、エラーメッセージのリストを返す"""
+        errors = []
+
+        # 信頼度閾値の検証
+        if not 0.0 <= self.pattern_confidence_threshold <= 1.0:
+            errors.append(
+                f"pattern_confidence_threshold must be between 0.0 and 1.0, got {self.pattern_confidence_threshold}"
+            )
+
+        if not 0.0 <= self.auto_fix_confidence_threshold <= 1.0:
+            errors.append(
+                f"auto_fix_confidence_threshold must be between 0.0 and 1.0, got {self.auto_fix_confidence_threshold}"
+            )
+
+        # リスク許容度の検証
+        valid_risk_levels = ["low", "medium", "high"]
+        if self.auto_fix_risk_tolerance not in valid_risk_levels:
+            errors.append(
+                f"auto_fix_risk_tolerance must be one of {valid_risk_levels}, got '{self.auto_fix_risk_tolerance}'"
+            )
+
+        # パターンカテゴリの検証
+        valid_categories = ["permission", "network", "config", "dependency", "build", "test"]
+        invalid_categories = [cat for cat in self.enabled_pattern_categories if cat not in valid_categories]
+        if invalid_categories:
+            errors.append(f"Invalid pattern categories: {invalid_categories}. Valid categories are: {valid_categories}")
+
+        # 数値範囲の検証
+        if self.backup_retention_days < 1:
+            errors.append(f"backup_retention_days must be at least 1, got {self.backup_retention_days}")
+
+        if self.min_pattern_occurrences < 1:
+            errors.append(f"min_pattern_occurrences must be at least 1, got {self.min_pattern_occurrences}")
+
+        if self.max_pattern_matches < 1:
+            errors.append(f"max_pattern_matches must be at least 1, got {self.max_pattern_matches}")
+
+        if self.pattern_cache_ttl_hours < 1:
+            errors.append(f"pattern_cache_ttl_hours must be at least 1, got {self.pattern_cache_ttl_hours}")
+
+        return errors
+
+    def is_valid(self) -> bool:
+        """設定が有効かどうかを判定"""
+        return len(self.validate_config()) == 0
+
+    def get_default_config(self) -> AIConfig:
+        """デフォルト設定を取得"""
+        return AIConfig(
+            default_provider="openai",
+            providers={},
+            cache_enabled=True,
+            cache_ttl_hours=24,
+            cache_max_size_mb=100,
+            cost_limits={},
+            prompt_templates={},
+            interactive_timeout=300,
+            streaming_enabled=True,
+            security_checks_enabled=True,
+            cache_dir=".ci-helper/cache",
+            pattern_recognition_enabled=True,
+            pattern_confidence_threshold=0.7,
+            pattern_database_path="data/patterns",
+            custom_patterns_enabled=True,
+            enabled_pattern_categories=["permission", "network", "config", "dependency", "build", "test"],
+            auto_fix_enabled=False,
+            auto_fix_confidence_threshold=0.8,
+            auto_fix_risk_tolerance="low",
+            backup_retention_days=30,
+            backup_before_fix=True,
+            learning_enabled=True,
+            feedback_collection_enabled=True,
+            pattern_discovery_enabled=True,
+            min_pattern_occurrences=3,
+            max_pattern_matches=10,
+            pattern_cache_enabled=True,
+            pattern_cache_ttl_hours=6,
+            auto_pattern_update_enabled=True,
+            fallback_analysis_enabled=True,
+            debug_pattern_matching=False,
+            log_pattern_performance=False,
+            verbose_error_reporting=False,
+        )
+
+    def merge_with_defaults(self) -> AIConfig:
+        """デフォルト値とマージした設定を返す（後方互換性のため）"""
+        default_config = self.get_default_config()
+
+        # 既存の値を保持し、未設定の場合のみデフォルト値を使用
+        merged_config = AIConfig(
+            default_provider=self.default_provider or default_config.default_provider,
+            providers=self.providers or default_config.providers,
+            cache_enabled=self.cache_enabled,
+            cache_ttl_hours=self.cache_ttl_hours,
+            cache_max_size_mb=self.cache_max_size_mb,
+            cost_limits=self.cost_limits or default_config.cost_limits,
+            prompt_templates=self.prompt_templates or default_config.prompt_templates,
+            interactive_timeout=self.interactive_timeout,
+            streaming_enabled=self.streaming_enabled,
+            security_checks_enabled=self.security_checks_enabled,
+            cache_dir=self.cache_dir or default_config.cache_dir,
+            pattern_recognition_enabled=self.pattern_recognition_enabled,
+            pattern_confidence_threshold=self.pattern_confidence_threshold,
+            pattern_database_path=self.pattern_database_path or default_config.pattern_database_path,
+            custom_patterns_enabled=self.custom_patterns_enabled,
+            enabled_pattern_categories=self.enabled_pattern_categories or default_config.enabled_pattern_categories,
+            auto_fix_enabled=self.auto_fix_enabled,
+            auto_fix_confidence_threshold=self.auto_fix_confidence_threshold,
+            auto_fix_risk_tolerance=self.auto_fix_risk_tolerance or default_config.auto_fix_risk_tolerance,
+            backup_retention_days=self.backup_retention_days,
+            backup_before_fix=self.backup_before_fix,
+            learning_enabled=self.learning_enabled,
+            feedback_collection_enabled=self.feedback_collection_enabled,
+            pattern_discovery_enabled=self.pattern_discovery_enabled,
+            min_pattern_occurrences=self.min_pattern_occurrences,
+            max_pattern_matches=self.max_pattern_matches,
+            pattern_cache_enabled=self.pattern_cache_enabled,
+            pattern_cache_ttl_hours=self.pattern_cache_ttl_hours,
+            auto_pattern_update_enabled=self.auto_pattern_update_enabled,
+            fallback_analysis_enabled=self.fallback_analysis_enabled,
+            debug_pattern_matching=self.debug_pattern_matching,
+            log_pattern_performance=self.log_pattern_performance,
+            verbose_error_reporting=self.verbose_error_reporting,
+        )
+
+        return merged_config
 
 
 @dataclass
@@ -502,6 +660,9 @@ class Pattern:
     created_at: datetime  # 作成日時
     updated_at: datetime  # 更新日時
     user_defined: bool = False  # ユーザー定義フラグ
+    auto_generated: bool = False  # 自動生成フラグ
+    source: str = "manual"  # パターンの作成元
+    occurrence_count: int = 0  # 発生回数（学習用）
 
 
 @dataclass
@@ -589,6 +750,83 @@ class UserFeedback:
 
 
 @dataclass
+class LearningData:
+    """学習データ"""
+
+    id: str  # 学習データID
+    error_log: str  # エラーログ
+    pattern_id: str | None = None  # 関連パターンID
+    user_feedback: UserFeedback | None = None  # ユーザーフィードバック
+    success_rate: float = 0.0  # 成功率
+    occurrence_count: int = 1  # 発生回数
+    last_seen: datetime = field(default_factory=datetime.now)  # 最終確認日時
+    created_at: datetime = field(default_factory=datetime.now)  # 作成日時
+    updated_at: datetime = field(default_factory=datetime.now)  # 更新日時
+    category: str = "unknown"  # カテゴリ
+    confidence_adjustments: list[float] = field(default_factory=list)  # 信頼度調整履歴
+
+
+@dataclass
+class PatternImprovement:
+    """パターン改善提案"""
+
+    pattern_id: str  # 対象パターンID
+    improvement_type: str  # 改善タイプ（regex_update/keyword_add/confidence_adjust）
+    description: str  # 改善内容の説明
+    suggested_changes: dict[str, Any]  # 提案される変更内容
+    confidence: float  # 改善提案の信頼度
+    supporting_data: list[str]  # 裏付けデータ
+    created_at: datetime = field(default_factory=datetime.now)  # 作成日時
+
+
+@dataclass
+class BatchFixResult:
+    """一括修正結果"""
+
+    total_fixes: int  # 総修正数
+    successful_fixes: int  # 成功した修正数
+    failed_fixes: int  # 失敗した修正数
+    fix_results: list[FixResult]  # 個別修正結果
+    overall_success: bool  # 全体の成功フラグ
+    execution_time: float  # 実行時間（秒）
+    rollback_info: list[BackupInfo] = field(default_factory=list)  # ロールバック情報
+
+
+@dataclass
+class PatternAnalysisOptions:
+    """パターン分析オプション"""
+
+    confidence_threshold: float = 0.7  # 信頼度閾値
+    enabled_categories: list[str] = field(default_factory=list)  # 有効カテゴリ
+    max_patterns: int = 10  # 最大パターン数
+    include_low_confidence: bool = False  # 低信頼度パターンを含める
+    context_window: int = 5  # コンテキストウィンドウサイズ（行数）
+
+
+@dataclass
+class PatternAnalysisResult:
+    """パターン分析結果"""
+
+    matches: list[PatternMatch]  # パターンマッチ結果
+    total_patterns_checked: int  # チェックしたパターン総数
+    analysis_time: float  # 分析時間（秒）
+    confidence_distribution: dict[str, int]  # 信頼度分布
+    category_breakdown: dict[str, int]  # カテゴリ別内訳
+    best_match: PatternMatch | None = None  # 最良マッチ
+
+
+@dataclass
+class PatternSuggestion:
+    """パターン提案"""
+
+    suggested_pattern: Pattern  # 提案パターン
+    confidence: float  # 提案の信頼度
+    supporting_logs: list[str]  # 裏付けログ
+    similar_patterns: list[Pattern]  # 類似パターン
+    creation_reason: str  # 作成理由
+
+
+@dataclass
 class AnalyzeOptions:
     """分析オプション"""
 
@@ -604,3 +842,7 @@ class AnalyzeOptions:
     max_tokens: int | None = None  # 最大トークン数
     temperature: float = 0.1  # 温度パラメータ
     timeout_seconds: int = 30  # タイムアウト
+    force_ai_analysis: bool = False  # AI分析を強制実行（フォールバックを無視）
+    pattern_analysis_options: PatternAnalysisOptions = field(
+        default_factory=PatternAnalysisOptions
+    )  # パターン分析オプション

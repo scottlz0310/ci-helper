@@ -1,0 +1,294 @@
+{
+    "metadata": {
+        "version": "1.0.0",
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z",
+        "total_templates": 31,
+        "description": "CI-Helper修正テンプレートデータベース - 各エラーパターンに対応する具体的な修正手順"
+    },
+    "categories": {
+        "permission": {
+            "description": "権限関連のエラー修正テンプレート",
+            "templates": [
+                "docker_permission_fix",
+                "file_permission_fix",
+                "sudo_required_fix"
+            ],
+            "template_count": 3,
+            "average_success_rate": 0.87,
+            "average_risk_level": "low"
+        },
+        "network": {
+            "description": "ネットワーク関連のエラー修正テンプレート",
+            "templates": [
+                "network_timeout_fix",
+                "dns_resolution_fix",
+                "ssl_certificate_fix"
+            ],
+            "template_count": 3,
+            "average_success_rate": 0.72,
+            "average_risk_level": "medium"
+        },
+        "config": {
+            "description": "設定関連のエラー修正テンプレート",
+            "templates": [
+                "github_actions_syntax_fix",
+                "environment_variable_fix",
+                "action_not_found_fix",
+                "checkout_action_fix",
+                "setup_node_version_fix",
+                "setup_python_version_fix",
+                "cache_action_fix",
+                "artifact_upload_fix"
+            ],
+            "template_count": 8,
+            "average_success_rate": 0.81,
+            "average_risk_level": "low"
+        },
+        "build": {
+            "description": "ビルド関連のエラー修正テンプレート",
+            "templates": [
+                "compilation_error_fix",
+                "make_target_fix",
+                "cmake_configuration_fix",
+                "gradle_build_fix",
+                "maven_build_fix",
+                "npm_build_fix"
+            ],
+            "template_count": 6,
+            "average_success_rate": 0.77,
+            "average_risk_level": "medium"
+        },
+        "dependency": {
+            "description": "依存関係関連のエラー修正テンプレート",
+            "templates": [
+                "python_dependency_fix",
+                "node_dependency_fix",
+                "npm_install_fix",
+                "pip_install_fix",
+                "gem_install_fix",
+                "composer_dependency_fix"
+            ],
+            "template_count": 6,
+            "average_success_rate": 0.82,
+            "average_risk_level": "medium"
+        },
+        "test": {
+            "description": "テスト関連のエラー修正テンプレート",
+            "templates": [
+                "test_assertion_fix",
+                "test_timeout_fix",
+                "jest_test_fix",
+                "pytest_fix",
+                "coverage_threshold_fix"
+            ],
+            "template_count": 5,
+            "average_success_rate": 0.74,
+            "average_risk_level": "medium"
+        }
+    },
+    "template_files": [
+        {
+            "file": "permission_fixes.json",
+            "description": "権限関連の修正テンプレート",
+            "categories": [
+                "permission"
+            ],
+            "template_count": 3
+        },
+        {
+            "file": "network_fixes.json",
+            "description": "ネットワーク関連の修正テンプレート",
+            "categories": [
+                "network"
+            ],
+            "template_count": 3
+        },
+        {
+            "file": "config_fixes.json",
+            "description": "設定関連の修正テンプレート",
+            "categories": [
+                "config"
+            ],
+            "template_count": 8
+        },
+        {
+            "file": "build_fixes.json",
+            "description": "ビルド関連の修正テンプレート",
+            "categories": [
+                "build"
+            ],
+            "template_count": 6
+        },
+        {
+            "file": "dependency_fixes.json",
+            "description": "依存関係関連の修正テンプレート",
+            "categories": [
+                "dependency"
+            ],
+            "template_count": 6
+        },
+        {
+            "file": "test_fixes.json",
+            "description": "テスト関連の修正テンプレート",
+            "categories": [
+                "test"
+            ],
+            "template_count": 5
+        }
+    ],
+    "risk_levels": {
+        "low": {
+            "description": "低リスク - 自動適用可能",
+            "template_count": 12,
+            "auto_apply_threshold": 0.8
+        },
+        "medium": {
+            "description": "中リスク - ユーザー確認推奨",
+            "template_count": 13,
+            "auto_apply_threshold": 0.9
+        },
+        "high": {
+            "description": "高リスク - 必ずユーザー確認",
+            "template_count": 2,
+            "auto_apply_threshold": 1.0
+        }
+    },
+    "statistics": {
+        "overall_success_rate": 0.79,
+        "most_reliable_category": "dependency",
+        "least_reliable_category": "network",
+        "average_fix_time": "8.5分",
+        "templates_by_risk": {
+            "low": 12,
+            "medium": 13,
+            "high": 2
+        }
+    },
+    "usage_guidelines": {
+        "template_selection_order": [
+            "config",
+            "dependency",
+            "build",
+            "test",
+            "permission",
+            "network"
+        ],
+        "confidence_thresholds": {
+            "auto_apply_low_risk": 0.8,
+            "auto_apply_medium_risk": 0.9,
+            "manual_review_required": 1.0
+        },
+        "validation_requirements": {
+            "pre_fix": [
+                "backup_creation",
+                "prerequisite_check"
+            ],
+            "post_fix": [
+                "validation_steps",
+                "rollback_availability"
+            ]
+        }
+    },
+    "pattern_template_mapping": {
+        "docker_permission_denied": [
+            "docker_permission_fix"
+        ],
+        "file_permission_denied": [
+            "file_permission_fix"
+        ],
+        "sudo_required_error": [
+            "sudo_required_fix"
+        ],
+        "network_connection_timeout": [
+            "network_timeout_fix"
+        ],
+        "dns_resolution_failure": [
+            "dns_resolution_fix"
+        ],
+        "ssl_certificate_error": [
+            "ssl_certificate_fix"
+        ],
+        "yaml_syntax_error": [
+            "github_actions_syntax_fix"
+        ],
+        "github_actions_invalid_syntax": [
+            "github_actions_syntax_fix"
+        ],
+        "env_var_not_set": [
+            "environment_variable_fix"
+        ],
+        "action_not_found": [
+            "action_not_found_fix"
+        ],
+        "checkout_action_error": [
+            "checkout_action_fix"
+        ],
+        "setup_node_version_error": [
+            "setup_node_version_fix"
+        ],
+        "setup_python_version_error": [
+            "setup_python_version_fix"
+        ],
+        "cache_action_error": [
+            "cache_action_fix"
+        ],
+        "artifact_upload_error": [
+            "artifact_upload_fix"
+        ],
+        "compilation_error": [
+            "compilation_error_fix"
+        ],
+        "make_target_not_found": [
+            "make_target_fix"
+        ],
+        "cmake_configuration_error": [
+            "cmake_configuration_fix"
+        ],
+        "gradle_build_failure": [
+            "gradle_build_fix"
+        ],
+        "maven_build_failure": [
+            "maven_build_fix"
+        ],
+        "npm_build_error": [
+            "npm_build_fix"
+        ],
+        "python_module_not_found": [
+            "python_dependency_fix"
+        ],
+        "python_import_error": [
+            "python_dependency_fix"
+        ],
+        "node_module_not_found": [
+            "node_dependency_fix"
+        ],
+        "npm_install_error": [
+            "npm_install_fix"
+        ],
+        "pip_install_error": [
+            "pip_install_fix"
+        ],
+        "gem_install_error": [
+            "gem_install_fix"
+        ],
+        "composer_dependency_error": [
+            "composer_dependency_fix"
+        ],
+        "test_failure_assertion": [
+            "test_assertion_fix"
+        ],
+        "test_timeout": [
+            "test_timeout_fix"
+        ],
+        "jest_test_failure": [
+            "jest_test_fix"
+        ],
+        "pytest_failure": [
+            "pytest_fix"
+        ],
+        "coverage_threshold_error": [
+            "coverage_threshold_fix"
+        ]
+    }
+}

@@ -1,0 +1,151 @@
+{
+    "metadata": {
+        "version": "1.0.0",
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z",
+        "total_patterns": 27,
+        "description": "CI-Helper初期パターンデータベース - 一般的なCI失敗パターンの包括的なコレクション"
+    },
+    "categories": {
+        "permission": {
+            "description": "権限関連のエラーパターン",
+            "patterns": [
+                "docker_permission_denied",
+                "file_permission_denied",
+                "sudo_required_error"
+            ],
+            "pattern_count": 3
+        },
+        "network": {
+            "description": "ネットワーク関連のエラーパターン",
+            "patterns": [
+                "network_connection_timeout",
+                "dns_resolution_failure",
+                "ssl_certificate_error"
+            ],
+            "pattern_count": 3
+        },
+        "config": {
+            "description": "設定関連のエラーパターン",
+            "patterns": [
+                "yaml_syntax_error",
+                "github_actions_invalid_syntax",
+                "env_var_not_set",
+                "action_not_found",
+                "checkout_action_error",
+                "setup_node_version_error",
+                "setup_python_version_error",
+                "cache_action_error",
+                "artifact_upload_error"
+            ],
+            "pattern_count": 9
+        },
+        "build": {
+            "description": "ビルド関連のエラーパターン",
+            "patterns": [
+                "compilation_error",
+                "make_target_not_found",
+                "cmake_configuration_error",
+                "gradle_build_failure",
+                "maven_build_failure",
+                "npm_build_error"
+            ],
+            "pattern_count": 6
+        },
+        "dependency": {
+            "description": "依存関係関連のエラーパターン",
+            "patterns": [
+                "python_module_not_found",
+                "python_import_error",
+                "node_module_not_found",
+                "npm_install_error",
+                "pip_install_error",
+                "gem_install_error",
+                "composer_dependency_error"
+            ],
+            "pattern_count": 7
+        },
+        "test": {
+            "description": "テスト関連のエラーパターン",
+            "patterns": [
+                "test_failure_assertion",
+                "test_timeout",
+                "jest_test_failure",
+                "pytest_failure",
+                "coverage_threshold_error"
+            ],
+            "pattern_count": 5
+        }
+    },
+    "pattern_files": [
+        {
+            "file": "ci_patterns.json",
+            "description": "基本的なCI失敗パターン",
+            "categories": [
+                "permission",
+                "network",
+                "config"
+            ],
+            "pattern_count": 9
+        },
+        {
+            "file": "build_patterns.json",
+            "description": "ビルドシステム関連のパターン",
+            "categories": [
+                "build"
+            ],
+            "pattern_count": 6
+        },
+        {
+            "file": "dependency_patterns.json",
+            "description": "依存関係管理関連のパターン",
+            "categories": [
+                "dependency"
+            ],
+            "pattern_count": 7
+        },
+        {
+            "file": "test_patterns.json",
+            "description": "テスト実行関連のパターン",
+            "categories": [
+                "test"
+            ],
+            "pattern_count": 5
+        },
+        {
+            "file": "action_patterns.json",
+            "description": "GitHub Actions固有のパターン",
+            "categories": [
+                "config"
+            ],
+            "pattern_count": 6
+        }
+    ],
+    "statistics": {
+        "most_common_category": "config",
+        "average_confidence": 0.88,
+        "average_success_rate": 0.79,
+        "patterns_by_confidence": {
+            "high": 21,
+            "medium": 6,
+            "low": 0
+        }
+    },
+    "usage_guidelines": {
+        "pattern_matching_order": [
+            "config",
+            "dependency",
+            "build",
+            "test",
+            "permission",
+            "network"
+        ],
+        "confidence_thresholds": {
+            "auto_fix": 0.8,
+            "suggestion": 0.7,
+            "investigation": 0.5
+        },
+        "update_frequency": "monthly",
+        "learning_enabled": true
+    }
+}

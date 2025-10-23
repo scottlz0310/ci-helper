@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +23,7 @@ class PatternDatabase:
     CI失敗パターンの読み込み、管理、検証を行います。
     """
 
-    def __init__(self, data_directory: Path | str = "test_data"):
+    def __init__(self, data_directory: Path | str = "data/patterns"):
         """パターンデータベースを初期化
 
         Args:
@@ -31,7 +31,18 @@ class PatternDatabase:
         """
         self.data_directory = Path(data_directory)
         self.patterns: dict[str, Pattern] = {}
-        self.pattern_file = self.data_directory / "failure_patterns.json"
+        # 新しいパターンファイル構造をサポート
+        self.pattern_files = [
+            "ci_patterns.json",
+            "build_patterns.json",
+            "dependency_patterns.json",
+            "test_patterns.json",
+            "action_patterns.json",
+        ]
+        # カスタムパターンファイル
+        self.custom_pattern_files = ["custom/user_patterns.json", "custom/learned_patterns.json"]
+        # 後方互換性のための既存ファイル
+        self.legacy_pattern_file = Path("test_data") / "failure_patterns.json"
         self._loaded = False
 
     async def load_patterns(self) -> None:
@@ -39,32 +50,190 @@ class PatternDatabase:
         if self._loaded:
             return
 
-        logger.info("パターンデータベースを読み込み中: %s", self.pattern_file)
+        logger.info("パターンデータベースを読み込み中: %s", self.data_directory)
 
         try:
-            if not self.pattern_file.exists():
-                logger.warning("パターンファイルが存在しません: %s", self.pattern_file)
+            # 新しいパターンファイル構造を読み込み
+            patterns_loaded = await self._load_new_pattern_files()
+
+            # カスタムパターンファイルを読み込み
+            custom_patterns_loaded = await self._load_custom_pattern_files()
+
+            # 後方互換性: 既存のlegacyファイルがあれば読み込み
+            legacy_patterns_loaded = await self._load_legacy_pattern_file()
+
+            total_loaded = patterns_loaded + custom_patterns_loaded + legacy_patterns_loaded
+
+            if total_loaded == 0:
+                logger.warning("パターンファイルが見つかりません。デフォルトパターンを作成します。")
                 await self._create_default_patterns()
-                return
-
-            with open(self.pattern_file, encoding="utf-8") as f:
-                data = json.load(f)
-
-            # 既存のパターンデータを新しい形式に変換
-            for pattern_id, pattern_data in data.items():
-                pattern = self._convert_legacy_pattern(pattern_id, pattern_data)
-                if self._validate_pattern(pattern):
-                    self.patterns[pattern_id] = pattern
-                else:
-                    logger.warning("無効なパターンをスキップ: %s", pattern_id)
-
-            logger.info("パターンを %d 個読み込みました", len(self.patterns))
-            self._loaded = True
+            else:
+                logger.info("パターンを %d 個読み込みました", len(self.patterns))
+                self._loaded = True
 
         except Exception as e:
             logger.error("パターンデータベースの読み込みに失敗: %s", e)
             # フォールバック: デフォルトパターンを作成
             await self._create_default_patterns()
+
+    async def _load_new_pattern_files(self) -> int:
+        """新しいパターンファイル構造を読み込み
+
+        Returns:
+            読み込んだパターン数
+        """
+        patterns_loaded = 0
+
+        for pattern_file in self.pattern_files:
+            file_path = self.data_directory / pattern_file
+            if file_path.exists():
+                try:
+                    with open(file_path, encoding="utf-8") as f:
+                        data = json.load(f)
+
+                    if "patterns" in data:
+                        for pattern_data in data["patterns"]:
+                            pattern = self._convert_new_pattern_format(pattern_data)
+                            if self._validate_pattern(pattern):
+                                self.patterns[pattern.id] = pattern
+                                patterns_loaded += 1
+                            else:
+                                logger.warning("無効なパターンをスキップ: %s", pattern_data.get("id", "unknown"))
+
+                    logger.info(
+                        "パターンファイル %s から %d 個のパターンを読み込み",
+                        pattern_file,
+                        len(data.get("patterns", [])),
+                    )
+
+                except Exception as e:
+                    logger.error("パターンファイル %s の読み込みに失敗: %s", pattern_file, e)
+            else:
+                logger.debug("パターンファイルが存在しません: %s", file_path)
+
+        return patterns_loaded
+
+    async def _load_custom_pattern_files(self) -> int:
+        """カスタムパターンファイルを読み込み
+
+        Returns:
+            読み込んだパターン数
+        """
+        patterns_loaded = 0
+
+        for pattern_file in self.custom_pattern_files:
+            file_path = self.data_directory / pattern_file
+            if file_path.exists():
+                try:
+                    with open(file_path, encoding="utf-8") as f:
+                        data = json.load(f)
+
+                    if "patterns" in data:
+                        for pattern_data in data["patterns"]:
+                            pattern = self._convert_new_pattern_format(pattern_data)
+                            if self._validate_pattern(pattern):
+                                self.patterns[pattern.id] = pattern
+                                patterns_loaded += 1
+                            else:
+                                logger.warning(
+                                    "無効なカスタムパターンをスキップ: %s", pattern_data.get("id", "unknown")
+                                )
+
+                    logger.info(
+                        "カスタムパターンファイル %s から %d 個のパターンを読み込み",
+                        pattern_file,
+                        len(data.get("patterns", [])),
+                    )
+
+                except Exception as e:
+                    logger.error("カスタムパターンファイル %s の読み込みに失敗: %s", pattern_file, e)
+            else:
+                logger.debug("カスタムパターンファイルが存在しません: %s", file_path)
+
+        return patterns_loaded
+
+    async def _load_legacy_pattern_file(self) -> int:
+        """既存のlegacyパターンファイルを読み込み（後方互換性）
+
+        Returns:
+            読み込んだパターン数
+        """
+        patterns_loaded = 0
+
+        if self.legacy_pattern_file.exists():
+            try:
+                with open(self.legacy_pattern_file, encoding="utf-8") as f:
+                    data = json.load(f)
+
+                # 既存のパターンデータを新しい形式に変換
+                for pattern_id, pattern_data in data.items():
+                    pattern = self._convert_legacy_pattern(pattern_id, pattern_data)
+                    if self._validate_pattern(pattern):
+                        self.patterns[pattern_id] = pattern
+                        patterns_loaded += 1
+                    else:
+                        logger.warning("無効なlegacyパターンをスキップ: %s", pattern_id)
+
+                logger.info("legacyパターンファイルから %d 個のパターンを読み込み", patterns_loaded)
+
+            except Exception as e:
+                logger.error("legacyパターンファイルの読み込みに失敗: %s", e)
+
+        return patterns_loaded
+
+    def _parse_datetime(self, datetime_str: str) -> datetime:
+        """日時文字列をdatetimeオブジェクトに変換（タイムゾーン対応）
+
+        Args:
+            datetime_str: ISO形式の日時文字列
+
+        Returns:
+            datetimeオブジェクト
+        """
+        try:
+            # "Z"をUTC timezone指定に変換
+            if datetime_str.endswith("Z"):
+                datetime_str = datetime_str[:-1] + "+00:00"
+
+            # ISO形式でパース
+            dt = datetime.fromisoformat(datetime_str)
+
+            # タイムゾーン情報がない場合はUTCとして扱う
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=UTC)
+
+            # ローカル時間に変換
+            return dt.astimezone().replace(tzinfo=None)
+
+        except Exception:
+            # パースに失敗した場合は現在時刻を返す
+            return datetime.now()
+
+    def _convert_new_pattern_format(self, pattern_data: dict[str, Any]) -> Pattern:
+        """新しいパターンファイル形式からPatternオブジェクトを作成
+
+        Args:
+            pattern_data: パターンデータ辞書
+
+        Returns:
+            Patternオブジェクト
+        """
+        return Pattern(
+            id=pattern_data["id"],
+            name=pattern_data["name"],
+            category=pattern_data["category"],
+            regex_patterns=pattern_data["regex_patterns"],
+            keywords=pattern_data["keywords"],
+            context_requirements=pattern_data["context_requirements"],
+            confidence_base=pattern_data["confidence_base"],
+            success_rate=pattern_data["success_rate"],
+            created_at=self._parse_datetime(pattern_data["created_at"]),
+            updated_at=self._parse_datetime(pattern_data["updated_at"]),
+            user_defined=pattern_data.get("user_defined", False),
+            auto_generated=pattern_data.get("auto_generated", False),
+            source=pattern_data.get("source", "manual"),
+            occurrence_count=pattern_data.get("occurrence_count", 0),
+        )
 
     def _convert_legacy_pattern(self, pattern_id: str, pattern_data: dict[str, Any]) -> Pattern:
         """既存のパターンデータを新しいPattern形式に変換
@@ -287,29 +456,83 @@ class PatternDatabase:
         try:
             # ディレクトリが存在しない場合は作成
             self.data_directory.mkdir(parents=True, exist_ok=True)
+            (self.data_directory / "custom").mkdir(parents=True, exist_ok=True)
 
-            # 既存形式に変換して保存
-            legacy_data = {}
-            for pattern_id, pattern in self.patterns.items():
-                legacy_data[pattern_id] = {
-                    "pattern_id": pattern.id,
-                    "pattern_name": pattern.name,
-                    "description": f"カテゴリ: {pattern.category}",
-                    "error_signature": pattern.regex_patterns[0] if pattern.regex_patterns else "",
-                    "fix_strategy": "パターンベースの修正提案を参照",
-                    "examples": pattern.keywords[:3],  # 最初の3つのキーワードを例として使用
-                    "frequency": 0,
-                    "last_occurrence": pattern.updated_at.isoformat(),
-                }
+            # カテゴリ別にパターンを分類
+            patterns_by_category = {}
+            user_patterns = []
+            learned_patterns = []
 
-            with open(self.pattern_file, "w", encoding="utf-8") as f:
-                json.dump(legacy_data, f, ensure_ascii=False, indent=2)
+            for pattern in self.patterns.values():
+                if pattern.user_defined and pattern.source == "user":
+                    user_patterns.append(pattern)
+                elif pattern.auto_generated or pattern.source == "learning":
+                    learned_patterns.append(pattern)
+                else:
+                    # 組み込みパターンはカテゴリ別に分類（読み取り専用として扱う）
+                    if pattern.category not in patterns_by_category:
+                        patterns_by_category[pattern.category] = []
+                    patterns_by_category[pattern.category].append(pattern)
 
-            logger.info("パターンデータベースを保存しました: %s", self.pattern_file)
+            # ユーザー定義パターンを保存
+            if user_patterns:
+                await self._save_custom_patterns(user_patterns, "custom/user_patterns.json")
+
+            # 学習済みパターンを保存
+            if learned_patterns:
+                await self._save_custom_patterns(learned_patterns, "custom/learned_patterns.json")
+
+            logger.info(
+                "パターンデータベースを保存しました (ユーザー: %d, 学習済み: %d)",
+                len(user_patterns),
+                len(learned_patterns),
+            )
 
         except Exception as e:
             logger.error("パターンデータベースの保存に失敗: %s", e)
             raise
+
+    async def _save_custom_patterns(self, patterns: list[Pattern], filename: str) -> None:
+        """カスタムパターンをファイルに保存
+
+        Args:
+            patterns: 保存するパターンのリスト
+            filename: 保存先ファイル名
+        """
+        file_path = self.data_directory / filename
+
+        pattern_data = {
+            "patterns": [
+                {
+                    "id": pattern.id,
+                    "name": pattern.name,
+                    "category": pattern.category,
+                    "regex_patterns": pattern.regex_patterns,
+                    "keywords": pattern.keywords,
+                    "context_requirements": pattern.context_requirements,
+                    "confidence_base": pattern.confidence_base,
+                    "success_rate": pattern.success_rate,
+                    "created_at": pattern.created_at.isoformat(),
+                    "updated_at": pattern.updated_at.isoformat(),
+                    "user_defined": pattern.user_defined,
+                    "auto_generated": pattern.auto_generated,
+                    "source": pattern.source,
+                    "occurrence_count": pattern.occurrence_count,
+                }
+                for pattern in patterns
+            ],
+            "metadata": {
+                "description": "ユーザー定義パターン" if "user" in filename else "学習済みパターン",
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat(),
+                "pattern_count": len(patterns),
+            },
+        }
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(pattern_data, f, ensure_ascii=False, indent=4)
+
+        logger.info("カスタムパターンを保存しました: %s (%d個)", filename, len(patterns))
 
     def get_pattern(self, pattern_id: str) -> Pattern | None:
         """指定されたIDのパターンを取得

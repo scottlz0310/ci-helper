@@ -1,0 +1,122 @@
+{
+    "templates": [
+        {
+            "id": "network_timeout_fix",
+            "name": "ネットワークタイムアウト修正",
+            "description": "ネットワーク接続タイムアウトエラーを修正",
+            "pattern_ids": [
+                "network_connection_timeout"
+            ],
+            "fix_steps": [
+                {
+                    "type": "command",
+                    "description": "ネットワーク接続を確認",
+                    "command": "ping -c 3 8.8.8.8",
+                    "validation": "ping -c 1 8.8.8.8"
+                },
+                {
+                    "type": "file_modification",
+                    "description": "タイムアウト値を増加",
+                    "file_path": "{config_file}",
+                    "action": "replace",
+                    "content": "timeout: 300",
+                    "validation": "grep -q 'timeout.*300' {config_file}"
+                },
+                {
+                    "type": "command",
+                    "description": "プロキシ設定を確認",
+                    "command": "echo $HTTP_PROXY $HTTPS_PROXY",
+                    "validation": "echo 'Check proxy configuration'"
+                }
+            ],
+            "risk_level": "low",
+            "estimated_time": "8分",
+            "success_rate": 0.70,
+            "prerequisites": [
+                "ネットワーク接続が利用可能であること"
+            ],
+            "validation_steps": [
+                "ネットワーク操作が正常に完了することを確認"
+            ]
+        },
+        {
+            "id": "dns_resolution_fix",
+            "name": "DNS解決修正",
+            "description": "DNS解決失敗エラーを修正",
+            "pattern_ids": [
+                "dns_resolution_failure"
+            ],
+            "fix_steps": [
+                {
+                    "type": "command",
+                    "description": "DNSサーバーを確認",
+                    "command": "nslookup {hostname} 8.8.8.8",
+                    "validation": "nslookup google.com 8.8.8.8"
+                },
+                {
+                    "type": "file_modification",
+                    "description": "/etc/resolv.confにDNSサーバーを追加",
+                    "file_path": "/etc/resolv.conf",
+                    "action": "append",
+                    "content": "nameserver 8.8.8.8\nnameserver 8.8.4.4",
+                    "validation": "grep -q '8.8.8.8' /etc/resolv.conf"
+                },
+                {
+                    "type": "command",
+                    "description": "DNSキャッシュをクリア",
+                    "command": "sudo systemctl restart systemd-resolved",
+                    "validation": "systemctl is-active systemd-resolved"
+                }
+            ],
+            "risk_level": "medium",
+            "estimated_time": "10分",
+            "success_rate": 0.65,
+            "prerequisites": [
+                "sudo権限があること"
+            ],
+            "validation_steps": [
+                "ホスト名が正常に解決されることを確認"
+            ]
+        },
+        {
+            "id": "ssl_certificate_fix",
+            "name": "SSL証明書修正",
+            "description": "SSL証明書検証エラーを修正",
+            "pattern_ids": [
+                "ssl_certificate_error"
+            ],
+            "fix_steps": [
+                {
+                    "type": "command",
+                    "description": "証明書の詳細を確認",
+                    "command": "openssl s_client -connect {hostname}:443 -servername {hostname}",
+                    "validation": "echo 'Review certificate details'"
+                },
+                {
+                    "type": "command",
+                    "description": "CA証明書を更新",
+                    "command": "sudo apt-get update && sudo apt-get install -y ca-certificates",
+                    "validation": "ls /etc/ssl/certs/ca-certificates.crt"
+                },
+                {
+                    "type": "file_modification",
+                    "description": "SSL検証を一時的に無効化（開発環境のみ）",
+                    "file_path": "{config_file}",
+                    "action": "append",
+                    "content": "ssl_verify: false",
+                    "validation": "grep -q 'ssl_verify.*false' {config_file}"
+                }
+            ],
+            "risk_level": "high",
+            "estimated_time": "15分",
+            "success_rate": 0.80,
+            "prerequisites": [
+                "opensslがインストールされていること"
+            ],
+            "validation_steps": [
+                "SSL接続が正常に確立されることを確認",
+                "本番環境ではSSL検証を有効に戻すことを確認"
+            ]
+        }
+    ]
+}

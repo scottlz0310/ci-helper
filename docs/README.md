@@ -229,6 +229,22 @@ user_feedback_enabled = true
 2. **中優先度**: 自動修正機能（利便性）
 3. **低優先度**: 学習機能（長期改善）
 
+## ドキュメント
+
+### パターン認識機能
+
+- [パターン認識機能使用ガイド](pattern-recognition-guide.md) - パターン認識機能の基本的な使用方法と設定
+- [カスタムパターン作成ガイド](custom-pattern-guide.md) - プロジェクト固有のエラーパターンの作成方法
+- [トラブルシューティングガイド](troubleshooting-pattern-recognition.md) - パターン認識機能の問題解決方法
+
+### その他のドキュメント
+
+- [AI設定ガイド](ai-configuration.md) - AI機能の設定方法
+- [AI統合ガイド](ai-integration.md) - AI機能の統合方法
+- [使用方法](usage.md) - CI-Helperの基本的な使用方法
+- [インストールガイド](installation.md) - インストール手順
+- [技術詳細](technical-details.md) - 技術的な詳細情報
+
 ## 次のステップ
 
 1. フェーズ1の詳細設計

@@ -51,6 +51,39 @@
             "validation_steps": [
                 "ファイルが実行可能であることを確認"
             ]
+        },
+        {
+            "id": "sudo_required_fix",
+            "name": "sudo権限必要エラー修正",
+            "description": "sudo権限が必要なコマンドの実行エラーを修正",
+            "pattern_ids": [
+                "sudo_required_error"
+            ],
+            "fix_steps": [
+                {
+                    "type": "file_modification",
+                    "description": ".actrcにDockerの特権モードを追加",
+                    "file_path": ".actrc",
+                    "action": "append",
+                    "content": "--privileged\n--userns=host",
+                    "validation": "grep -q 'privileged' .actrc"
+                },
+                {
+                    "type": "command",
+                    "description": "sudoを使わない代替コマンドを確認",
+                    "command": "echo 'Consider using rootless alternatives'",
+                    "validation": "echo 'Manual verification required'"
+                }
+            ],
+            "risk_level": "medium",
+            "estimated_time": "5分",
+            "success_rate": 0.75,
+            "prerequisites": [
+                ".actrcファイルが存在すること"
+            ],
+            "validation_steps": [
+                "act実行時にsudo権限エラーが発生しないことを確認"
+            ]
         }
     ]
 }

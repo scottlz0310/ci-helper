@@ -1,0 +1,84 @@
+[
+  {
+    "timestamp": "2025-10-23T22:15:17.920145",
+    "log_content_hash": 1218777695703844808,
+    "log_length": 144,
+    "error_features": {
+      "error_keywords": [
+        "access",
+        "failed",
+        "denied",
+        "permission",
+        "error"
+      ],
+      "file_paths": [
+        "/var/log/test.log"
+      ],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "permission_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_permission_error_20251023_221517",
+      "name": "自動生成パターン: permission_error",
+      "category": "permission_error",
+      "regex_patterns": [
+        "Error:\\ Permission\\ denied\\ when\\ accessing\\ /[^/\\s]+/[^/\\s]+/[^/\\s]+st\\.log",
+        "Failed\\ to\\ execute\\ command:\\ docker\\ run\\ \\-\\-rm\\ test\\-image"
+      ],
+      "keywords": [
+        "access",
+        "failed",
+        "denied",
+        "permission",
+        "error"
+      ],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": 1218777695703844808,
+      "created_at": "2025-10-23T22:15:17.920141"
+    },
+    "occurrence_count": 1
+  },
+  {
+    "timestamp": "2025-10-23T22:15:17.920552",
+    "log_content_hash": -4080189379267680538,
+    "log_length": 133,
+    "error_features": {
+      "error_keywords": [
+        "error",
+        "exception"
+      ],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "unknown_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_unknown_error_20251023_221517",
+      "name": "自動生成パターン: unknown_error",
+      "category": "unknown_error",
+      "regex_patterns": [
+        "ERROR:\\ Could\\ not\\ find\\ or\\ load\\ main\\ class\\ com\\.example\\.Main",
+        "Caused\\ by:\\ java\\.lang\\.ClassNotFoundException:\\ com\\.example\\.Main"
+      ],
+      "keywords": [
+        "error",
+        "exception"
+      ],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": -4080189379267680538,
+      "created_at": "2025-10-23T22:15:17.920549"
+    },
+    "occurrence_count": 1
+  }
+]

@@ -1,0 +1,147 @@
+{
+    "patterns": [
+        {
+            "id": "test_failure_assertion",
+            "name": "テスト失敗（アサーション）",
+            "category": "test",
+            "regex_patterns": [
+                "AssertionError: .*",
+                "Test failed: .*",
+                "Expected .*, but got .*",
+                "FAIL: .*"
+            ],
+            "keywords": [
+                "AssertionError",
+                "Test failed",
+                "Expected",
+                "FAIL:"
+            ],
+            "context_requirements": [
+                "test",
+                "assertion",
+                "expected"
+            ],
+            "confidence_base": 0.90,
+            "success_rate": 0.70,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "test_timeout",
+            "name": "テストタイムアウト",
+            "category": "test",
+            "regex_patterns": [
+                "Test timed out after \\d+ seconds",
+                "Timeout: .*",
+                "Test exceeded maximum time"
+            ],
+            "keywords": [
+                "Test timed out",
+                "Timeout:",
+                "exceeded maximum time"
+            ],
+            "context_requirements": [
+                "test",
+                "timeout",
+                "time"
+            ],
+            "confidence_base": 0.88,
+            "success_rate": 0.75,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "jest_test_failure",
+            "name": "Jestテスト失敗",
+            "category": "test",
+            "regex_patterns": [
+                "FAIL .*\\.test\\.(js|ts)",
+                "● .*",
+                "Tests: \\d+ failed"
+            ],
+            "keywords": [
+                "FAIL",
+                "test.js",
+                "test.ts",
+                "Tests: .* failed"
+            ],
+            "context_requirements": [
+                "jest",
+                "test",
+                "javascript"
+            ],
+            "confidence_base": 0.85,
+            "success_rate": 0.72,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "pytest_failure",
+            "name": "pytestテスト失敗",
+            "category": "test",
+            "regex_patterns": [
+                "FAILED .*::.*",
+                "E   .*",
+                "=+ FAILURES =+"
+            ],
+            "keywords": [
+                "FAILED",
+                "FAILURES",
+                "pytest"
+            ],
+            "context_requirements": [
+                "pytest",
+                "test",
+                "python"
+            ],
+            "confidence_base": 0.87,
+            "success_rate": 0.74,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        },
+        {
+            "id": "coverage_threshold_error",
+            "name": "カバレッジ閾値エラー",
+            "category": "test",
+            "regex_patterns": [
+                "Coverage threshold for .* not met",
+                "Coverage .* is below threshold",
+                "Insufficient coverage"
+            ],
+            "keywords": [
+                "Coverage threshold",
+                "below threshold",
+                "Insufficient coverage"
+            ],
+            "context_requirements": [
+                "coverage",
+                "threshold",
+                "test"
+            ],
+            "confidence_base": 0.92,
+            "success_rate": 0.80,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "manual",
+            "occurrence_count": 0
+        }
+    ]
+}

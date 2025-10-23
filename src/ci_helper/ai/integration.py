@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator
 from datetime import datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from ..core.models import FailureType
@@ -191,7 +192,7 @@ class AIIntegration:
             # パターン認識エンジンを初期化
             from .pattern_engine import PatternRecognitionEngine
 
-            pattern_data_dir = self.config.get_path("cache_dir").parent / "test_data"
+            pattern_data_dir = Path("data/patterns")
             self.pattern_engine = PatternRecognitionEngine(
                 data_directory=pattern_data_dir,
                 confidence_threshold=0.7,  # デフォルト信頼度閾値
@@ -306,15 +307,24 @@ class AIIntegration:
             # ログ内容を前処理
             formatted_log = await self._preprocess_log(log_content)
 
-            # パターン認識を実行
-            pattern_matches = []
+            # パターン認識を実行（フォールバック機能付き）
+            pattern_analysis_result = None
             if hasattr(self, "pattern_engine") and self.pattern_engine:
                 try:
-                    pattern_matches = await self.pattern_engine.analyze_log(formatted_log)
-                    if pattern_matches:
-                        logger.info("パターン認識で %d 個のパターンを検出", len(pattern_matches))
+                    pattern_analysis_result = await self.pattern_engine.analyze_with_fallback(formatted_log)
+                    if pattern_analysis_result.pattern_matches:
+                        logger.info(
+                            "パターン認識で %d 個のパターンを検出", len(pattern_analysis_result.pattern_matches)
+                        )
+                    elif pattern_analysis_result.status == AnalysisStatus.FALLBACK:
+                        logger.info("パターン認識フォールバック処理を実行")
+                    elif pattern_analysis_result.status == AnalysisStatus.LOW_CONFIDENCE:
+                        logger.info("低信頼度パターンを検出")
                 except Exception as pattern_error:
                     logger.warning("パターン認識中にエラー: %s", pattern_error)
+                    # 不正な形式のログファイルの場合の処理
+                    if "format" in str(pattern_error).lower() or "encoding" in str(pattern_error).lower():
+                        pattern_analysis_result = self.pattern_engine.handle_malformed_log(formatted_log, pattern_error)
 
             # キャッシュをチェック
             cached_result = None
@@ -336,6 +346,16 @@ class AIIntegration:
                     # キャッシュ読み込みエラーは警告を出すが継続する
                     logger.warning("キャッシュ読み込みに失敗しました: %s", cache_error)
 
+            # パターン認識がフォールバック結果を提供した場合はそれを返す
+            if (
+                pattern_analysis_result
+                and pattern_analysis_result.status in [AnalysisStatus.FALLBACK, AnalysisStatus.LOW_CONFIDENCE]
+                and not options.force_ai_analysis
+            ):
+                logger.info("パターン認識フォールバック結果を返します")
+                pattern_analysis_result.analysis_time = (datetime.now() - start_time).total_seconds()
+                return pattern_analysis_result
+
             # プロンプトを生成
             prompt = self._generate_analysis_prompt(formatted_log, options)
 
@@ -353,13 +373,13 @@ class AIIntegration:
             result.status = AnalysisStatus.COMPLETED
 
             # パターン認識結果を追加
-            if pattern_matches:
+            if pattern_analysis_result and pattern_analysis_result.pattern_matches:
                 # パターンマッチ結果をAnalysisResultに保存
-                result.pattern_matches = pattern_matches
+                result.pattern_matches = pattern_analysis_result.pattern_matches
 
                 # パターン情報をサマリーに追加
                 pattern_info = []
-                for match in pattern_matches:
+                for match in pattern_analysis_result.pattern_matches:
                     pattern_info.append(f"- {match.pattern.name} (信頼度: {match.confidence:.1%})")
 
                 if pattern_info:

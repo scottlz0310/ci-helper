@@ -34,8 +34,7 @@
             "name": "環境変数設定エラー修正",
             "description": "不足している環境変数を設定",
             "pattern_ids": [
-                "env_var_not_set",
-                "missing_environment_variable"
+                "env_var_not_set"
             ],
             "fix_steps": [
                 {
@@ -55,6 +54,208 @@
             ],
             "validation_steps": [
                 "環境変数が正しく設定されていることを確認"
+            ]
+        },
+        {
+            "id": "action_not_found_fix",
+            "name": "GitHub Actionが見つからないエラー修正",
+            "description": "存在しないまたは無効なGitHub Actionの参照を修正",
+            "pattern_ids": [
+                "action_not_found"
+            ],
+            "fix_steps": [
+                {
+                    "type": "file_modification",
+                    "description": "ワークフローファイルのアクション参照を修正",
+                    "file_path": "{workflow_file}",
+                    "action": "replace",
+                    "content": "uses: actions/checkout@v4",
+                    "validation": "grep -q 'actions/checkout@v4' {workflow_file}"
+                },
+                {
+                    "type": "command",
+                    "description": "アクションの存在を確認",
+                    "command": "curl -s https://api.github.com/repos/{action_repo}/releases/latest",
+                    "validation": "echo 'Verify action exists'"
+                }
+            ],
+            "risk_level": "low",
+            "estimated_time": "5分",
+            "success_rate": 0.85,
+            "prerequisites": [
+                "ワークフローファイルが存在すること"
+            ],
+            "validation_steps": [
+                "act --dryrun でエラーが発生しないことを確認"
+            ]
+        },
+        {
+            "id": "checkout_action_fix",
+            "name": "checkoutアクションエラー修正",
+            "description": "リポジトリのcheckoutエラーを修正",
+            "pattern_ids": [
+                "checkout_action_error"
+            ],
+            "fix_steps": [
+                {
+                    "type": "file_modification",
+                    "description": "checkoutアクションのバージョンを更新",
+                    "file_path": "{workflow_file}",
+                    "action": "replace",
+                    "content": "uses: actions/checkout@v4\nwith:\n  fetch-depth: 0",
+                    "validation": "grep -q 'actions/checkout@v4' {workflow_file}"
+                },
+                {
+                    "type": "command",
+                    "description": "Gitリポジトリの状態を確認",
+                    "command": "git status",
+                    "validation": "git rev-parse --git-dir"
+                }
+            ],
+            "risk_level": "low",
+            "estimated_time": "3分",
+            "success_rate": 0.78,
+            "prerequisites": [
+                "Gitリポジトリが初期化されていること"
+            ],
+            "validation_steps": [
+                "checkoutアクションが正常に動作することを確認"
+            ]
+        },
+        {
+            "id": "setup_node_version_fix",
+            "name": "setup-nodeバージョンエラー修正",
+            "description": "Node.jsバージョン設定エラーを修正",
+            "pattern_ids": [
+                "setup_node_version_error"
+            ],
+            "fix_steps": [
+                {
+                    "type": "file_modification",
+                    "description": "Node.jsバージョンを利用可能なバージョンに更新",
+                    "file_path": "{workflow_file}",
+                    "action": "replace",
+                    "content": "uses: actions/setup-node@v4\nwith:\n  node-version: '20'",
+                    "validation": "grep -q 'node-version.*20' {workflow_file}"
+                },
+                {
+                    "type": "file_modification",
+                    "description": ".nvmrcファイルでバージョンを指定",
+                    "file_path": ".nvmrc",
+                    "action": "create",
+                    "content": "20",
+                    "validation": "cat .nvmrc"
+                }
+            ],
+            "risk_level": "low",
+            "estimated_time": "4分",
+            "success_rate": 0.82,
+            "prerequisites": [
+                "ワークフローファイルが存在すること"
+            ],
+            "validation_steps": [
+                "setup-nodeアクションが正常に動作することを確認"
+            ]
+        },
+        {
+            "id": "setup_python_version_fix",
+            "name": "setup-pythonバージョンエラー修正",
+            "description": "Pythonバージョン設定エラーを修正",
+            "pattern_ids": [
+                "setup_python_version_error"
+            ],
+            "fix_steps": [
+                {
+                    "type": "file_modification",
+                    "description": "Pythonバージョンを利用可能なバージョンに更新",
+                    "file_path": "{workflow_file}",
+                    "action": "replace",
+                    "content": "uses: actions/setup-python@v5\nwith:\n  python-version: '3.12'",
+                    "validation": "grep -q 'python-version.*3.12' {workflow_file}"
+                },
+                {
+                    "type": "file_modification",
+                    "description": ".python-versionファイルでバージョンを指定",
+                    "file_path": ".python-version",
+                    "action": "create",
+                    "content": "3.12",
+                    "validation": "cat .python-version"
+                }
+            ],
+            "risk_level": "low",
+            "estimated_time": "4分",
+            "success_rate": 0.80,
+            "prerequisites": [
+                "ワークフローファイルが存在すること"
+            ],
+            "validation_steps": [
+                "setup-pythonアクションが正常に動作することを確認"
+            ]
+        },
+        {
+            "id": "cache_action_fix",
+            "name": "cacheアクションエラー修正",
+            "description": "キャッシュアクションのエラーを修正",
+            "pattern_ids": [
+                "cache_action_error"
+            ],
+            "fix_steps": [
+                {
+                    "type": "file_modification",
+                    "description": "キャッシュパスを修正",
+                    "file_path": "{workflow_file}",
+                    "action": "replace",
+                    "content": "uses: actions/cache@v4\nwith:\n  path: |\n    ~/.cache/pip\n    ~/.cache/uv\n  key: ${{ runner.os }}-cache-${{ hashFiles('**/pyproject.toml') }}",
+                    "validation": "grep -q 'actions/cache@v4' {workflow_file}"
+                },
+                {
+                    "type": "command",
+                    "description": "キャッシュディレクトリを作成",
+                    "command": "mkdir -p ~/.cache/pip ~/.cache/uv",
+                    "validation": "ls -la ~/.cache/"
+                }
+            ],
+            "risk_level": "low",
+            "estimated_time": "6分",
+            "success_rate": 0.75,
+            "prerequisites": [
+                "ワークフローファイルが存在すること"
+            ],
+            "validation_steps": [
+                "キャッシュアクションが正常に動作することを確認"
+            ]
+        },
+        {
+            "id": "artifact_upload_fix",
+            "name": "アーティファクトアップロードエラー修正",
+            "description": "アーティファクトのアップロードエラーを修正",
+            "pattern_ids": [
+                "artifact_upload_error"
+            ],
+            "fix_steps": [
+                {
+                    "type": "command",
+                    "description": "アーティファクトファイルの存在を確認",
+                    "command": "find . -name '{artifact_pattern}' -type f",
+                    "validation": "ls -la {artifact_path}"
+                },
+                {
+                    "type": "file_modification",
+                    "description": "アーティファクトアップロード設定を修正",
+                    "file_path": "{workflow_file}",
+                    "action": "replace",
+                    "content": "uses: actions/upload-artifact@v4\nwith:\n  name: {artifact_name}\n  path: {artifact_path}\n  if-no-files-found: warn",
+                    "validation": "grep -q 'upload-artifact@v4' {workflow_file}"
+                }
+            ],
+            "risk_level": "low",
+            "estimated_time": "5分",
+            "success_rate": 0.77,
+            "prerequisites": [
+                "アーティファクトファイルが生成されること"
+            ],
+            "validation_steps": [
+                "アーティファクトが正常にアップロードされることを確認"
             ]
         }
     ]

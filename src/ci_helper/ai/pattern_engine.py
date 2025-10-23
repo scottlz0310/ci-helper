@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .confidence_calculator import ConfidenceCalculator
-from .models import Pattern, PatternMatch
+from .models import AnalysisResult, Pattern, PatternMatch, RootCause
 from .pattern_database import PatternDatabase
 from .pattern_matcher import PatternMatcher
 
@@ -46,6 +46,12 @@ class PatternRecognitionEngine:
         self.pattern_matcher = PatternMatcher()
         self.confidence_calculator = ConfidenceCalculator()
 
+        # PatternFallbackHandlerを遅延インポート
+        from .pattern_fallback_handler import PatternFallbackHandler
+
+        self.fallback_handler = PatternFallbackHandler(data_directory)
+        self.learning_engine = None  # 遅延初期化
+
         self._initialized = False
 
     async def initialize(self) -> None:
@@ -57,6 +63,19 @@ class PatternRecognitionEngine:
 
         # パターンデータベースを読み込み
         await self.pattern_database.load_patterns()
+
+        # 学習エンジンを初期化
+        if self.learning_engine is None:
+            from .learning_engine import LearningEngine
+
+            self.learning_engine = LearningEngine(
+                pattern_database=self.pattern_database,
+                learning_data_dir=self.data_directory,
+            )
+            await self.learning_engine.initialize()
+
+        # フォールバックハンドラーに学習エンジンを設定
+        self.fallback_handler.learning_engine = self.learning_engine
 
         self._initialized = True
         logger.info("パターン認識エンジンの初期化完了 (パターン数: %d)", len(self.pattern_database.patterns))
@@ -405,6 +424,148 @@ class PatternRecognitionEngine:
             await self.pattern_database.save_patterns()
 
         logger.info("パターン認識エンジンのクリーンアップ完了")
+
+    async def analyze_with_fallback(self, log_content: str, options: dict[str, Any] | None = None) -> AnalysisResult:
+        """フォールバック機能付きでログを分析
+
+        Args:
+            log_content: 分析対象のログ内容
+            options: 分析オプション
+
+        Returns:
+            分析結果（フォールバック含む）
+        """
+        try:
+            # 通常のパターン分析を実行
+            pattern_matches = await self.analyze_log(log_content, options)
+
+            if not pattern_matches:
+                # パターンマッチが全くない場合はフォールバック処理
+                logger.info("パターンマッチなし - フォールバック処理を実行")
+                fallback_result = self.fallback_handler.handle_pattern_recognition_failure(
+                    log_content, [], self.confidence_threshold
+                )
+
+                # 学習エンジンに未知エラー情報を送信
+                if self.learning_engine and fallback_result.unknown_error_info.get("_needs_learning_processing"):
+                    try:
+                        await self.learning_engine.process_unknown_error(fallback_result.unknown_error_info)
+                        logger.info("未知エラー情報を学習エンジンに送信しました")
+                    except Exception as learning_error:
+                        logger.warning("学習エンジンへの未知エラー送信に失敗: %s", learning_error)
+
+                return fallback_result
+
+            # 信頼度が閾値を下回る場合の処理
+            high_confidence_matches = [m for m in pattern_matches if m.confidence >= self.confidence_threshold]
+
+            if not high_confidence_matches:
+                logger.info("信頼度不足 - 低信頼度パターン処理を実行")
+                return self.fallback_handler.handle_low_confidence_patterns(
+                    pattern_matches, self.confidence_threshold, log_content
+                )
+
+            # 通常の成功結果を作成
+            from datetime import datetime
+
+            from .models import AnalysisResult, AnalysisStatus
+
+            return AnalysisResult(
+                summary=f"{len(high_confidence_matches)}個の高信頼度パターンが検出されました。",
+                root_causes=[
+                    RootCause(
+                        category=match.pattern.category,
+                        description=match.pattern.name,
+                        confidence=match.confidence,
+                    )
+                    for match in high_confidence_matches
+                ],
+                fix_suggestions=[],  # 修正提案は別のコンポーネントで生成
+                related_errors=[match.extracted_context for match in high_confidence_matches],
+                confidence_score=sum(m.confidence for m in high_confidence_matches) / len(high_confidence_matches),
+                analysis_time=0.0,
+                tokens_used=None,
+                status=AnalysisStatus.COMPLETED,
+                timestamp=datetime.now(),
+                provider="pattern_engine",
+                model="pattern_recognition",
+                cache_hit=False,
+                pattern_matches=high_confidence_matches,
+            )
+
+        except Exception as e:
+            logger.error("パターン認識中にエラーが発生: %s", e)
+            # エラー時のフォールバック処理
+            fallback_result = self.fallback_handler.handle_pattern_recognition_failure(
+                log_content, [], self.confidence_threshold, error=e
+            )
+
+            # 学習エンジンに未知エラー情報を送信
+            if self.learning_engine and fallback_result.unknown_error_info.get("_needs_learning_processing"):
+                try:
+                    await self.learning_engine.process_unknown_error(fallback_result.unknown_error_info)
+                    logger.info("未知エラー情報を学習エンジンに送信しました")
+                except Exception as learning_error:
+                    logger.warning("学習エンジンへの未知エラー送信に失敗: %s", learning_error)
+
+            return fallback_result
+
+    def handle_malformed_log(self, log_content: str, error: Exception) -> AnalysisResult:
+        """不正な形式のログファイルを処理
+
+        Args:
+            log_content: ログ内容
+            error: 発生したエラー
+
+        Returns:
+            処理結果
+        """
+        logger.warning("不正な形式のログファイルを検出: %s", error)
+        return self.fallback_handler.handle_malformed_log(log_content, error)
+
+    async def get_pattern_suggestions_from_unknown_errors(self) -> list[dict[str, Any]]:
+        """未知エラーから新しいパターンの提案を取得
+
+        Returns:
+            パターン提案のリスト
+        """
+        if not self._initialized:
+            await self.initialize()
+
+        if self.learning_engine:
+            return await self.learning_engine.get_pattern_suggestions_from_unknown_errors()
+        else:
+            logger.warning("学習エンジンが初期化されていません")
+            return []
+
+    async def promote_potential_pattern(self, pattern_id: str) -> bool:
+        """潜在的なパターンを正式なパターンデータベースに昇格
+
+        Args:
+            pattern_id: パターンID
+
+        Returns:
+            昇格成功の場合True
+        """
+        if not self._initialized:
+            await self.initialize()
+
+        if self.learning_engine:
+            return await self.learning_engine.promote_potential_pattern_to_official(pattern_id)
+        else:
+            logger.warning("学習エンジンが初期化されていません")
+            return False
+
+    def get_unknown_error_statistics(self) -> dict[str, Any]:
+        """未知エラーの統計情報を取得
+
+        Returns:
+            統計情報
+        """
+        if self.learning_engine:
+            return self.learning_engine.get_unknown_error_statistics()
+        else:
+            return {"error": "学習エンジンが初期化されていません"}
 
     def __str__(self) -> str:
         """文字列表現"""

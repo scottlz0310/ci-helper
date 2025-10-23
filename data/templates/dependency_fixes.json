@@ -32,8 +32,7 @@
             "name": "Node.js依存関係エラー修正",
             "description": "Node.jsパッケージの依存関係エラーを修正",
             "pattern_ids": [
-                "node_module_not_found",
-                "npm_install_error"
+                "node_module_not_found"
             ],
             "fix_steps": [
                 {
@@ -52,6 +51,139 @@
             ],
             "validation_steps": [
                 "パッケージがnode_modulesに存在することを確認"
+            ]
+        },
+        {
+            "id": "npm_install_fix",
+            "name": "NPMインストールエラー修正",
+            "description": "NPMパッケージのインストールエラーを修正",
+            "pattern_ids": [
+                "npm_install_error"
+            ],
+            "fix_steps": [
+                {
+                    "type": "command",
+                    "description": "NPMキャッシュをクリア",
+                    "command": "npm cache clean --force",
+                    "validation": "npm cache verify"
+                },
+                {
+                    "type": "command",
+                    "description": "node_modulesを削除して再インストール",
+                    "command": "rm -rf node_modules package-lock.json && npm install",
+                    "validation": "npm list"
+                }
+            ],
+            "risk_level": "medium",
+            "estimated_time": "8分",
+            "success_rate": 0.85,
+            "prerequisites": [
+                "package.jsonファイルが存在すること"
+            ],
+            "validation_steps": [
+                "npm installが正常に完了することを確認"
+            ]
+        },
+        {
+            "id": "pip_install_fix",
+            "name": "pipインストールエラー修正",
+            "description": "Pythonパッケージのpipインストールエラーを修正",
+            "pattern_ids": [
+                "pip_install_error"
+            ],
+            "fix_steps": [
+                {
+                    "type": "command",
+                    "description": "pipを最新バージョンに更新",
+                    "command": "uv run python -m pip install --upgrade pip",
+                    "validation": "uv run python -m pip --version"
+                },
+                {
+                    "type": "command",
+                    "description": "uvを使用してパッケージをインストール",
+                    "command": "uv add {package_name}",
+                    "validation": "uv run python -c 'import {package_name}'"
+                }
+            ],
+            "risk_level": "medium",
+            "estimated_time": "5分",
+            "success_rate": 0.88,
+            "prerequisites": [
+                "uvがインストールされていること",
+                "pyproject.tomlファイルが存在すること"
+            ],
+            "validation_steps": [
+                "パッケージが正常にインポートできることを確認"
+            ]
+        },
+        {
+            "id": "gem_install_fix",
+            "name": "gemインストールエラー修正",
+            "description": "Rubyパッケージのgemインストールエラーを修正",
+            "pattern_ids": [
+                "gem_install_error"
+            ],
+            "fix_steps": [
+                {
+                    "type": "command",
+                    "description": "Bundlerを使用して依存関係をインストール",
+                    "command": "bundle install",
+                    "validation": "bundle check"
+                },
+                {
+                    "type": "command",
+                    "description": "gemを個別にインストール",
+                    "command": "gem install {gem_name}",
+                    "validation": "gem list {gem_name}"
+                }
+            ],
+            "risk_level": "medium",
+            "estimated_time": "6分",
+            "success_rate": 0.78,
+            "prerequisites": [
+                "Rubyがインストールされていること",
+                "Gemfileが存在すること（Bundler使用時）"
+            ],
+            "validation_steps": [
+                "gemが正常にインストールされていることを確認"
+            ]
+        },
+        {
+            "id": "composer_dependency_fix",
+            "name": "Composer依存関係エラー修正",
+            "description": "PHPパッケージのComposer依存関係エラーを修正",
+            "pattern_ids": [
+                "composer_dependency_error"
+            ],
+            "fix_steps": [
+                {
+                    "type": "command",
+                    "description": "Composerの依存関係を更新",
+                    "command": "composer update",
+                    "validation": "composer validate"
+                },
+                {
+                    "type": "command",
+                    "description": "Composerキャッシュをクリア",
+                    "command": "composer clear-cache",
+                    "validation": "composer diagnose"
+                },
+                {
+                    "type": "command",
+                    "description": "依存関係を再インストール",
+                    "command": "rm -rf vendor && composer install",
+                    "validation": "composer check-platform-reqs"
+                }
+            ],
+            "risk_level": "medium",
+            "estimated_time": "10分",
+            "success_rate": 0.82,
+            "prerequisites": [
+                "composer.jsonファイルが存在すること",
+                "Composerがインストールされていること"
+            ],
+            "validation_steps": [
+                "composer installが正常に完了することを確認"
             ]
         }
     ]

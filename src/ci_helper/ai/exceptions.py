@@ -170,3 +170,23 @@ class FixApplicationError(AIError):
             "バックアップからロールバックを実行してください",
         )
         self.rollback_info = rollback_info
+
+
+class PatternRecognitionError(AnalysisError):
+    """パターン認識関連のエラー"""
+
+    def __init__(self, message: str, log_path: str | None = None, confidence: float = 0.0):
+        super().__init__(message, log_path)
+        self.confidence = confidence
+
+
+class UnknownErrorError(AIError):
+    """未知エラー処理関連のエラー"""
+
+    def __init__(self, message: str, error_category: str | None = None):
+        super().__init__(
+            message,
+            f"エラーカテゴリ: {error_category}" if error_category else None,
+            "ログの詳細を確認し、手動で調査してください",
+        )
+        self.error_category = error_category
