@@ -267,7 +267,7 @@ class AIProvider(ABC):
 class ProviderFactory:
     """AIプロバイダーのファクトリークラス"""
 
-    _providers: dict[str, type[AIProvider]] = {}
+    _providers: ClassVar[dict[str, type[AIProvider]]] = {}
 
     @classmethod
     def register_provider(cls, name: str, provider_class: type[AIProvider]) -> None:

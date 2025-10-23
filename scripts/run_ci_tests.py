@@ -31,22 +31,19 @@ def run_command(cmd: list[str], timeout: int = 300) -> subprocess.CompletedProce
     Returns:
         実行結果
     """
-    print(f"実行中: {' '.join(cmd)}")
-    start_time = time.time()
+    time.time()
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, cwd=project_root)
 
-        end_time = time.time()
-        print(f"完了 ({end_time - start_time:.2f}秒): 終了コード {result.returncode}")
+        time.time()
 
         if result.returncode != 0:
-            print(f"エラー出力:\n{result.stderr}")
+            pass
 
         return result
 
     except subprocess.TimeoutExpired:
-        print(f"タイムアウト: {timeout}秒")
         raise
 
 
@@ -61,7 +58,6 @@ def run_unit_tests(coverage: bool = True, parallel: bool = True) -> bool:
     Returns:
         成功したかどうか
     """
-    print("\n=== ユニットテスト実行 ===")
 
     cmd = ["uv", "run", "pytest", "tests/unit/"]
 
@@ -91,7 +87,6 @@ def run_integration_tests() -> bool:
     Returns:
         成功したかどうか
     """
-    print("\n=== 統合テスト実行 ===")
 
     cmd = ["uv", "run", "pytest", "tests/integration/", "-v", "--tb=short", "-m", "not slow"]
 
@@ -106,7 +101,6 @@ def run_performance_tests() -> dict:
     Returns:
         パフォーマンス結果
     """
-    print("\n=== パフォーマンステスト実行 ===")
 
     monitor = PerformanceMonitor(Path("test_results"))
 
@@ -117,17 +111,15 @@ def run_performance_tests() -> dict:
         "tests/unit/ai/test_error_handler.py::TestErrorTypeHandling::test_api_key_error_handling",
     ]
 
-    metrics = monitor.run_test_suite_monitoring(critical_tests)
+    monitor.run_test_suite_monitoring(critical_tests)
 
     # 結果を保存
-    results_file = monitor.save_metrics("ci_performance_metrics.json")
-    print(f"パフォーマンス結果を保存: {results_file}")
+    monitor.save_metrics("ci_performance_metrics.json")
 
     # レポートを生成
     report = monitor.generate_report()
     report_file = Path("test_results") / "ci_performance_report.md"
     report_file.write_text(report, encoding="utf-8")
-    print(f"パフォーマンスレポートを生成: {report_file}")
 
     return monitor.analyze_performance()
 
@@ -139,11 +131,9 @@ def check_coverage_targets() -> bool:
     Returns:
         目標を達成したかどうか
     """
-    print("\n=== カバレッジ目標確認 ===")
 
     coverage_file = Path("coverage.json")
     if not coverage_file.exists():
-        print("カバレッジファイルが見つかりません")
         return False
 
     with open(coverage_file) as f:
@@ -161,26 +151,21 @@ def check_coverage_targets() -> bool:
     for file_path, target_coverage in targets.items():
         if file_path in coverage_data["files"]:
             actual_coverage = coverage_data["files"][file_path]["summary"]["percent_covered"]
-            print(f"{file_path}: {actual_coverage:.1f}% (目標: {target_coverage}%)")
 
             if actual_coverage < target_coverage:
-                print("  ❌ 目標未達成")
                 all_targets_met = False
             else:
-                print("  ✅ 目標達成")
+                pass
         else:
-            print(f"{file_path}: ファイルが見つかりません")
             all_targets_met = False
 
     # 全体カバレッジも確認
     total_coverage = coverage_data["totals"]["percent_covered"]
     total_target = 20.0  # 現在20%から向上目標
 
-    print(f"\n全体カバレッジ: {total_coverage:.1f}% (目標: {total_target}%)")
     if total_coverage >= total_target:
-        print("✅ 全体カバレッジ目標達成")
+        pass
     else:
-        print("❌ 全体カバレッジ目標未達成")
         all_targets_met = False
 
     return all_targets_met
@@ -193,7 +178,6 @@ def run_linting_and_formatting() -> bool:
     Returns:
         成功したかどうか
     """
-    print("\n=== リンティング・フォーマットチェック ===")
 
     # Ruffチェック
     ruff_check = run_command(["uv", "run", "ruff", "check", "src/", "tests/"])
@@ -226,14 +210,12 @@ def main():
 
     args = parser.parse_args()
 
-    print("CI/CDテスト実行を開始...")
     start_time = time.time()
 
     success = True
 
     # 高速モードの場合は最小限のテストのみ
     if args.fast:
-        print("高速モードで実行中...")
         args.skip_integration = True
         args.skip_performance = True
         args.no_parallel = True
@@ -241,19 +223,16 @@ def main():
     # リンティング・フォーマットチェック
     if not args.skip_linting:
         if not run_linting_and_formatting():
-            print("❌ リンティング・フォーマットチェックが失敗しました")
             success = False
 
     # ユニットテスト
     if not args.skip_unit:
         if not run_unit_tests(coverage=not args.no_coverage, parallel=not args.no_parallel):
-            print("❌ ユニットテストが失敗しました")
             success = False
 
     # 統合テスト
     if not args.skip_integration:
         if not run_integration_tests():
-            print("❌ 統合テストが失敗しました")
             success = False
 
     # パフォーマンステスト
@@ -261,30 +240,22 @@ def main():
         try:
             performance_results = run_performance_tests()
             if not performance_results.get("benchmark_passed", False):
-                print("❌ パフォーマンスベンチマークが失敗しました")
                 success = False
-        except Exception as e:
-            print(f"❌ パフォーマンステストでエラー: {e}")
+        except Exception:
             success = False
 
     # カバレッジ目標確認
     if not args.no_coverage and not args.skip_unit:
         if not check_coverage_targets():
-            print("❌ カバレッジ目標が未達成です")
             success = False
 
     # 結果サマリー
     end_time = time.time()
-    total_time = end_time - start_time
-
-    print("\n=== 実行結果サマリー ===")
-    print(f"総実行時間: {total_time:.2f}秒")
+    end_time - start_time
 
     if success:
-        print("✅ 全てのテストが成功しました")
         sys.exit(0)
     else:
-        print("❌ 一部のテストが失敗しました")
         sys.exit(1)
 
 

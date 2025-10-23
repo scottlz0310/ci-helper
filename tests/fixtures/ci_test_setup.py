@@ -155,7 +155,7 @@ class CITestHelper:
         return lambda func: func
 
     @staticmethod
-    def create_test_log_file(temp_dir: Path, content: str = None) -> Path:
+    def create_test_log_file(temp_dir: Path, content: str | None = None) -> Path:
         """テスト用ログファイルを作成"""
         if content is None:
             content = """
@@ -171,7 +171,7 @@ Process completed with exit code 1
         return log_file
 
     @staticmethod
-    def create_test_config_file(temp_dir: Path, config_content: str = None) -> Path:
+    def create_test_config_file(temp_dir: Path, config_content: str | None = None) -> Path:
         """テスト用設定ファイルを作成"""
         if config_content is None:
             config_content = """
@@ -256,10 +256,9 @@ def measure_performance(func):
 
             return result
 
-        except Exception as e:
+        except Exception:
             end_time = time.time()
             execution_time = end_time - start_time
-            print(f"Test failed after {execution_time:.2f}s: {e}")
             raise
 
     return wrapper

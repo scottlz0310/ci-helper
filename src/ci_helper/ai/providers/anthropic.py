@@ -23,7 +23,7 @@ class AnthropicProvider(AIProvider):
     """Anthropic Claude APIプロバイダー"""
 
     # モデル別のトークン制限
-    MODEL_LIMITS: Dict[str, int] = {
+    MODEL_LIMITS: ClassVar[dict[str, int]] = {
         "claude-3-5-sonnet-20241022": 200000,
         "claude-3-5-haiku-20241022": 200000,
         "claude-3-opus-20240229": 200000,
@@ -32,7 +32,7 @@ class AnthropicProvider(AIProvider):
     }
 
     # モデル別の料金（USD per 1K tokens）
-    MODEL_COSTS: Dict[str, Dict[str, float]] = {
+    MODEL_COSTS: ClassVar[dict[str, dict[str, float]]] = {
         "claude-3-5-sonnet-20241022": {"input": 0.003, "output": 0.015},
         "claude-3-5-haiku-20241022": {"input": 0.00025, "output": 0.00125},
         "claude-3-opus-20240229": {"input": 0.015, "output": 0.075},
@@ -311,7 +311,7 @@ class AnthropicProvider(AIProvider):
         summary = content.strip()
 
         # ## 分析結果の後の最初のテキストブロックを要約として抽出
-        match = re.search(r'##\s*分析結果\s*\n+(.+?)(?:\n\n|$)', content, re.DOTALL)
+        match = re.search(r"##\s*分析結果\s*\n+(.+?)(?:\n\n|$)", content, re.DOTALL)
         if match:
             summary = match.group(1).strip()
         else:

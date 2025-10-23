@@ -152,7 +152,7 @@ AssertionError: Expected 200, got 404
             with patch.object(fallback_handler, "_perform_traditional_analysis") as mock_traditional:
                 mock_traditional.return_value = {"summary": "Retry successful", "errors": []}
 
-                result = await fallback_handler._attempt_auto_retry(
+                await fallback_handler._attempt_auto_retry(
                     error, sample_log_content, sample_analyze_options, operation_id
                 )
 

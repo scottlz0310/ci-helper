@@ -437,8 +437,13 @@ TimeoutError: Database connection timed out after 30 seconds
 
             # OpenAIが利用不可、Anthropicは利用可能
             with (
-                patch("src.ci_helper.ai.providers.openai.OpenAIProvider.validate_connection", side_effect=ProviderError("openai", "OpenAI unavailable")),
-                patch("src.ci_helper.ai.providers.anthropic.AnthropicProvider.validate_connection", new_callable=AsyncMock),
+                patch(
+                    "src.ci_helper.ai.providers.openai.OpenAIProvider.validate_connection",
+                    side_effect=ProviderError("openai", "OpenAI unavailable"),
+                ),
+                patch(
+                    "src.ci_helper.ai.providers.anthropic.AnthropicProvider.validate_connection", new_callable=AsyncMock
+                ),
                 patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai,
                 patch("src.ci_helper.ai.providers.anthropic.AsyncAnthropic") as mock_anthropic,
             ):

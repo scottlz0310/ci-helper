@@ -835,7 +835,7 @@ default_model = "gpt-4o"
         for scenario in error_scenarios:
             with runner.isolated_filesystem(temp_dir=str(temp_dir)):
                 with patch.dict("os.environ", scenario["env_vars"], clear=True):
-                    args = ["analyze"] + scenario.get("args", ["--log", str(log_file)])
+                    args = ["analyze", *scenario.get("args", ["--log", str(log_file)])]
                     result = runner.invoke(cli, args)
 
                     assert result.exit_code == scenario["expected_exit_code"]

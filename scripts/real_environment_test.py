@@ -55,9 +55,9 @@ class RealEnvironmentTester:
 
     def log(self, message: str, level: str = "INFO") -> None:
         """ログメッセージを出力"""
-        timestamp = datetime.now().strftime("%H:%M:%S")
+        datetime.now().strftime("%H:%M:%S")
         if self.verbose or level in ["ERROR", "WARNING"]:
-            print(f"[{timestamp}] {level}: {message}")
+            pass
 
     def record_test_result(self, test_name: str, success: bool, details: dict[str, Any]) -> None:
         """テスト結果を記録"""
@@ -115,7 +115,7 @@ class RealEnvironmentTester:
         try:
             import socket
 
-            import aiohttp
+            # aiohttp は使用しないため削除
 
             # 簡単な接続テスト（非同期を避ける）
             try:
@@ -830,9 +830,6 @@ def main():
         tester.log(f"テスト実行中にエラーが発生しました: {e}", "ERROR")
     finally:
         # 結果を表示
-        print(f"\n結果ファイル: {tester.temp_dir}")
-        print(f"- JSON: {tester.temp_dir}/real_environment_test_results.json")
-        print(f"- レポート: {tester.temp_dir}/real_environment_test_report.md")
 
         # クリーンアップするかユーザーに確認
         try:
@@ -840,9 +837,9 @@ def main():
             if response.lower() in ["y", "yes"]:
                 tester.cleanup()
             else:
-                print(f"一時ファイルは保持されました: {tester.temp_dir}")
+                pass
         except (KeyboardInterrupt, EOFError):
-            print(f"\n一時ファイルは保持されました: {tester.temp_dir}")
+            pass
 
 
 if __name__ == "__main__":

@@ -72,7 +72,6 @@ class PerformanceMonitor:
         initial_memory = process.memory_info().rss / 1024 / 1024  # MB
 
         start_time = time.time()
-        cpu_samples = []
 
         # テスト実行
         try:
@@ -125,7 +124,6 @@ class PerformanceMonitor:
         suite_metrics = []
 
         for test_path in test_paths:
-            print(f"実行中: {test_path}")
             metrics = self.run_test_with_monitoring(test_path)
             suite_metrics.append(metrics)
 
@@ -355,18 +353,15 @@ def run_coverage_improvement_verification():
         "tests/unit/ai/test_error_handler.py::TestErrorTypeHandling",
     ]
 
-    print("新規テストのパフォーマンス検証を開始...")
-    metrics = monitor.run_test_suite_monitoring(new_tests)
+    monitor.run_test_suite_monitoring(new_tests)
 
     # 結果を保存
-    results_file = monitor.save_metrics("coverage_improvement_metrics.json")
-    print(f"結果を保存しました: {results_file}")
+    monitor.save_metrics("coverage_improvement_metrics.json")
 
     # レポートを生成
     report = monitor.generate_report()
     report_file = monitor.results_dir / "performance_report.md"
     report_file.write_text(report, encoding="utf-8")
-    print(f"レポートを生成しました: {report_file}")
 
     # 分析結果を返す
     return monitor.analyze_performance()
@@ -375,4 +370,3 @@ def run_coverage_improvement_verification():
 if __name__ == "__main__":
     # スタンドアロン実行時のテスト
     results = run_coverage_improvement_verification()
-    print(json.dumps(results, indent=2, ensure_ascii=False))

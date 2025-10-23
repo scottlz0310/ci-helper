@@ -78,7 +78,7 @@ class TestBackupManager:
         import time
 
         backups = []
-        for i in range(5):
+        for _i in range(5):
             backup = backup_manager.create_backup(sample_file)
             backups.append(backup)
             time.sleep(1.1)  # 1秒以上待機してタイムスタンプを変える

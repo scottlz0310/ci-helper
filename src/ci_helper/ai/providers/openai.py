@@ -23,7 +23,7 @@ class OpenAIProvider(AIProvider):
     """OpenAI APIプロバイダー"""
 
     # モデル別のトークン制限
-    MODEL_LIMITS = {
+    MODEL_LIMITS: ClassVar[dict[str, int]] = {
         "gpt-4o": 128000,
         "gpt-4o-mini": 128000,
         "gpt-4": 8192,
@@ -34,7 +34,7 @@ class OpenAIProvider(AIProvider):
     }
 
     # モデル別の料金（USD per 1K tokens）
-    MODEL_COSTS = {
+    MODEL_COSTS: ClassVar[dict[str, dict[str, float]]] = {
         "gpt-4o": {"input": 0.0025, "output": 0.01},
         "gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
         "gpt-4": {"input": 0.03, "output": 0.06},
@@ -327,7 +327,7 @@ class OpenAIProvider(AIProvider):
         summary = content.strip()
 
         # ## 分析結果の後の最初のテキストブロックを要約として抽出
-        match = re.search(r'##\s*分析結果\s*\n+(.+?)(?:\n\n|$)', content, re.DOTALL)
+        match = re.search(r"##\s*分析結果\s*\n+(.+?)(?:\n\n|$)", content, re.DOTALL)
         if match:
             summary = match.group(1).strip()
         else:

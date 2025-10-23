@@ -291,7 +291,7 @@ class TestCostManager:
         cost_manager.tracker.record_usage("openai", "gpt-4o-mini", 1000, 500, 0.1)  # 低コスト
 
         # 多数のリクエストを記録してキャッシュ推奨を発生させる
-        for i in range(60):
+        for _i in range(60):
             cost_manager.tracker.record_usage("openai", "gpt-4o", 100, 50, 0.01)
 
         suggestions = cost_manager.get_cost_optimization_suggestions()

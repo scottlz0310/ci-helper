@@ -532,7 +532,7 @@ def _display_fix_suggestions(result: AnalysisResult, console: Console) -> None:
 
         # コード変更がある場合はファイルパスを表示
         if suggestion.code_changes:
-            files = set(change.file_path for change in suggestion.code_changes)
+            files = {change.file_path for change in suggestion.code_changes}
             console.print(f"対象ファイル: {', '.join(files)}")
 
         console.print(f"優先度: {suggestion.priority.value}")
@@ -1194,10 +1194,11 @@ def _display_error_footer(error: Exception, console: Console, verbose: bool) -> 
     # 詳細表示モードの場合はエラー詳細を表示
     if verbose:
         console.print("\n[dim]📊 詳細なエラー情報:[/dim]")
-        console.print(f"[dim]エラーメッセージ: {str(error)}[/dim]")
-        if hasattr(error, '__traceback__') and error.__traceback__:
+        console.print(f"[dim]エラーメッセージ: {error!s}[/dim]")
+        if hasattr(error, "__traceback__") and error.__traceback__:
             import traceback
-            tb_str = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
+
+            tb_str = "".join(traceback.format_exception(type(error), error, error.__traceback__))
             console.print(f"[dim]{tb_str}[/dim]")
 
     # ヘルプ情報

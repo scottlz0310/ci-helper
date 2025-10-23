@@ -507,7 +507,7 @@ ERROR: Test case {i} failed with timeout
             memory_before = self._get_memory_usage()
 
             # 複数回の分析でメモリリークをチェック
-            for i in range(5):
+            for _i in range(5):
                 options = AnalyzeOptions(
                     provider=provider,
                     use_cache=False,

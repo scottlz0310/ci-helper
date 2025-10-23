@@ -199,7 +199,7 @@ class TestErrorTypeHandling:
         result = error_handler.handle_cache_error(error)
 
         assert result["error_type"] == "cache_error"
-        assert result["cache_path"] == "/tmp/cache"
+        assert result["cache_path"] == "./test_cache"
         assert result["message"] == "Permission denied"
         assert result["can_retry"] is True
         assert result["disable_cache"] is True
@@ -378,7 +378,7 @@ class TestFallbackMechanisms:
 
     def test_cache_error_fallback_to_no_cache(self, error_handler):
         """キャッシュエラー時のキャッシュ無効化フォールバックのテスト"""
-        cache_error = CacheError("Cache write failed", cache_path="/tmp/cache")
+        cache_error = CacheError("Cache write failed", cache_path="./test_cache")
         error_info = error_handler.handle_cache_error(cache_error)
 
         # キャッシュ無効化が推奨されることを確認
@@ -865,7 +865,7 @@ class TestErrorLoggingAndNotification:
     @patch("ci_helper.ai.error_handler.logger")
     def test_appropriate_log_level_for_cache_error(self, mock_logger, error_handler):
         """キャッシュエラーの適切なログレベルでの記録テスト"""
-        error = CacheError("Cache write failed", cache_path="/tmp/cache")
+        error = CacheError("Cache write failed", cache_path="./test_cache")
 
         error_handler.handle_cache_error(error)
 

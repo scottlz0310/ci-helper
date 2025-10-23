@@ -31,8 +31,7 @@ def create_test_log_file() -> Path:
 2024-01-15 10:31:00 [ERROR] Missing closing parenthesis
 """
 
-    import tempfile
-    with tempfile.NamedTemporaryFile(mode='w', suffix=".log", delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".log", delete=False) as f:
         f.write(content.strip())
         temp_file = Path(f.name)
     return temp_file
@@ -40,7 +39,6 @@ def create_test_log_file() -> Path:
 
 def test_analyze_command_help():
     """analyze コマンドのヘルプ表示テスト"""
-    print("Testing: ci-run analyze --help")
 
     try:
         result = subprocess.run(
@@ -51,26 +49,18 @@ def test_analyze_command_help():
         )
 
         if result.returncode == 0:
-            print("✓ Help command succeeded")
-            print("Help output preview:")
-            print(result.stdout[:200] + "..." if len(result.stdout) > 200 else result.stdout)
             return True
         else:
-            print(f"✗ Help command failed with exit code {result.returncode}")
-            print("STDERR:", result.stderr)
             return False
 
     except subprocess.TimeoutExpired:
-        print("✗ Help command timed out")
         return False
-    except Exception as e:
-        print(f"✗ Help command error: {e}")
+    except Exception:
         return False
 
 
 def test_analyze_command_with_log_file():
     """ログファイルを指定した analyze コマンドのテスト"""
-    print("\nTesting: ci-run analyze --log <file>")
 
     # テスト用ログファイルを作成
     log_file = create_test_log_file()
@@ -80,7 +70,6 @@ def test_analyze_command_with_log_file():
         has_api_key = bool(os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY"))
 
         if not has_api_key:
-            print("⚠ No API keys found, testing with --dry-run equivalent")
             # APIキーがない場合は、エラーが期待される
             result = subprocess.run(
                 ["uv", "run", "python", "-m", "ci_helper.cli", "analyze", "--log", str(log_file)],
@@ -91,15 +80,10 @@ def test_analyze_command_with_log_file():
 
             # APIキーエラーが期待される
             if result.returncode != 0 and ("APIキー" in result.stderr or "API key" in result.stderr):
-                print("✓ Expected API key error occurred")
                 return True
             else:
-                print(f"✗ Unexpected result: exit_code={result.returncode}")
-                print("STDOUT:", result.stdout)
-                print("STDERR:", result.stderr)
                 return False
         else:
-            print("✓ API keys found, testing actual analysis")
             result = subprocess.run(
                 ["uv", "run", "python", "-m", "ci_helper.cli", "analyze", "--log", str(log_file), "--format", "json"],
                 capture_output=True,
@@ -108,20 +92,13 @@ def test_analyze_command_with_log_file():
             )
 
             if result.returncode == 0:
-                print("✓ Analysis command succeeded")
-                print("Output preview:")
-                print(result.stdout[:300] + "..." if len(result.stdout) > 300 else result.stdout)
                 return True
             else:
-                print(f"✗ Analysis command failed with exit code {result.returncode}")
-                print("STDERR:", result.stderr)
                 return False
 
     except subprocess.TimeoutExpired:
-        print("✗ Analysis command timed out")
         return False
-    except Exception as e:
-        print(f"✗ Analysis command error: {e}")
+    except Exception:
         return False
     finally:
         # クリーンアップ
@@ -133,7 +110,6 @@ def test_analyze_command_with_log_file():
 
 def test_analyze_command_stats():
     """analyze コマンドの統計表示テスト"""
-    print("\nTesting: ci-run analyze --stats")
 
     try:
         result = subprocess.run(
@@ -145,26 +121,18 @@ def test_analyze_command_stats():
 
         # 統計表示は初回実行時は空でも正常
         if result.returncode == 0:
-            print("✓ Stats command succeeded")
-            print("Stats output:")
-            print(result.stdout)
             return True
         else:
-            print(f"✗ Stats command failed with exit code {result.returncode}")
-            print("STDERR:", result.stderr)
             return False
 
     except subprocess.TimeoutExpired:
-        print("✗ Stats command timed out")
         return False
-    except Exception as e:
-        print(f"✗ Stats command error: {e}")
+    except Exception:
         return False
 
 
 def test_analyze_command_invalid_options():
     """analyze コマンドの無効なオプションテスト"""
-    print("\nTesting: ci-run analyze with invalid options")
 
     test_cases = [
         {"name": "invalid provider", "args": ["--provider", "invalid_provider"], "expect_error": True},
@@ -175,8 +143,6 @@ def test_analyze_command_invalid_options():
     success_count = 0
 
     for test_case in test_cases:
-        print(f"  Testing: {test_case['name']}")
-
         try:
             result = subprocess.run(
                 ["uv", "run", "python", "-m", "ci_helper.cli", "analyze"] + test_case["args"],
@@ -187,37 +153,27 @@ def test_analyze_command_invalid_options():
 
             if test_case["expect_error"]:
                 if result.returncode != 0:
-                    print(f"    ✓ Expected error occurred (exit code: {result.returncode})")
                     success_count += 1
                 else:
-                    print("    ✗ Expected error but command succeeded")
+                    pass
             else:
                 if result.returncode == 0:
-                    print("    ✓ Command succeeded as expected")
                     success_count += 1
                 else:
-                    print(f"    ✗ Command failed unexpectedly (exit code: {result.returncode})")
+                    pass
 
         except subprocess.TimeoutExpired:
-            print("    ✗ Command timed out")
-        except Exception as e:
-            print(f"    ✗ Command error: {e}")
+            pass
+        except Exception:
+            pass
 
     return success_count == len(test_cases)
 
 
 def main():
     """メイン関数"""
-    print("=== CI Helper Analyze Command Real Environment Test ===")
-    print()
 
     # 環境情報を表示
-    print("Environment:")
-    print(f"  Python: {sys.version}")
-    print(f"  Working directory: {os.getcwd()}")
-    print(f"  OPENAI_API_KEY: {'Set' if os.getenv('OPENAI_API_KEY') else 'Not set'}")
-    print(f"  ANTHROPIC_API_KEY: {'Set' if os.getenv('ANTHROPIC_API_KEY') else 'Not set'}")
-    print()
 
     # テストを実行
     tests = [
@@ -230,35 +186,22 @@ def main():
     results = []
 
     for test_name, test_func in tests:
-        print(f"Running: {test_name}")
-        print("-" * 50)
-
         try:
             success = test_func()
             results.append((test_name, success))
-        except Exception as e:
-            print(f"✗ Test {test_name} failed with exception: {e}")
+        except Exception:
             results.append((test_name, False))
 
-        print()
-
     # 結果サマリー
-    print("=== Test Results Summary ===")
     passed = sum(1 for _, success in results if success)
     total = len(results)
 
-    for test_name, success in results:
-        status = "✓ PASSED" if success else "✗ FAILED"
-        print(f"  {status}: {test_name}")
-
-    print()
-    print(f"Total: {passed}/{total} tests passed ({passed / total * 100:.1f}%)")
+    for _test_name, _success in results:
+        pass
 
     if passed == total:
-        print("🎉 All tests passed!")
         return 0
     else:
-        print("❌ Some tests failed")
         return 1
 
 

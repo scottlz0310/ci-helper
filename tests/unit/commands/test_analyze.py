@@ -168,7 +168,7 @@ class TestAnalyzeCommand:
         ctx_obj = {"config": mock_config, "console": Mock()}
 
         # コマンド実行
-        result = runner.invoke(analyze, ["--stats"], obj=ctx_obj)
+        runner.invoke(analyze, ["--stats"], obj=ctx_obj)
 
         # AI統合が初期化されないことを確認
         mock_ai_class.assert_not_called()
@@ -473,9 +473,7 @@ class TestAnalyzeDisplayFunctions:
                 "total_requests": 10,
                 "success_rate": 0.95,
             },
-            "provider_breakdown": {
-                "openai": {"total_tokens": 1000, "total_cost": 0.05}
-            },
+            "provider_breakdown": {"openai": {"total_tokens": 1000, "total_cost": 0.05}},
         }
 
         # モック設定の追加設定
@@ -1477,7 +1475,6 @@ class TestAnalyzeStreamingFeatures:
         mock_read_log.return_value = "test log content"
 
         # ストリーミングレスポンスのシミュレーション
-        streaming_chunks = ["分析中", "...", "完了"]
 
         # 分析結果のモック
         from datetime import datetime
@@ -2535,14 +2532,14 @@ class TestAnalyzePerformance:
         for key in test_data:
             # データベース検索のシミュレーション
             time.sleep(0.001)  # 1ms の遅延
-            result = test_data[key]
+            test_data[key]
         no_cache_time = time.time() - start_time
 
         # キャッシュありの処理時間（辞書アクセス）
         cache = test_data.copy()
         start_time = time.time()
         for key in cache:
-            result = cache[key]  # キャッシュからの高速アクセス
+            cache[key]  # キャッシュからの高速アクセス
         cache_time = time.time() - start_time
 
         # 検証
@@ -2633,9 +2630,9 @@ class TestAnalyzePerformance:
         # 正常処理の時間
         start_time = time.time()
         try:
-            result = "normal_processing"
+            pass
         except Exception:
-            result = "error_handled"
+            pass
         normal_time = time.time() - start_time
 
         # エラー処理の時間
@@ -2643,7 +2640,7 @@ class TestAnalyzePerformance:
         try:
             raise ValueError("test error")
         except ValueError:
-            result = "error_handled"
+            pass
         error_time = time.time() - start_time
 
         # 検証

@@ -6,7 +6,7 @@ AI APIレスポンスのモックデータ
 """
 
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Any
 
 # OpenAI APIレスポンスのモック
 MOCK_OPENAI_RESPONSE = {
@@ -35,16 +35,12 @@ MOCK_OPENAI_RESPONSE = {
 
 ## 信頼度
 85% - 一般的なNode.jsプロジェクトのエラーパターンです。
-"""
+""",
             },
-            "finish_reason": "stop"
+            "finish_reason": "stop",
         }
     ],
-    "usage": {
-        "prompt_tokens": 150,
-        "completion_tokens": 200,
-        "total_tokens": 350
-    }
+    "usage": {"prompt_tokens": 150, "completion_tokens": 200, "total_tokens": 350},
 }
 
 # Anthropic APIレスポンスのモック
@@ -71,16 +67,13 @@ MOCK_ANTHROPIC_RESPONSE = {
 3. **長期対応**: データベース接続の最適化
 
 信頼度: 90%
-"""
+""",
         }
     ],
     "model": "claude-3-5-sonnet-20241022",
     "stop_reason": "end_turn",
     "stop_sequence": None,
-    "usage": {
-        "input_tokens": 180,
-        "output_tokens": 220
-    }
+    "usage": {"input_tokens": 180, "output_tokens": 220},
 }
 
 # ストリーミングレスポンスのモック
@@ -101,7 +94,7 @@ MOCK_STREAMING_CHUNKS = [
     "\n\n### 中長期的な改善",
     "\n1. 認証システムの見直し",
     "\n2. データベース接続の最適化",
-    "\n\n分析完了。信頼度: 85%"
+    "\n\n分析完了。信頼度: 85%",
 ]
 
 # エラーレスポンスのモック
@@ -111,7 +104,7 @@ MOCK_ERROR_RESPONSES = {
             "message": "Invalid API key provided",
             "type": "invalid_request_error",
             "param": None,
-            "code": "invalid_api_key"
+            "code": "invalid_api_key",
         }
     },
     "rate_limit_error": {
@@ -119,7 +112,7 @@ MOCK_ERROR_RESPONSES = {
             "message": "Rate limit exceeded",
             "type": "rate_limit_error",
             "param": None,
-            "code": "rate_limit_exceeded"
+            "code": "rate_limit_exceeded",
         }
     },
     "token_limit_error": {
@@ -127,9 +120,9 @@ MOCK_ERROR_RESPONSES = {
             "message": "Token limit exceeded",
             "type": "invalid_request_error",
             "param": "messages",
-            "code": "context_length_exceeded"
+            "code": "context_length_exceeded",
         }
-    }
+    },
 }
 
 # 修正提案のモック
@@ -150,7 +143,7 @@ MOCK_FIX_SUGGESTIONS = [
 }""",
         "priority": "HIGH",
         "estimated_effort": "5分",
-        "confidence": 0.95
+        "confidence": 0.95,
     },
     {
         "title": "npm installステップの追加",
@@ -164,8 +157,8 @@ MOCK_FIX_SUGGESTIONS = [
         run: npm test""",
         "priority": "HIGH",
         "estimated_effort": "2分",
-        "confidence": 0.90
-    }
+        "confidence": 0.90,
+    },
 ]
 
 # 対話セッションのモック
@@ -175,7 +168,6 @@ MOCK_INTERACTIVE_RESPONSES = {
 /analyze - 詳細分析を実行
 /fix - 修正提案を生成
 /exit - セッションを終了""",
-    
     "/analyze": """詳細分析を実行中...
 
 追加の分析結果:
@@ -186,7 +178,6 @@ MOCK_INTERACTIVE_RESPONSES = {
 推奨アクション:
 1. 緊急度: 高 - package.json問題の即座の修正
 2. 緊急度: 中 - CI/CDパイプラインの見直し""",
-    
     "/fix": """修正提案を生成中...
 
 以下の修正を提案します:
@@ -195,31 +186,27 @@ MOCK_INTERACTIVE_RESPONSES = {
    - 実行時間: 5分
    - 成功確率: 95%
 
-2. **ワークフロー修正** (優先度: 高)  
+2. **ワークフロー修正** (優先度: 高)
    - 実行時間: 10分
    - 成功確率: 90%
 
 これらの修正を適用しますか？ (y/n)""",
-    
-    "default": "申し訳ありませんが、その質問は理解できませんでした。/help でコマンド一覧を確認してください。"
+    "default": "申し訳ありませんが、その質問は理解できませんでした。/help でコマンド一覧を確認してください。",
 }
 
 
 def create_mock_analysis_result(
-    summary: str = "テスト分析結果",
-    confidence: float = 0.85,
-    provider: str = "openai",
-    model: str = "gpt-4o"
-) -> Dict[str, Any]:
+    summary: str = "テスト分析結果", confidence: float = 0.85, provider: str = "openai", model: str = "gpt-4o"
+) -> dict[str, Any]:
     """
     分析結果のモックデータを作成
-    
+
     Args:
         summary: 分析結果の要約
         confidence: 信頼度スコア
         provider: AIプロバイダー名
         model: 使用モデル名
-        
+
     Returns:
         Dict[str, Any]: 分析結果のモックデータ
     """
@@ -230,56 +217,43 @@ def create_mock_analysis_result(
                 "category": "dependency_error",
                 "description": "package.jsonファイルが見つからない",
                 "severity": "HIGH",
-                "confidence": 0.95
+                "confidence": 0.95,
             },
-            {
-                "category": "test_failure", 
-                "description": "認証テストの失敗",
-                "severity": "MEDIUM",
-                "confidence": 0.80
-            }
+            {"category": "test_failure", "description": "認証テストの失敗", "severity": "MEDIUM", "confidence": 0.80},
         ],
         "fix_suggestions": MOCK_FIX_SUGGESTIONS,
-        "related_errors": [
-            "npm ERR! code ENOENT",
-            "AssertionError: Expected status code 401, got 200"
-        ],
+        "related_errors": ["npm ERR! code ENOENT", "AssertionError: Expected status code 401, got 200"],
         "confidence_score": confidence,
         "analysis_time": 2.5,
-        "tokens_used": {
-            "input_tokens": 150,
-            "output_tokens": 200,
-            "total_tokens": 350,
-            "estimated_cost": 0.0175
-        },
+        "tokens_used": {"input_tokens": 150, "output_tokens": 200, "total_tokens": 350, "estimated_cost": 0.0175},
         "status": "COMPLETED",
         "provider": provider,
         "model": model,
         "timestamp": datetime.now().isoformat(),
-        "cache_hit": False
+        "cache_hit": False,
     }
 
 
-def create_mock_streaming_response(chunks: List[str] = None) -> List[str]:
+def create_mock_streaming_response(chunks: list[str] | None = None) -> list[str]:
     """
     ストリーミングレスポンスのモックデータを作成
-    
+
     Args:
         chunks: カスタムチャンクリスト（Noneの場合はデフォルトを使用）
-        
+
     Returns:
         List[str]: ストリーミングチャンクのリスト
     """
     return chunks if chunks is not None else MOCK_STREAMING_CHUNKS
 
 
-def create_mock_error_response(error_type: str) -> Dict[str, Any]:
+def create_mock_error_response(error_type: str) -> dict[str, Any]:
     """
     エラーレスポンスのモックデータを作成
-    
+
     Args:
         error_type: エラータイプ（api_key_error, rate_limit_error, token_limit_error）
-        
+
     Returns:
         Dict[str, Any]: エラーレスポンスのモックデータ
     """

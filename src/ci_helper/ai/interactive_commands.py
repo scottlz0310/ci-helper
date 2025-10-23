@@ -25,7 +25,7 @@ class InteractiveCommand:
         self.description = description
 
     async def execute(
-        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] = None
+        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] | None = None
     ) -> dict[str, Any]:
         """コマンドを実行
 
@@ -47,7 +47,7 @@ class HelpCommand(InteractiveCommand):
         super().__init__("help", "利用可能なコマンドを表示")
 
     async def execute(
-        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] = None
+        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] | None = None
     ) -> dict[str, Any]:
         """ヘルプを表示"""
         help_text = f"""
@@ -96,7 +96,7 @@ class ExitCommand(InteractiveCommand):
         super().__init__("exit", "セッションを終了")
 
     async def execute(
-        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] = None
+        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] | None = None
     ) -> dict[str, Any]:
         """セッションを終了"""
         session_manager.close_session(session.session_id)
@@ -116,7 +116,7 @@ class SummaryCommand(InteractiveCommand):
         super().__init__("summary", "現在の問題の要約を表示")
 
     async def execute(
-        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] = None
+        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] | None = None
     ) -> dict[str, Any]:
         """問題の要約を表示"""
         context = session_manager.get_session_context(session.session_id)
@@ -155,7 +155,7 @@ class LogsCommand(InteractiveCommand):
         super().__init__("logs", "初期ログの再表示")
 
     async def execute(
-        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] = None
+        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] | None = None
     ) -> dict[str, Any]:
         """初期ログを再表示"""
         context = session_manager.get_session_context(session.session_id)
@@ -181,7 +181,7 @@ class StatsCommand(InteractiveCommand):
         super().__init__("stats", "セッション統計を表示")
 
     async def execute(
-        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] = None
+        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] | None = None
     ) -> dict[str, Any]:
         """セッション統計を表示"""
         stats = session_manager.get_session_stats(session.session_id)
@@ -216,7 +216,7 @@ class ContextCommand(InteractiveCommand):
         super().__init__("context", "現在のコンテキストを表示")
 
     async def execute(
-        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] = None
+        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] | None = None
     ) -> dict[str, Any]:
         """現在のコンテキストを表示"""
         context = session_manager.get_session_context(session.session_id)

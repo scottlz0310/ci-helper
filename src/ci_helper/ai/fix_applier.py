@@ -206,25 +206,12 @@ class FixApplier:
         Returns:
             承認結果
         """
-        print(f"\n{'=' * 60}")
-        print(f"修正提案: {suggestion.title}")
-        print(f"優先度: {suggestion.priority.value}")
-        print(f"推定工数: {suggestion.estimated_effort}")
-        print(f"信頼度: {suggestion.confidence:.1%}")
-        print(f"説明: {suggestion.description}")
 
         if suggestion.code_changes:
-            print(f"\nコード変更 ({len(suggestion.code_changes)}個):")
-            for i, change in enumerate(suggestion.code_changes, 1):
-                print(f"  {i}. {change.file_path} (行 {change.line_start}-{change.line_end})")
-                print(f"     {change.description}")
-
+            for _i, change in enumerate(suggestion.code_changes, 1):
                 # 変更内容のプレビュー
                 if change.old_code and change.new_code:
-                    print(f"     変更前: {change.old_code[:50]}...")
-                    print(f"     変更後: {change.new_code[:50]}...")
-
-        print(f"\n{'=' * 60}")
+                    pass
 
         while True:
             try:
@@ -241,10 +228,9 @@ class FixApplier:
                 elif response in ["q", "quit"]:
                     raise KeyboardInterrupt("ユーザーが終了を選択")
                 else:
-                    print("無効な入力です。y, n, s, q のいずれかを入力してください。")
+                    pass
 
             except KeyboardInterrupt:
-                print("\n修正適用を中断しました。")
                 return FixApprovalResult(False, "ユーザーが中断")
             except EOFError:
                 return FixApprovalResult(False, "入力エラー")

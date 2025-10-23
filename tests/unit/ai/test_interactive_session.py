@@ -217,7 +217,7 @@ class TestInteractiveSessionManager:
         short_timeout_manager = InteractiveSessionManager(Mock(), session_timeout=1)
 
         # セッションを作成
-        session = short_timeout_manager.create_session(provider="openai", model="gpt-4o")
+        short_timeout_manager.create_session(provider="openai", model="gpt-4o")
 
         # セッションが存在することを確認
         assert len(short_timeout_manager.active_sessions) == 1

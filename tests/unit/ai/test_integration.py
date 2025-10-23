@@ -675,6 +675,7 @@ AssertionError: Expected 200, got 404
 
         # プロンプト管理を初期化（必須）
         from src.ci_helper.ai.prompts import PromptManager
+
         integration.prompt_manager = PromptManager()
 
         options = AnalyzeOptions(provider="mock", streaming=True)
@@ -789,6 +790,7 @@ AssertionError: Expected 200, got 404
 
         # プロンプト管理を初期化（必須）
         from src.ci_helper.ai.prompts import PromptManager
+
         integration.prompt_manager = PromptManager()
 
         # モックフォールバックハンドラーを設定

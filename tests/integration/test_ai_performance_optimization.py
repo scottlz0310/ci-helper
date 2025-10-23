@@ -192,8 +192,6 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
                 assert isinstance(result, AnalysisResult)
                 assert result.status == AnalysisStatus.COMPLETED
 
-                print(f"Large log processing: {processing_time:.2f}s, Memory: +{memory_increase:.1f}MB")
-
     @pytest.mark.asyncio
     async def test_very_large_log_handling(self, very_large_log_content, mock_ai_config):
         """非常に大きなログの処理テスト（メモリ効率性）"""
@@ -237,8 +235,6 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
 
                 # メモリリークがないことを確認（現実的な制限値に調整）
                 assert memory_increase < 2000  # 2GB以下のメモリ増加（大きなログ処理のため）
-
-                print(f"Very large log handling: Memory: +{memory_increase:.1f}MB")
 
     @pytest.mark.asyncio
     async def test_concurrent_large_log_processing(self, large_log_content, mock_ai_config):
@@ -299,8 +295,6 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
                 assert memory_increase < 2000  # メモリ増加量が2GB以下（並行処理のため）
                 assert len(results) == 5
                 assert all(isinstance(result, AnalysisResult) for result in results)
-
-                print(f"Concurrent processing: {processing_time:.2f}s, Memory: +{memory_increase:.1f}MB")
 
     @pytest.mark.asyncio
     async def test_streaming_performance_optimization(self, large_log_content, mock_ai_config):
@@ -381,8 +375,6 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
                     first_chunk_time = chunk_times[0] - start_time
                     assert first_chunk_time < 5.0  # 最初のチャンクが5秒以内に到着
 
-                print(f"Streaming: {total_time:.2f}s, Chunks: {len(chunks)}, Memory: +{memory_increase:.1f}MB")
-
     @pytest.mark.asyncio
     async def test_memory_cleanup_after_analysis(self, large_log_content, mock_ai_config):
         """分析後のメモリクリーンアップテスト"""
@@ -408,7 +400,7 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
                 initial_memory = self.get_memory_usage()
 
                 # 複数回の分析を実行
-                for i in range(10):
+                for _i in range(10):
                     with patch(
                         "src.ci_helper.ai.providers.openai.OpenAIProvider.validate_connection", new_callable=AsyncMock
                     ):
@@ -437,8 +429,6 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
 
                 # メモリリークがないことを確認（現実的な制限値に調整）
                 assert memory_increase < 500  # 500MB以下のメモリ増加（複数回実行のため）
-
-                print(f"Memory cleanup test: Initial: {initial_memory:.1f}MB, Final: {final_memory:.1f}MB")
 
     @pytest.mark.asyncio
     async def test_cache_performance_optimization(self, large_log_content, mock_ai_config, temp_dir):
@@ -491,8 +481,6 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
                 assert isinstance(result2, AnalysisResult)
                 assert first_run_time > 0
                 assert second_run_time > 0
-
-                print(f"Cache performance: 1st run: {first_run_time:.2f}s, 2nd run: {second_run_time:.2f}s")
 
     @pytest.mark.asyncio
     async def test_response_time_optimization(self, mock_ai_config):
@@ -555,8 +543,6 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
         assert response_times["small"] < 30.0  # 小さなログは30秒以内
         assert response_times["medium"] < 60.0  # 中程度のログは60秒以内
         assert response_times["large"] < 120.0  # 大きなログは120秒以内
-
-        print(f"Response times: {response_times}")
 
     @pytest.mark.asyncio
     async def test_token_optimization_strategies(self, large_log_content, mock_ai_config):
@@ -704,8 +690,6 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
                 assert result.status == AnalysisStatus.COMPLETED
                 assert call_count == 3  # 3回の呼び出しが行われた
 
-                print(f"Error recovery: {total_time:.2f}s, Attempts: {call_count}")
-
     @pytest.mark.asyncio
     async def test_batch_processing_optimization(self, mock_ai_config):
         """バッチ処理最適化テスト"""
@@ -749,13 +733,13 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
                     for log in small_logs[:5]:  # 最初の5個のみテスト
                         result = await ai_integration.analyze_log(log, options)
                         individual_results.append(result)
-                    individual_time = time.time() - start_time
+                    time.time() - start_time
 
                     # バッチ処理の時間測定
                     start_time = time.time()
                     batch_tasks = [ai_integration.analyze_log(log, options) for log in small_logs[:5]]
                     batch_results = await asyncio.gather(*batch_tasks)
-                    batch_time = time.time() - start_time
+                    time.time() - start_time
 
                 # バッチ処理の効率性を確認
                 assert len(individual_results) == 5
@@ -764,7 +748,6 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
                 assert all(isinstance(result, AnalysisResult) for result in batch_results)
 
                 # バッチ処理が効率的であることを確認（実装に依存）
-                print(f"Individual: {individual_time:.2f}s, Batch: {batch_time:.2f}s")
 
     def test_resource_monitoring_during_analysis(self, large_log_content, mock_ai_config):
         """分析中のリソース監視テスト"""
@@ -859,7 +842,3 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
         # リソース使用量の確認
         assert resource_stats["max_memory"] < 2000  # 2GB以下
         assert len(resource_stats["measurements"]) > 0
-
-        print(
-            f"Resource usage: Max Memory: {resource_stats['max_memory']:.1f}MB, Max CPU: {resource_stats['max_cpu']:.1f}%"
-        )

@@ -45,12 +45,18 @@ class APIKeyError(ProviderError):
 class RateLimitError(ProviderError):
     """レート制限エラー"""
 
-    def __init__(self, provider: str, message: str | None = None, retry_after: int | None = None, reset_time: datetime | None = None):
+    def __init__(
+        self,
+        provider: str,
+        message: str | None = None,
+        retry_after: int | None = None,
+        reset_time: datetime | None = None,
+    ):
         if message is None:
             message = f"{provider}のレート制限に達しました"
-        
+
         super().__init__(provider, message)
-        
+
         details = None
         suggestion = "しばらく待ってから再試行してください"
 

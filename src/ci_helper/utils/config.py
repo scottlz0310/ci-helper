@@ -426,7 +426,7 @@ class Config:
         return self.project_root
 
     # AI設定関連のメソッド
-    def get_ai_config(self, key: str = None, default: Any = None) -> Any:
+    def get_ai_config(self, key: str | None = None, default: Any = None) -> Any:
         """AI設定値を取得
 
         Args:

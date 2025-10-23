@@ -77,7 +77,7 @@ npm ERR! path /github/workspace/package.json
 npm ERR! errno -2
 npm ERR! enoent ENOENT: no such file or directory, open '/github/workspace/package.json'
 npm ERR! enoent This is related to npm not being able to find a file.
-npm ERR! enoent 
+npm ERR! enoent
 
 npm ERR! A complete log of this run can be found in:
 npm ERR!     /home/runner/.npm/_logs/2024-01-15T10_30_45_123Z-debug-0.log
@@ -98,14 +98,14 @@ FAIL tests/integration/database.test.js
 ● should connect to database
 
   TimeoutError: Database connection timed out after 30 seconds
-  
+
     at Database.connect (src/database.js:45:15)
     at Object.<anonymous> (tests/integration/database.test.js:12:18)
 
 ● should perform CRUD operations
 
   Error: Connection not established
-  
+
     at Database.query (src/database.js:78:11)
     at Object.<anonymous> (tests/integration/database.test.js:25:20)
 
@@ -192,7 +192,7 @@ Will install lodash@4.17.21, which is a breaking change
 node_modules/lodash
 
 express  <4.18.2
-Severity: moderate  
+Severity: moderate
 qs prototype poisoning - https://github.com/advisories/GHSA-hrpp-h998-j3pp
 fix available via `npm audit fix`
 node_modules/express
@@ -238,7 +238,7 @@ FAIL src/auth.test.js
 ● should authenticate user
 
   TypeError: Cannot read properties of undefined (reading 'token')
-  
+
     at authenticate (src/auth.js:23:15)
     at Object.<anonymous> (src/auth.test.js:15:23)
 
@@ -254,23 +254,29 @@ FAIL tests/integration/api.test.js
 ● should handle API requests
 
   TimeoutError: Request timed out after 30 seconds
-  
+
     at ApiClient.request (src/api-client.js:45:15)
 """
 
 # 大きなログファイル（パフォーマンステスト用）
-LARGE_LOG_CONTENT = """
+LARGE_LOG_CONTENT = (
+    """
 STEP: Run extensive test suite
-""" + "\n".join([
-    f"Running test {i}: {'PASS' if i % 10 != 0 else 'FAIL'} - Test case {i} completed in {i % 100}ms"
-    for i in range(1, 1001)
-]) + """
+"""
+    + "\n".join(
+        [
+            f"Running test {i}: {'PASS' if i % 10 != 0 else 'FAIL'} - Test case {i} completed in {i % 100}ms"
+            for i in range(1, 1001)
+        ]
+    )
+    + """
 
 FAILURES:
-""" + "\n".join([
-    f"test_case_{i}.py::test_function_{i} FAILED - AssertionError: Test {i} failed"
-    for i in range(10, 101, 10)
-]) + """
+"""
+    + "\n".join(
+        [f"test_case_{i}.py::test_function_{i} FAILED - AssertionError: Test {i} failed" for i in range(10, 101, 10)]
+    )
+    + """
 
 Test Summary:
 - Total tests: 1000
@@ -278,6 +284,7 @@ Test Summary:
 - Failed: 100
 - Execution time: 45.6 seconds
 """
+)
 
 # 不正形式のログコンテンツ
 MALFORMED_LOG_CONTENT = """
@@ -299,60 +306,60 @@ LOG_METADATA = {
         "description": "基本的なテスト失敗パターン",
         "error_types": ["test_failure", "assertion_error"],
         "severity": "medium",
-        "estimated_fix_time": "15分"
+        "estimated_fix_time": "15分",
     },
     "build_failure": {
         "description": "ビルド失敗パターン",
         "error_types": ["build_error", "module_not_found"],
         "severity": "high",
-        "estimated_fix_time": "30分"
+        "estimated_fix_time": "30分",
     },
     "dependency_error": {
         "description": "依存関係エラーパターン",
         "error_types": ["dependency_error", "file_not_found"],
         "severity": "high",
-        "estimated_fix_time": "10分"
+        "estimated_fix_time": "10分",
     },
     "database_error": {
         "description": "データベース接続エラーパターン",
         "error_types": ["database_error", "timeout_error"],
         "severity": "high",
-        "estimated_fix_time": "45分"
+        "estimated_fix_time": "45分",
     },
     "type_check_error": {
         "description": "型チェックエラーパターン",
         "error_types": ["type_error", "typescript_error"],
         "severity": "medium",
-        "estimated_fix_time": "20分"
+        "estimated_fix_time": "20分",
     },
     "lint_error": {
         "description": "リンターエラーパターン",
         "error_types": ["lint_error", "code_style"],
         "severity": "low",
-        "estimated_fix_time": "10分"
+        "estimated_fix_time": "10分",
     },
     "docker_error": {
         "description": "Dockerビルドエラーパターン",
         "error_types": ["docker_error", "build_context"],
         "severity": "medium",
-        "estimated_fix_time": "25分"
+        "estimated_fix_time": "25分",
     },
     "security_scan_error": {
         "description": "セキュリティスキャンエラーパターン",
         "error_types": ["security_vulnerability", "dependency_audit"],
         "severity": "high",
-        "estimated_fix_time": "60分"
-    }
+        "estimated_fix_time": "60分",
+    },
 }
 
 
 def get_log_by_type(log_type: str) -> str:
     """
     ログタイプに基づいてサンプルログを取得
-    
+
     Args:
         log_type: ログのタイプ
-        
+
     Returns:
         str: 対応するログコンテンツ
     """
@@ -368,27 +375,24 @@ def get_log_by_type(log_type: str) -> str:
         "complex_error": COMPLEX_ERROR_LOG,
         "large_log": LARGE_LOG_CONTENT,
         "malformed_log": MALFORMED_LOG_CONTENT,
-        "empty_log": EMPTY_LOG_CONTENT
+        "empty_log": EMPTY_LOG_CONTENT,
     }
-    
+
     return log_map.get(log_type, BASIC_TEST_FAILURE_LOG)
 
 
 def create_custom_log(
-    step_name: str,
-    error_message: str,
-    error_type: str = "generic_error",
-    additional_context: str = ""
+    step_name: str, error_message: str, error_type: str = "generic_error", additional_context: str = ""
 ) -> str:
     """
     カスタムログコンテンツを作成
-    
+
     Args:
         step_name: ステップ名
         error_message: エラーメッセージ
         error_type: エラータイプ
         additional_context: 追加のコンテキスト情報
-        
+
     Returns:
         str: 生成されたログコンテンツ
     """
@@ -399,8 +403,8 @@ STEP: {step_name}
 
 Error Type: {error_type}
 """
-    
+
     if additional_context:
         log_content += f"\nAdditional Context:\n{additional_context}"
-    
+
     return log_content.strip()

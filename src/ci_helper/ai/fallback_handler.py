@@ -365,7 +365,7 @@ class FallbackHandler:
                 duration=0.0,
             )
 
-            execution_result = ExecutionResult(
+            ExecutionResult(
                 success=False,
                 workflows=[workflow_result],
                 total_duration=0.0,

@@ -295,7 +295,10 @@ alpine:latest	5.61MB"""
         _show_cache_status()
 
         mock_subprocess_run.assert_called_once_with(
-            ["docker", "images", "--format", "{{.Repository}}:{{.Tag}}\t{{.Size}}"], capture_output=True, text=True, timeout=30
+            ["docker", "images", "--format", "{{.Repository}}:{{.Tag}}\t{{.Size}}"],
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
 
     @patch("subprocess.run")
