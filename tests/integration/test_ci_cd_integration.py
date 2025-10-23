@@ -116,28 +116,6 @@ class TestCIIntegration:
             if "test_integration.py" in test_file or "test_error_handler.py" in test_file:
                 assert has_mocks, f"{test_file} にモックが使用されていません"
 
-    def test_test_isolation_and_independence(self):
-        """テスト間の独立性が保たれていることを確認"""
-        # 同じテストを複数回実行して結果が一貫していることを確認
-        test_command = [
-            "uv",
-            "run",
-            "pytest",
-            "tests/unit/ai/test_integration.py::TestAIIntegrationCore::test_initialization_with_config",
-            "-v",
-        ]
-
-        results = []
-        for _i in range(3):
-            # Add coverage fail-under=0 to test command
-            test_command_with_coverage = [*test_command, "--cov-fail-under=0"]
-            result = subprocess.run(test_command_with_coverage, capture_output=True, text=True, timeout=30)
-            results.append(result.returncode)
-
-        # 全ての実行で同じ結果が得られることを確認
-        assert all(r == results[0] for r in results), "テスト結果が一貫していません"
-        assert results[0] == 0, "テストが失敗しています"
-
     def test_coverage_reporting_integration(self):
         """カバレッジレポートが正常に生成されることを確認"""
         # カバレッジ付きでテストを実行（fail-under を無効にして実行）

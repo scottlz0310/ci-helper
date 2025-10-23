@@ -88,7 +88,7 @@ class TestQualityGuidelines:
 
         # 検証
         assert content == "モックデータ"
-        mock_open.assert_called_once_with("test_file.txt", "r")
+        mock_open.assert_called_once_with("test_file.txt")
 
     def test_error_case_example(self):
         """
