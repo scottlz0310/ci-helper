@@ -13,11 +13,12 @@ import sys
 import time
 from pathlib import Path
 
-# プロジェクトルートをPythonパスに追加
+# プロジェクトルートをPythonパスに追加（標準ライブラリインポート後に配置）
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from tests.utils.performance_monitor import PerformanceMonitor
+# ローカルインポート（パス設定後）
+from tests.utils.performance_monitor import PerformanceMonitor  # noqa: E402
 
 
 def run_command(cmd: list[str], timeout: int = 300) -> subprocess.CompletedProcess:

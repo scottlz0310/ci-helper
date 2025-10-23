@@ -27,12 +27,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-# プロジェクトルートをパスに追加
+# プロジェクトルートをパスに追加（標準ライブラリインポート後に配置）
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
-from ci_helper.ai.integration import AIIntegration
-from ci_helper.ai.models import AIConfig, AnalyzeOptions, ProviderConfig
+# ローカルインポート（パス設定後）
+from ci_helper.ai.integration import AIIntegration  # noqa: E402
+from ci_helper.ai.models import AIConfig, AnalyzeOptions, ProviderConfig  # noqa: E402
 
 
 class RealEnvironmentTester:
@@ -727,7 +728,7 @@ class RealEnvironmentTester:
                     # 成功時の詳細情報
                     details = result.get("details", {})
                     for key, value in details.items():
-                        if isinstance(value, (int, float)):
+                        if isinstance(value, int | float):
                             if key.endswith("_time"):
                                 f.write(f"**{key}**: {value:.3f}秒\n")
                             elif key.endswith("_cost"):

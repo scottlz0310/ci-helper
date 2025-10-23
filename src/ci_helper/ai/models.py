@@ -301,7 +301,7 @@ class CostEstimate:
     estimated_output_tokens: int = 0  # 推定出力トークン数（エイリアス）
     confidence: float = 1.0  # 推定の信頼度
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """初期化後の処理"""
         # estimated_output_tokensが指定されている場合はoutput_tokensに設定
         if self.estimated_output_tokens > 0 and self.output_tokens == 0:

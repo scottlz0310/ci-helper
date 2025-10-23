@@ -545,7 +545,7 @@ class Config:
         # コスト制限の検証
         cost_limits = self.get_ai_cost_limits()
         for limit_key, limit_value in cost_limits.items():
-            if not isinstance(limit_value, (int, float)) or limit_value < 0:
+            if not isinstance(limit_value, int | float) or limit_value < 0:
                 raise ConfigurationError(
                     f"コスト制限 '{limit_key}' の値が無効です: {limit_value}",
                     "正の数値を指定してください",

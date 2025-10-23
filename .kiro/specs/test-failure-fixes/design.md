@@ -107,7 +107,7 @@ class MockAlignmentEngine:
         # 実際の呼び出しパラメータに合わせてモックを調整
         expected_call = mismatch.expected_call
         actual_call = mismatch.actual_call
-        
+
         return MockFix(
             target_file=mismatch.test_file,
             original_mock=expected_call,
@@ -551,13 +551,13 @@ class FixVerificationFramework:
         """修正の検証"""
         # 1. 構文チェック
         syntax_check = self._verify_syntax(fix_result.target_file)
-        
+
         # 2. テスト実行チェック
         test_execution = self._run_specific_test(fix_result.test_name)
-        
+
         # 3. 回帰テストチェック
         regression_check = self._run_regression_tests(fix_result.affected_area)
-        
+
         return VerificationResult(
             syntax_valid=syntax_check.success,
             test_passes=test_execution.success,
@@ -569,7 +569,7 @@ class FixVerificationFramework:
         """修正レポートの生成"""
         successful_fixes = [f for f in fixes if f.success]
         failed_fixes = [f for f in fixes if not f.success]
-        
+
         return FixReport(
             total_fixes=len(fixes),
             successful_fixes=len(successful_fixes),

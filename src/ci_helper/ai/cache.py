@@ -12,8 +12,9 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
-import aiofiles
+import aiofiles  # type: ignore[import-untyped]
 
 from .exceptions import CacheError
 from .models import AnalysisResult, AnalysisStatus
@@ -52,7 +53,7 @@ class ResponseCache:
         # 最後のクリーンアップ時刻
         self.last_cleanup = time.time()
 
-    def _load_metadata(self) -> dict[str, any]:
+    def _load_metadata(self) -> dict[str, Any]:
         """キャッシュメタデータを読み込み"""
         if not self.metadata_file.exists():
             return {
@@ -229,7 +230,7 @@ class ResponseCache:
         except Exception as e:
             raise CacheError(f"キャッシュのクリアに失敗しました: {e}")
 
-    async def get_stats(self) -> dict[str, any]:
+    async def get_stats(self) -> dict[str, Any]:
         """キャッシュ統計を取得
 
         Returns:
@@ -348,7 +349,7 @@ class ResponseCache:
         except Exception:
             return False
 
-    def _is_expired(self, entry: dict[str, any], current_time: float | None = None) -> bool:
+    def _is_expired(self, entry: dict[str, Any], current_time: float | None = None) -> bool:
         """エントリが期限切れかどうかをチェック"""
         if current_time is None:
             current_time = time.time()
@@ -358,7 +359,7 @@ class ResponseCache:
 
         return (current_time - created_time) > ttl_seconds
 
-    def _serialize_analysis_result(self, result: AnalysisResult) -> dict[str, any]:
+    def _serialize_analysis_result(self, result: AnalysisResult) -> dict[str, Any]:
         """AnalysisResultをシリアライズ"""
         return {
             "summary": result.summary,
@@ -412,7 +413,7 @@ class ResponseCache:
             "model": result.model,
         }
 
-    def _deserialize_analysis_result(self, data: dict[str, any]) -> AnalysisResult:
+    def _deserialize_analysis_result(self, data: dict[str, Any]) -> AnalysisResult:
         """シリアライズされたデータからAnalysisResultを復元"""
         from .models import CodeChange, FixSuggestion, Priority, RootCause, Severity, TokenUsage
 
@@ -496,7 +497,7 @@ class ResponseCache:
         """全キャッシュをクリア"""
         await self.clear()
 
-    def get_cache_stats(self) -> dict[str, any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """キャッシュ統計を取得（同期版）
 
         Returns:

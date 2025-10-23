@@ -976,11 +976,11 @@ def _determine_error_severity(error: Exception) -> str:
         TokenLimitError,
     )
 
-    if isinstance(error, (APIKeyError, SecurityError, ConfigurationError)):
+    if isinstance(error, APIKeyError | SecurityError | ConfigurationError):
         return "critical"
-    elif isinstance(error, (RateLimitError, NetworkError)):
+    elif isinstance(error, RateLimitError | NetworkError):
         return "medium"
-    elif isinstance(error, (ProviderError, TokenLimitError)):
+    elif isinstance(error, ProviderError | TokenLimitError):
         return "high"
     else:
         return "low"

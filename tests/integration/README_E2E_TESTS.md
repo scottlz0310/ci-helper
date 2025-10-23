@@ -7,7 +7,7 @@
 #### 実際のログファイルでのAI分析テスト
 
 - **OpenAI分析テスト**: 実際のログファイル（`ai_analysis_test.log`）を使用したOpenAI APIでの分析
-- **Anthropic分析テスト**: 複雑な失敗パターン（`complex_failure.log`）を使用したAnthropic APIでの分析  
+- **Anthropic分析テスト**: 複雑な失敗パターン（`complex_failure.log`）を使用したAnthropic APIでの分析
 - **ローカルLLM分析テスト**: Pythonエラーログ（`python_error.log`）を使用したローカルLLMでの分析
 
 #### プロバイダー別動作確認
@@ -68,7 +68,7 @@
 ### プロバイダー機能
 
 - ✅ OpenAI APIクライアントの動作確認
-- ✅ Anthropic APIクライアントの動作確認  
+- ✅ Anthropic APIクライアントの動作確認
 - ✅ ローカルLLM（Ollama）APIクライアントの動作確認
 - ✅ プロバイダー間のフォールバック機能
 

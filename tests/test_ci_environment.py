@@ -84,9 +84,10 @@ class TestCIEnvironmentStandardization:
 
         # システムのデフォルトエンコーディングを確認
         default_encoding = locale.getpreferredencoding()
-        assert default_encoding.lower() in ["utf-8", "utf8"], (
-            f"デフォルトエンコーディングがUTF-8ではありません: {default_encoding}"
-        )
+        assert default_encoding.lower() in [
+            "utf-8",
+            "utf8",
+        ], f"デフォルトエンコーディングがUTF-8ではありません: {default_encoding}"
 
     def test_resource_cleanup_verification(self, isolated_test_resources):
         """リソースクリーンアップの検証テスト"""

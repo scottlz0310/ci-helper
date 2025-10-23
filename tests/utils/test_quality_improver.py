@@ -259,7 +259,7 @@ def {fixture_name}():
         issues = []
 
         for node in ast.walk(tree):
-            if isinstance(node, (ast.ClassDef, ast.FunctionDef)):
+            if isinstance(node, ast.ClassDef | ast.FunctionDef):
                 # テストクラスまたはテストメソッドかチェック
                 if (isinstance(node, ast.ClassDef) and node.name.startswith("Test")) or (
                     isinstance(node, ast.FunctionDef) and node.name.startswith("test_")

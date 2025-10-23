@@ -70,7 +70,7 @@ ci-run analyze --stats
    OPENAI_API_KEY=sk-proj-your-key-here
    ANTHROPIC_API_KEY=sk-ant-your-key-here
    EOF
-   
+
    # .gitignoreに追加
    echo ".env" >> .gitignore
    ```
@@ -195,7 +195,7 @@ ci-helper.tomlからAPIキーを削除し、環境変数を使用してくださ
    ```bash
    # サービスの起動
    ollama serve
-   
+
    # 別ターミナルで動作確認
    curl http://localhost:11434/api/version
    ```
@@ -205,7 +205,7 @@ ci-helper.tomlからAPIキーを削除し、環境変数を使用してくださ
    ```bash
    # インストール済みモデルの確認
    ollama list
-   
+
    # モデルのダウンロード
    ollama pull llama3.2
    ```

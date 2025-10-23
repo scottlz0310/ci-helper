@@ -349,7 +349,7 @@ class CostManager:
         if export_format.lower() == "json":
             import json
 
-            import aiofiles
+            import aiofiles  # type: ignore[import-untyped]
 
             async with aiofiles.open(export_path, "w", encoding="utf-8") as f:
                 await f.write(json.dumps(report, indent=2, ensure_ascii=False))
