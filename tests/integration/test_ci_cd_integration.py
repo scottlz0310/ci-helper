@@ -159,9 +159,9 @@ class TestCIIntegration:
 
         # テスト自体は成功し、カバレッジレポートが生成されることを確認
         # カバレッジが低くても、レポート生成機能が動作することが重要
-        assert (
-            result.returncode == 0 or "coverage_test.json" in result.stdout
-        ), f"カバレッジレポート生成が失敗: {result.stderr}"
+        assert result.returncode == 0 or "coverage_test.json" in result.stdout, (
+            f"カバレッジレポート生成が失敗: {result.stderr}"
+        )
 
         # カバレッジファイルが生成されていることを確認
         coverage_file = Path("coverage_test.json")
@@ -446,9 +446,9 @@ def test_intentional_failure():
 
             # 診断情報が含まれていることを確認
             assert "AssertionError" in result.stdout, "エラー情報が含まれていません"
-            assert (
-                "これは診断情報テスト用の意図的な失敗です" in result.stdout
-            ), "カスタムエラーメッセージが含まれていません"
+            assert "これは診断情報テスト用の意図的な失敗です" in result.stdout, (
+                "カスタムエラーメッセージが含まれていません"
+            )
             assert "FAILED" in result.stdout, "失敗ステータスが表示されていません"
 
         finally:
@@ -511,9 +511,9 @@ class TestTestQualityMetrics:
         for module, expected_min in expected_minimums.items():
             if module in coverage_results:
                 actual_coverage = coverage_results[module]
-                assert (
-                    actual_coverage >= expected_min
-                ), f"{module} のカバレッジが不十分: {actual_coverage}% < {expected_min}%"
+                assert actual_coverage >= expected_min, (
+                    f"{module} のカバレッジが不十分: {actual_coverage}% < {expected_min}%"
+                )
 
     def test_test_execution_stability(self):
         """テスト実行の安定性を確認"""
