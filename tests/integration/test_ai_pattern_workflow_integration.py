@@ -156,7 +156,7 @@ npm ERR! enoent ENOENT: no such file or directory, open '/github/workspace/packa
             "multiple_errors_log": """
 STEP: Set up Docker
 Got permission denied while trying to connect to the Docker daemon socket
-STEP: Install dependencies  
+STEP: Install dependencies
 npm ERR! code ENOENT
 npm ERR! path /github/workspace/package.json
 STEP: Run tests

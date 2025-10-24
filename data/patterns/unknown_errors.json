@@ -1,0 +1,70 @@
+[
+  {
+    "timestamp": "2025-10-24T22:41:29.649878",
+    "log_content_hash": 4269883217849340156,
+    "log_length": 11833,
+    "error_features": {
+      "error_keywords": [
+        "network",
+        "denied",
+        "permission",
+        "error",
+        "failed",
+        "failure"
+      ],
+      "file_paths": [
+        "/var/run/act/actions/astral-sh-setup-uv@v4/dist/setup/index.js",
+        "/github.com",
+        "/opt/hostedtoolcache/uv/0.9.5",
+        "/github.com/astral-sh/uv/releases/download/0.9.5/uv-x86_64-unknown-linux-gnu.tar.gz",
+        "/catthehacker/ubuntu:full-24.04",
+        "/var/run/docker.sock"
+      ],
+      "line_numbers": [
+        41
+      ],
+      "stack_traces": [
+        "[CI/security]   | Unexpected error attempting to determine if executable file exists '/home/runner/.local/bin/tar': Error: EACCES: permission denied, stat '/home/runner/.local/bin/tar'",
+        "[CI/test-2  ]   | Unexpected error attempting to determine if executable file exists '/home/runner/.config/composer/vendor/bin/tar': Error: EACCES: permission denied, stat '/home/runner/.config/composer/vendor/bin/tar'",
+        "[CI/security]   | Unexpected error attempting to determine if executable file exists '/home/runner/.dotnet/tools/tar': Error: EACCES: permission denied, stat '/home/runner/.dotnet/tools/tar'",
+        "[CI/test-1  ]   | Unexpected error attempting to determine if executable file exists '/home/runner/.local/bin/tar': Error: EACCES: permission denied, stat '/home/runner/.local/bin/tar'",
+        "[CI/test-1  ]   | Unexpected error attempting to determine if executable file exists '/home/runner/.config/composer/vendor/bin/tar': Error: EACCES: permission denied, stat '/home/runner/.config/composer/vendor/bin/tar'",
+        "[CI/test-2  ]   | Unexpected error attempting to determine if executable file exists '/home/runner/.local/bin/tar': Error: EACCES: permission denied, stat '/home/runner/.local/bin/tar'",
+        "[CI/security]   | Unexpected error attempting to determine if executable file exists '/home/runner/.config/composer/vendor/bin/tar': Error: EACCES: permission denied, stat '/home/runner/.config/composer/vendor/bin/tar'",
+        "[CI/test-1  ]   | Unexpected error attempting to determine if executable file exists '/home/runner/.cargo/bin/tar': Error: EACCES: permission denied, stat '/home/runner/.cargo/bin/tar'",
+        "[CI/security]   | Unexpected error attempting to determine if executable file exists '/home/runner/.cargo/bin/tar': Error: EACCES: permission denied, stat '/home/runner/.cargo/bin/tar'",
+        "[CI/test-2  ]   | Unexpected error attempting to determine if executable file exists '/home/runner/.dotnet/tools/tar': Error: EACCES: permission denied, stat '/home/runner/.dotnet/tools/tar'",
+        "[CI/test-2  ]   | Unexpected error attempting to determine if executable file exists '/home/runner/.cargo/bin/tar': Error: EACCES: permission denied, stat '/home/runner/.cargo/bin/tar'",
+        "[CI/test-1  ]   | Unexpected error attempting to determine if executable file exists '/home/runner/.dotnet/tools/tar': Error: EACCES: permission denied, stat '/home/runner/.dotnet/tools/tar'"
+      ],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "permission_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_permission_error_20251024_224129",
+      "name": "自動生成パターン: permission_error",
+      "category": "permission_error",
+      "regex_patterns": [
+        "\\[CI/security\\]\\ \\ \\ 🐳\\ \\ docker\\ create\\ image=ghcr\\.io/[^/\\s]+/[^/\\s]+\\-24\\.04\\ platform=\\ entrypoint=\\[\"tail\"\\ \"\\-f\"\\ \"/[^/\\s]+/[^/\\s]+\\]\\ cmd=\\[\\]\\ network=\"host\"",
+        "\\[CI/[^/\\s]+st\\-1\\ \\ \\]\\ \\ \\ 🐳\\ \\ docker\\ create\\ image=ghcr\\.io/[^/\\s]+/[^/\\s]+\\-24\\.04\\ platform=\\ entrypoint=\\[\"tail\"\\ \"\\-f\"\\ \"/[^/\\s]+/[^/\\s]+\\]\\ cmd=\\[\\]\\ network=\"host\"",
+        "\\[CI/security\\]\\ \\ \\ 🐳\\ \\ docker\\ run\\ image=ghcr\\.io/[^/\\s]+/[^/\\s]+\\-24\\.04\\ platform=\\ entrypoint=\\[\"tail\"\\ \"\\-f\"\\ \"/[^/\\s]+/[^/\\s]+\\]\\ cmd=\\[\\]\\ network=\"host\""
+      ],
+      "keywords": [
+        "network",
+        "denied",
+        "permission",
+        "error",
+        "failed"
+      ],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": 4269883217849340156,
+      "created_at": "2025-10-24T22:41:29.649873"
+    },
+    "occurrence_count": 3,
+    "last_seen": "2025-10-24T22:44:51.499086"
+  }
+]

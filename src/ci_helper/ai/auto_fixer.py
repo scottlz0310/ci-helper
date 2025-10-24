@@ -151,7 +151,7 @@ class AutoFixer:
 
         # バックアップIDを生成
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_id = f"fix_{timestamp}_{hashlib.md5(fix_suggestion.title.encode()).hexdigest()[:8]}"
+        backup_id = f"fix_{timestamp}_{hashlib.sha256(fix_suggestion.title.encode()).hexdigest()[:8]}"
 
         backup_files = []
 

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "auto_generated_permission_error_20251024_224129",
+    "name": "自動生成パターン: permission_error",
+    "category": "permission_error",
+    "regex_patterns": [
+      "\\[CI/security\\]\\ \\ \\ 🐳\\ \\ docker\\ create\\ image=ghcr\\.io/[^/\\s]+/[^/\\s]+\\-24\\.04\\ platform=\\ entrypoint=\\[\"tail\"\\ \"\\-f\"\\ \"/[^/\\s]+/[^/\\s]+\\]\\ cmd=\\[\\]\\ network=\"host\"",
+      "\\[CI/[^/\\s]+st\\-1\\ \\ \\]\\ \\ \\ 🐳\\ \\ docker\\ create\\ image=ghcr\\.io/[^/\\s]+/[^/\\s]+\\-24\\.04\\ platform=\\ entrypoint=\\[\"tail\"\\ \"\\-f\"\\ \"/[^/\\s]+/[^/\\s]+\\]\\ cmd=\\[\\]\\ network=\"host\"",
+      "\\[CI/security\\]\\ \\ \\ 🐳\\ \\ docker\\ run\\ image=ghcr\\.io/[^/\\s]+/[^/\\s]+\\-24\\.04\\ platform=\\ entrypoint=\\[\"tail\"\\ \"\\-f\"\\ \"/[^/\\s]+/[^/\\s]+\\]\\ cmd=\\[\\]\\ network=\"host\""
+    ],
+    "keywords": [
+      "network",
+      "denied",
+      "permission",
+      "error",
+      "failed"
+    ],
+    "confidence_base": 0.6,
+    "success_rate": 0.5,
+    "created_at": "2025-10-24T22:44:51.499328",
+    "auto_generated": true,
+    "source": "unknown_error_learning",
+    "occurrence_count": 3,
+    "last_updated": "2025-10-24T22:44:51.499369"
+  }
+]

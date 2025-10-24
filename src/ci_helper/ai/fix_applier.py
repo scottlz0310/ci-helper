@@ -12,11 +12,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from rich.console import Console
+
 from ..utils.config import Config
 from .exceptions import AIError
-from .models import CodeChange, FixSuggestion
+from .models import CodeChange, FixSuggestion, FixTemplate, PatternMatch
 
 logger = logging.getLogger(__name__)
+console = Console()
 
 
 class FixApprovalResult:
@@ -615,19 +618,19 @@ class FixApplier:
         Returns:
             承認結果
         """
-        print(f"\n🔍 検出されたパターン: {pattern_match.pattern.name}")
-        print(f"📊 信頼度: {pattern_match.confidence:.1%}")
-        print(f"🔧 提案される修正: {fix_template.name}")
-        print(f"⚠️  リスクレベル: {fix_template.risk_level}")
-        print(f"⏱️  推定時間: {fix_template.estimated_time}")
-        print(f"📝 説明: {fix_template.description}")
+        console.print(f"\n[cyan]🔍 検出されたパターン:[/cyan] {pattern_match.pattern.name}")
+        console.print(f"[yellow]📊 信頼度:[/yellow] {pattern_match.confidence:.1%}")
+        console.print(f"[green]🔧 提案される修正:[/green] {fix_template.name}")
+        console.print(f"[red]⚠️  リスクレベル:[/red] {fix_template.risk_level}")
+        console.print(f"[blue]⏱️  推定時間:[/blue] {fix_template.estimated_time}")
+        console.print(f"[white]📝 説明:[/white] {fix_template.description}")
 
         if fix_template.fix_steps:
-            print("\n📋 修正ステップ:")
+            console.print("\n[bold]📋 修正ステップ:[/bold]")
             for i, step in enumerate(fix_template.fix_steps, 1):
-                print(f"  {i}. {step.description}")
+                console.print(f"  {i}. {step.description}")
                 if step.file_path:
-                    print(f"     ファイル: {step.file_path}")
+                    console.print(f"     [dim]ファイル: {step.file_path}[/dim]")
 
         while True:
             try:
@@ -646,7 +649,7 @@ class FixApplier:
                 elif response in ["q", "quit"]:
                     raise KeyboardInterrupt("ユーザーが終了を選択")
                 else:
-                    print("無効な入力です。y, n, s, q のいずれかを入力してください。")
+                    console.print("[red]無効な入力です。y, n, s, q のいずれかを入力してください。[/red]")
 
             except KeyboardInterrupt:
                 return FixApprovalResult(False, "ユーザーが中断")

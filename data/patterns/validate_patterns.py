@@ -119,7 +119,7 @@ def validate_pattern_database() -> dict[str, list[str]]:
             index_errors = []
             if "categories" in index_data:
                 indexed_patterns = set()
-                for category, info in index_data["categories"].items():
+                for _category, info in index_data["categories"].items():
                     if "patterns" in info:
                         indexed_patterns.update(info["patterns"])
 

@@ -6,10 +6,14 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 from ..utils.config import Config
+from .exceptions import ConfigurationError, ValidationError
 from .models import Pattern
 
 
@@ -358,7 +362,7 @@ class CustomPatternManager:
 
         # パターンの競合をチェック
         for i, pattern1 in enumerate(patterns):
-            for j, pattern2 in enumerate(patterns[i + 1 :], i + 1):
+            for _j, pattern2 in enumerate(patterns[i + 1 :], i + 1):
                 if self._patterns_conflict(pattern1, pattern2):
                     validation_result["conflicting_patterns"].append(
                         {

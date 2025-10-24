@@ -13,10 +13,13 @@ from collections import Counter, defaultdict
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .models import Pattern, PatternMatch, UserFeedback
 from .pattern_database import PatternDatabase
+
+if TYPE_CHECKING:
+    from .feedback_collector import FeedbackCollector
 
 logger = logging.getLogger(__name__)
 

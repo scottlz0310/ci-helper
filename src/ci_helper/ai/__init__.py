@@ -45,7 +45,6 @@ __all__ = [
     "AIConfig",
     # 設定管理
     "AIConfigManager",
-    "PatternRecognitionConfigManager",
     # 例外
     "AIError",
     # メイン統合クラス
@@ -70,6 +69,7 @@ __all__ = [
     "NetworkError",
     # プロバイダー実装
     "OpenAIProvider",
+    "PatternRecognitionConfigManager",
     # プロンプト管理
     "PromptManager",
     "ProviderConfig",

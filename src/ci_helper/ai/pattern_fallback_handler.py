@@ -739,7 +739,7 @@ class PatternFallbackHandler:
         ]
 
         # 裏付け証拠を追加
-        for i, evidence in enumerate(pattern_match.supporting_evidence[:3], 4):
+        for _i, evidence in enumerate(pattern_match.supporting_evidence[:3], 4):
             steps.append(f"   - {evidence}")
 
         steps.extend(
