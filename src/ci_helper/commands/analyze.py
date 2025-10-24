@@ -371,6 +371,14 @@ async def _run_analysis(
         console.print("  [cyan]ci-run analyze --retry auto[/cyan]")
 
         raise
+    finally:
+        # リソースをクリーンアップ
+        try:
+            for provider in ai_integration.providers.values():
+                if hasattr(provider, "cleanup"):
+                    await provider.cleanup()
+        except Exception:
+            pass
 
 
 async def _run_standard_analysis(
@@ -770,7 +778,10 @@ def _get_latest_log_file(config: Config) -> Path | None:
         log_manager = LogManager(config)
         logs = log_manager.list_logs()
         if logs:
-            return logs[0].file_path  # 最新のログ
+            log_dir = config.get_path("log_dir")
+            log_filename = logs[0].get("log_file") or logs[0].get("file_path")
+            if log_filename:
+                return log_dir / log_filename
         return None
     except Exception:
         return None
@@ -1896,31 +1907,27 @@ def _validate_analysis_environment(config: Config, console: Console) -> bool:
     try:
         ai_config = config.get_ai_config()
         if not ai_config:
-            issues.append("AI設定が見つかりません")
+            warnings.append("AI設定が見つかりません（デフォルト設定を使用します）")
         elif isinstance(ai_config, dict) and not ai_config:
-            issues.append("AI設定が空です")
-    except Exception as e:
-        issues.append(f"AI設定の読み込みに失敗しました: {e}")
+            warnings.append("AI設定が空です（デフォルト設定を使用します）")
+    except Exception:
+        warnings.append("AI設定の読み込みに失敗しました（デフォルト設定を使用します）")
 
-    # プロバイダーの確認
+    # デフォルトプロバイダーの確認
     try:
-        available_providers = config.get_available_ai_providers()
-        if not available_providers:
-            issues.append("利用可能なAIプロバイダーがありません")
-        else:
-            # APIキーの確認
-            for provider in available_providers:
-                if provider != "local":  # ローカルLLMはAPIキー不要
-                    try:
-                        api_key = config.get_ai_provider_api_key(provider)
-                        if not api_key:
-                            issues.append(f"{provider}のAPIキーが設定されていません")
-                        elif len(api_key) < 10:  # 最小長チェック
-                            warnings.append(f"{provider}のAPIキーが短すぎる可能性があります")
-                    except Exception as e:
-                        issues.append(f"{provider}のAPIキー取得に失敗: {e}")
-    except Exception as e:
-        issues.append(f"プロバイダー情報の取得に失敗しました: {e}")
+        default_provider = config.get_default_ai_provider()
+        if default_provider and default_provider != "local":
+            # デフォルトプロバイダーのAPIキーのみチェック
+            try:
+                api_key = config.get_ai_provider_api_key(default_provider)
+                if not api_key:
+                    issues.append(f"{default_provider}のAPIキーが設定されていません")
+                elif len(api_key) < 10:
+                    warnings.append(f"{default_provider}のAPIキーが短すぎる可能性があります")
+            except Exception:
+                issues.append(f"{default_provider}のAPIキー取得に失敗しました")
+    except Exception:
+        warnings.append("デフォルトプロバイダーの取得に失敗しました")
 
     # 警告がある場合は表示（エラーではない）
     if warnings:
@@ -1934,15 +1941,24 @@ def _validate_analysis_environment(config: Config, console: Console) -> bool:
         for i, issue in enumerate(issues, 1):
             console.print(f"  {i}. {issue}")
 
-        console.print("\n[blue]💡 段階的な解決方法:[/blue]")
-        console.print("  1️⃣  [cyan]ci-run doctor[/cyan] で詳細な環境チェック")
-        console.print("  2️⃣  [cyan]ci-run init[/cyan] で設定ファイルを再生成")
-        console.print("  3️⃣  APIキーを環境変数に設定:")
-        console.print("     • OpenAI: [cyan]export OPENAI_API_KEY=your_key[/cyan]")
-        console.print("     • Anthropic: [cyan]export ANTHROPIC_API_KEY=your_key[/cyan]")
-        console.print("  4️⃣  設定ファイルの [ai] セクションを確認")
+        # デフォルトプロバイダーを取得
+        try:
+            default_provider = config.get_default_ai_provider()
+        except Exception:
+            default_provider = "openai"
 
-        console.print("\n[dim]💡 ヒント: ローカルLLMを使用する場合はAPIキーは不要です[/dim]")
+        console.print("\n[blue]💡 段階的な解決方法:[/blue]")
+        console.print("  1️⃣  APIキーを環境変数に設定:")
+        if default_provider == "openai":
+            console.print("     [cyan]export OPENAI_API_KEY=your_key[/cyan]")
+        elif default_provider == "anthropic":
+            console.print("     [cyan]export ANTHROPIC_API_KEY=your_key[/cyan]")
+        else:
+            console.print(f"     [cyan]export {default_provider.upper()}_API_KEY=your_key[/cyan]")
+        console.print("  2️⃣  または別のプロバイダーを使用:")
+        console.print("     [cyan]ci-run analyze --provider local[/cyan] (APIキー不要)")
+        console.print("  3️⃣  [cyan]ci-run init[/cyan] で設定ファイルを再生成")
+        console.print("  4️⃣  [cyan]ci-run doctor[/cyan] で詳細な環境チェック")
         return False
 
     return True

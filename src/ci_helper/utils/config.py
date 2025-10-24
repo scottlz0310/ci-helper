@@ -228,9 +228,14 @@ class Config:
 
                     # providers を更新
                     if "providers" in ai_section:
+                        # 設定ファイルにprovidersがある場合は、デフォルトを置き換え
+                        ai_config["providers"] = {}
                         for provider_name, provider_config in ai_section["providers"].items():
-                            if provider_name in ai_config["providers"]:
-                                ai_config["providers"][provider_name].update(provider_config)
+                            # デフォルト設定があればマージ
+                            if provider_name in self.DEFAULT_AI_CONFIG["providers"]:
+                                merged_config = self.DEFAULT_AI_CONFIG["providers"][provider_name].copy()
+                                merged_config.update(provider_config)
+                                ai_config["providers"][provider_name] = merged_config
                             else:
                                 ai_config["providers"][provider_name] = provider_config
 

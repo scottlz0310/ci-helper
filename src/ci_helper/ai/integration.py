@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING, Any
 from ..core.models import FailureType
 from ..utils.config import Config
 from .cache_manager import CacheManager
-from .config_manager import AIConfigManager
 from .cost_manager import CostManager
 from .error_handler import AIErrorHandler
 
@@ -110,27 +109,35 @@ class AIIntegration:
         else:
             # Configオブジェクトの場合
             self.config = config
-            # AI設定を取得または作成
-            try:
-                self.ai_config_manager = AIConfigManager(self.config)
-                self.ai_config = self.ai_config_manager.get_ai_config()
-            except Exception:
-                # AI設定が存在しない場合はデフォルト設定を作成
-                self.ai_config = AIConfig(
-                    default_provider="openai",
-                    providers={},
-                    cache_enabled=True,
-                    cache_ttl_hours=24,
-                    cache_max_size_mb=100,
-                    cost_limits={},
-                    prompt_templates={},
-                    interactive_timeout=300,
+            # AI設定をConfigから直接読み込む
+            ai_config_dict = self.config.get_ai_config()
+            providers_data = ai_config_dict.get("providers", {})
+
+            providers = {}
+            for name, provider_data in providers_data.items():
+                providers[name] = ProviderConfig(
+                    name=name,
+                    api_key=self.config.get_ai_provider_api_key(name),
+                    base_url=provider_data.get("base_url"),
+                    default_model=provider_data.get("default_model", ""),
+                    available_models=provider_data.get("available_models", []),
+                    timeout_seconds=provider_data.get("timeout_seconds", 30),
+                    max_retries=provider_data.get("max_retries", 3),
                 )
 
+            self.ai_config = AIConfig(
+                default_provider=ai_config_dict.get("default_provider", "openai"),
+                providers=providers,
+                cache_enabled=ai_config_dict.get("cache_enabled", True),
+                cache_ttl_hours=ai_config_dict.get("cache_ttl_hours", 24),
+                cache_max_size_mb=ai_config_dict.get("cache_max_size_mb", 100),
+                cost_limits=ai_config_dict.get("cost_limits", {}),
+                prompt_templates=ai_config_dict.get("prompt_templates", {}),
+                interactive_timeout=ai_config_dict.get("interactive_timeout", 300),
+            )
+            self.ai_config_manager = None
+
         # 他のコンポーネントを初期化
-        if hasattr(self, "config") and self.ai_config_manager is None:
-            # AIConfigが直接渡されていない場合のみAIConfigManagerを作成
-            self.ai_config_manager = AIConfigManager(self.config)
 
         if hasattr(self, "config"):
             self.error_handler = AIErrorHandler(self.config)
@@ -253,9 +260,11 @@ class AIIntegration:
                     logger.warning("プロバイダー '%s' の接続検証に失敗しました", provider_name)
 
             except ConfigurationError as e:
-                # 設定エラーは致命的なので再発生
-                logger.error("プロバイダー '%s' の設定エラー: %s", provider_name, e)
-                raise
+                # 最初のエラーを記録
+                if first_error is None:
+                    first_error = e
+                # 設定エラーは警告を出して次に進む
+                logger.warning("プロバイダー '%s' の設定エラー: %s", provider_name, e)
             except (APIKeyError, RateLimitError, ProviderError) as e:
                 # 最初のエラーを記録
                 if first_error is None:

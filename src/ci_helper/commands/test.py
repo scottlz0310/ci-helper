@@ -149,9 +149,14 @@ def test(
         # 結果の表示
         _display_results(execution_result, output_format, verbose, dry_run, sanitize)
 
-        # 失敗時の終了コード
+        # 失敗時の処理
         if not execution_result.success and not dry_run:
-            ctx.exit(1)
+            # メニューシステムから呼び出された場合は終了コードではなく結果を返す
+            if hasattr(ctx, "obj") and ctx.obj and ctx.obj.get("from_menu", False):
+                _display_failure_summary(execution_result)
+                return execution_result
+            else:
+                ctx.exit(1)
 
     except CIHelperError as e:
         ErrorHandler.handle_error(e, verbose)
@@ -159,6 +164,26 @@ def test(
     except Exception as e:
         ErrorHandler.handle_error(e, verbose)
         ctx.exit(1)
+
+
+def _display_failure_summary(execution_result: ExecutionResult) -> None:
+    """CI失敗時の概要を表示"""
+    console = Console()
+
+    failed_workflows = execution_result.failed_workflows
+    failed_jobs = execution_result.failed_jobs
+
+    console.print("\n[yellow]📋 CI実行結果[/yellow]")
+    console.print(f"[red]✗[/red] {len(failed_workflows)}個のワークフローが失敗しました")
+    console.print(f"[red]✗[/red] {len(failed_jobs)}個のジョブが失敗しました")
+
+    if execution_result.log_path:
+        console.print(f"[green]✓[/green] 失敗ログを収集しました: [cyan]{execution_result.log_path}[/cyan]")
+
+    console.print("\n[bold blue]💡 次のステップ:[/bold blue]")
+    console.print("• [cyan]AI分析[/cyan] でエラーの根本原因を特定")
+    console.print("• [cyan]ログ管理[/cyan] で詳細なログを確認")
+    console.print("• [cyan]環境チェック[/cyan] で依存関係を確認")
 
 
 @contextmanager

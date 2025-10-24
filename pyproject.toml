@@ -16,6 +16,7 @@ dependencies = [
     "rich>=13.9.0",
     "tiktoken>=0.8.0",
     "tomli>=2.0.0; python_version < '3.11'",
+    "pyyaml>=6.0.0",
     # AI統合用の依存関係
     "openai>=1.50.0",
     "anthropic>=0.34.0",

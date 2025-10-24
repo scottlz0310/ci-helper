@@ -4,6 +4,7 @@ init コマンド実装
 設定ファイルテンプレートを生成します。
 """
 
+import asyncio
 from pathlib import Path
 
 import click
@@ -12,6 +13,7 @@ from rich.prompt import Confirm
 
 from ..config.templates import ACTRC_TEMPLATE, CI_HELPER_TOML_TEMPLATE, ENV_EXAMPLE_TEMPLATE, GITIGNORE_ADDITIONS
 from ..core.exceptions import ConfigurationError
+from ..ui.interactive_setup import InteractiveSetup
 
 console = Console()
 
@@ -41,11 +43,17 @@ jobs:
     is_flag=True,
     help="既存の設定ファイルを強制的に上書きします",
 )
-def init(force: bool) -> None:
+@click.option(
+    "--interactive",
+    "-i",
+    is_flag=True,
+    help="対話的にAIプロバイダーとモデルを選択します",
+)
+def init(force: bool, interactive: bool) -> None:
     """プロジェクトの初期化
 
     ci-helper の設定ファイルを作成し、プロジェクトを初期化します。
-    環境に依存しない汎用的な設定を生成します。
+    --interactive オプションでAIプロバイダーとモデルを対話的に選択できます。
 
     \b
     生成されるファイル:
@@ -53,6 +61,12 @@ def init(force: bool) -> None:
     - ci-helper.toml: ci-helper の設定ファイル（Git除外）
     - .env: 環境変数ファイル（Git除外）
     - .actrc.example, ci-helper.toml.example, .env.example: 参考用テンプレート（Git管理）
+
+    \b
+    使用例:
+    - ci-run init                    # 標準的な初期化
+    - ci-run init --interactive      # 対話的なAI設定付き初期化
+    - ci-run init --force            # 既存ファイルを強制上書き
 
     \b
     注意:
@@ -63,6 +77,15 @@ def init(force: bool) -> None:
         project_root = Path.cwd()
 
         console.print("[bold blue]🚀 プロジェクトを初期化しています...[/bold blue]\n")
+
+        # 対話的設定の実行
+        interactive_config = {}
+        if interactive:
+            setup = InteractiveSetup(console)
+            interactive_config = asyncio.run(setup.run_interactive_setup())
+
+            if not interactive_config:
+                console.print("[yellow]対話的設定がキャンセルされました。標準設定で続行します。[/yellow]")
 
         # 実際の設定ファイルの定義
         config_files = [
@@ -92,7 +115,7 @@ def init(force: bool) -> None:
         _create_template_files(project_root, force)
 
         # 実際の設定ファイルを作成
-        _create_actual_config_files(project_root, force)
+        _create_actual_config_files(project_root, force, interactive_config)
 
         # サンプルワークフローを用意
         _ensure_sample_workflows(project_root)
@@ -101,13 +124,18 @@ def init(force: bool) -> None:
         _handle_gitignore_update(project_root)
 
         # 環境変数の状況を表示
-        _show_environment_status()
+        if not interactive:
+            _show_environment_status()
 
         # 成功メッセージと次のステップ
         console.print("\n[green]🎉 初期化が完了しました！[/green]")
         console.print("\n[bold]次のステップ:[/bold]")
         console.print("1. 必要に応じて設定ファイルを編集")
         console.print("2. [cyan]ci-run doctor[/cyan] で環境をチェック")
+
+        if interactive_config:
+            console.print("3. [cyan]ci-run test[/cyan] でCI実行をテスト")
+            console.print("4. [cyan]ci-run analyze[/cyan] でAI分析をテスト")
 
     except ConfigurationError:
         raise
@@ -143,7 +171,7 @@ def _create_template_files(project_root: Path, force: bool = False) -> None:
             console.print(f"[red]✗[/red] {filename} の作成に失敗しました: {e}")
 
 
-def _create_actual_config_files(project_root: Path, force: bool) -> None:
+def _create_actual_config_files(project_root: Path, force: bool, interactive_config: dict | None = None) -> None:
     """テンプレートから実際の設定ファイルを作成"""
     # テンプレートから実際の設定ファイルを生成
     config_mappings = [
@@ -165,7 +193,7 @@ def _create_actual_config_files(project_root: Path, force: bool) -> None:
             try:
                 # テンプレートを読み込み、環境固有の値で置換
                 template_content = template_path.read_text(encoding="utf-8")
-                actual_content = _customize_template_content(template_content, actual_name)
+                actual_content = _customize_template_content(template_content, actual_name, interactive_config)
                 _write_config_file(actual_path, actual_content, description, force)
             except OSError as e:
                 console.print(f"[red]✗[/red] {actual_name} の作成に失敗しました: {e}")
@@ -198,7 +226,7 @@ def _ensure_sample_workflows(project_root: Path) -> None:
         console.print(f"[red]✗[/red] サンプルワークフローの作成に失敗しました: {e}")
 
 
-def _customize_template_content(template_content: str, filename: str) -> str:
+def _customize_template_content(template_content: str, filename: str, interactive_config: dict | None = None) -> str:
     """テンプレート内容を環境固有の値でカスタマイズ"""
 
     # 環境情報を収集
@@ -208,7 +236,7 @@ def _customize_template_content(template_content: str, filename: str) -> str:
     if filename == ".env":
         return _customize_env_template(template_content, env_info)
     elif filename == "ci-helper.toml":
-        return _customize_toml_template(template_content, env_info)
+        return _customize_toml_template(template_content, env_info, interactive_config)
     elif filename == ".actrc":
         return _customize_actrc_template(template_content, env_info)
 
@@ -262,9 +290,16 @@ def _customize_env_template(template_content: str, env_info: dict) -> str:
     return content
 
 
-def _customize_toml_template(template_content: str, env_info: dict) -> str:
+def _customize_toml_template(template_content: str, env_info: dict, interactive_config: dict | None = None) -> str:
     """ci-helper.toml テンプレートをカスタマイズ"""
-    # 現在はテンプレートをそのまま使用
+    # 対話的設定がある場合はそれを使用
+    if interactive_config:
+        from ..ui.interactive_setup import InteractiveSetup
+
+        setup = InteractiveSetup()
+        return setup.generate_toml_content(interactive_config)
+
+    # デフォルトテンプレートを使用
     return template_content
 
 
