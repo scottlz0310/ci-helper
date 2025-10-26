@@ -45,6 +45,12 @@ class PatternRecognitionEngine:
         self.pattern_database = PatternDatabase(data_directory)
         self.pattern_matcher = PatternMatcher()
         self.confidence_calculator = ConfidenceCalculator()
+        self.performance_optimizer = PerformanceOptimizer(
+            chunk_size_mb=2.0,  # 2MBチャンク
+            max_workers=4,  # 4並列
+            max_memory_mb=500.0,  # 500MB制限
+            enable_caching=True,
+        )
 
         # PatternFallbackHandlerを遅延インポート
         from .pattern_fallback_handler import PatternFallbackHandler
@@ -100,19 +106,43 @@ class PatternRecognitionEngine:
         logger.info("ログ分析を開始 (長さ: %d文字)", len(log_content))
 
         try:
-            # パターンを特定
-            patterns = await self.identify_patterns(log_content, options)
+            # パフォーマンス最適化されたパターンマッチングを実行
+            all_patterns = self.pattern_database.get_all_patterns()
 
-            if not patterns:
+            # カテゴリフィルタリング
+            enabled_categories = options.get("enabled_categories") if options else None
+            if enabled_categories:
+                all_patterns = [p for p in all_patterns if p.category in enabled_categories]
+
+            # 最適化されたパターンマッチング
+            matches, performance_metrics = await self.performance_optimizer.optimize_pattern_matching(
+                log_content, all_patterns, force_chunking=len(log_content) > 5 * 1024 * 1024
+            )
+
+            logger.info(
+                "最適化パターンマッチング完了: %.2f秒, %.1f MB/s",
+                performance_metrics.processing_time,
+                performance_metrics.throughput_mb_per_sec,
+            )
+
+            if not matches:
                 logger.info("マッチするパターンが見つかりませんでした")
                 return []
 
-            # パターンマッチ結果を作成
+            # マッチ結果をPatternMatchオブジェクトに変換
             pattern_matches = []
-            for pattern in patterns:
-                match_result = await self._create_pattern_match(pattern, log_content)
-                if match_result:
-                    pattern_matches.append(match_result)
+            for match in matches:
+                pattern = self.pattern_database.get_pattern(match.pattern_id)
+                if pattern:
+                    pattern_match = PatternMatch(
+                        pattern=pattern,
+                        confidence=match.confidence,
+                        match_positions=[match.start_position],
+                        extracted_context=match.context_before + " " + match.context_after,
+                        match_strength=match.confidence,
+                        supporting_evidence=[match.matched_text],
+                    )
+                    pattern_matches.append(pattern_match)
 
             # 信頼度でフィルタリング
             filtered_matches = [match for match in pattern_matches if match.confidence >= self.confidence_threshold]

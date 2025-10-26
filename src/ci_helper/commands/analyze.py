@@ -220,8 +220,19 @@ def analyze(
         console.print("[dim]部分的な結果が保存されている場合があります。[/dim]")
         sys.exit(130)
     except CIHelperError as e:
-        # CI Helper固有のエラーを詳細に処理
-        _handle_ci_helper_error(e, console, verbose)
+        # 日本語エラーハンドラーを使用
+        japanese_handler = JapaneseErrorHandler()
+        error_info = japanese_handler.handle_error(e, "analyze コマンド実行中")
+
+        console.print(f"[red]❌ {error_info['message']}[/red]")
+
+        if error_info["suggestion"]:
+            console.print(f"[blue]💡 解決方法:[/blue] {error_info['suggestion']}")
+
+        if error_info["recovery_steps"]:
+            console.print("[blue]📋 復旧手順:[/blue]")
+            for i, step in enumerate(error_info["recovery_steps"], 1):
+                console.print(f"  {i}. {step}")
 
         # フォールバック機能の提案
         _suggest_fallback_options(console, log_file)
@@ -229,7 +240,13 @@ def analyze(
         ErrorHandler.handle_error(e, verbose)
         sys.exit(1)
     except Exception as e:
-        # AI固有のエラーハンドリング
+        # 日本語エラーハンドラーを使用
+        japanese_handler = JapaneseErrorHandler()
+        error_info = japanese_handler.handle_error(e, "AI分析実行中")
+
+        console.print(f"[red]❌ {error_info['message']}[/red]")
+
+        # AI固有のエラーハンドリング（詳細）
         _handle_analysis_error(e, console, verbose)
 
         # 自動復旧の提案と実行
@@ -626,15 +643,22 @@ def _display_analysis_result(result: AnalysisResult, output_format: str, console
         output_format: 出力形式
         console: Richコンソール
     """
-    if output_format == "json":
-        import json
-        from dataclasses import asdict
+    # 拡張フォーマッターを使用
+    formatter = EnhancedAnalysisFormatter(console, language="ja")
 
-        console.print(json.dumps(asdict(result), indent=2, ensure_ascii=False, default=str))
-    elif output_format == "table":
-        _display_result_as_table(result, console)
-    else:  # markdown
-        _display_result_as_markdown(result, console)
+    if output_format in ["enhanced", "markdown", "json", "table"]:
+        formatter.format_analysis_result(result, output_format)
+    else:
+        # フォールバック: 従来の表示方式
+        if output_format == "json":
+            import json
+            from dataclasses import asdict
+
+            console.print(json.dumps(asdict(result), indent=2, ensure_ascii=False, default=str))
+        elif output_format == "table":
+            _display_result_as_table(result, console)
+        else:  # markdown
+            _display_result_as_markdown(result, console)
 
 
 def _display_result_as_markdown(result: AnalysisResult, console: Console) -> None:
