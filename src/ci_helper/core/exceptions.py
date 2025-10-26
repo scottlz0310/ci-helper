@@ -217,3 +217,196 @@ class SecurityError(CIHelperError):
             "シークレットは環境変数で設定してください。設定ファイルからシークレットを削除してください。",
             security_issue="secrets_in_config",
         )
+
+
+class LogFormattingError(CIHelperError):
+    """ログ整形関連エラー"""
+
+    def __init__(
+        self,
+        message: str,
+        suggestion: str | None = None,
+        formatter_name: str | None = None,
+        format_type: str | None = None,
+    ):
+        super().__init__(message, suggestion)
+        self.formatter_name = formatter_name
+        self.format_type = format_type
+
+    @classmethod
+    def formatter_not_found(cls, formatter_name: str, available_formatters: list[str]) -> LogFormattingError:
+        """フォーマッターが見つからない場合のエラー"""
+        available_list = "、".join(available_formatters) if available_formatters else "なし"
+        return cls(
+            f"フォーマッター '{formatter_name}' が見つかりません",
+            f"利用可能なフォーマッター: {available_list}",
+            formatter_name=formatter_name,
+        )
+
+    @classmethod
+    def invalid_format_options(cls, formatter_name: str, invalid_options: list[str]) -> LogFormattingError:
+        """無効なフォーマットオプションが指定された場合のエラー"""
+        options_str = "、".join(invalid_options)
+        return cls(
+            f"フォーマッター '{formatter_name}' に無効なオプションが指定されました: {options_str}",
+            "フォーマッターのドキュメントを確認して、有効なオプションを指定してください",
+            formatter_name=formatter_name,
+        )
+
+    @classmethod
+    def formatting_failed(cls, formatter_name: str, error_details: str) -> LogFormattingError:
+        """フォーマット処理が失敗した場合のエラー"""
+        return cls(
+            f"フォーマッター '{formatter_name}' での処理が失敗しました: {error_details}",
+            "ログファイルの形式を確認するか、別のフォーマッターを試してください",
+            formatter_name=formatter_name,
+        )
+
+    @classmethod
+    def memory_limit_exceeded(cls, formatter_name: str, file_size_mb: int) -> LogFormattingError:
+        """メモリ制限を超えた場合のエラー"""
+        return cls(
+            f"ログファイルが大きすぎます ({file_size_mb}MB): フォーマッター '{formatter_name}' で処理できません",
+            "ストリーミングフォーマッターを使用するか、ログファイルを分割してください",
+            formatter_name=formatter_name,
+        )
+
+
+class FileOperationError(CIHelperError):
+    """ファイル操作関連エラー"""
+
+    def __init__(
+        self,
+        message: str,
+        suggestion: str | None = None,
+        file_path: str | None = None,
+        operation: str | None = None,
+    ):
+        super().__init__(message, suggestion)
+        self.file_path = file_path
+        self.operation = operation
+
+    @classmethod
+    def file_not_found(cls, file_path: str, operation: str = "読み込み") -> FileOperationError:
+        """ファイルが見つからない場合のエラー"""
+        return cls(
+            f"ファイルが見つかりません: {file_path}",
+            "ファイルパスを確認するか、'ci-run logs' で利用可能なログファイルを確認してください",
+            file_path=file_path,
+            operation=operation,
+        )
+
+    @classmethod
+    def permission_denied(cls, file_path: str, operation: str) -> FileOperationError:
+        """ファイルアクセス権限がない場合のエラー"""
+        return cls(
+            f"ファイル{operation}の権限がありません: {file_path}",
+            "ファイルの権限を確認するか、管理者権限で実行してください",
+            file_path=file_path,
+            operation=operation,
+        )
+
+    @classmethod
+    def disk_space_insufficient(cls, file_path: str, required_mb: int, available_mb: int) -> FileOperationError:
+        """ディスク容量不足の場合のエラー"""
+        return cls(
+            f"ディスク容量が不足しています: 必要 {required_mb}MB、利用可能 {available_mb}MB",
+            "'ci-run clean' でキャッシュを削除するか、別の場所に保存してください",
+            file_path=file_path,
+            operation="書き込み",
+        )
+
+    @classmethod
+    def file_corrupted(cls, file_path: str) -> FileOperationError:
+        """ファイルが破損している場合のエラー"""
+        return cls(
+            f"ファイルが破損しているか、読み取れません: {file_path}",
+            "ファイルを再生成するか、バックアップから復元してください",
+            file_path=file_path,
+            operation="読み込み",
+        )
+
+    @classmethod
+    def path_too_long(cls, file_path: str) -> FileOperationError:
+        """ファイルパスが長すぎる場合のエラー"""
+        return cls(
+            f"ファイルパスが長すぎます: {file_path}",
+            "より短いファイル名を使用するか、ディレクトリ階層を浅くしてください",
+            file_path=file_path,
+            operation="作成",
+        )
+
+    @classmethod
+    def unsafe_path(cls, file_path: str) -> FileOperationError:
+        """安全でないパスが指定された場合のエラー"""
+        return cls(
+            f"セキュリティ上の理由により、このパスへのアクセスは許可されていません: {file_path}",
+            "現在のディレクトリまたはその下位ディレクトリを使用してください",
+            file_path=file_path,
+            operation="アクセス",
+        )
+
+
+class UserInputError(CIHelperError):
+    """ユーザー入力関連エラー"""
+
+    def __init__(
+        self,
+        message: str,
+        suggestion: str | None = None,
+        input_value: str | None = None,
+        input_type: str | None = None,
+    ):
+        super().__init__(message, suggestion)
+        self.input_value = input_value
+        self.input_type = input_type
+
+    @classmethod
+    def invalid_format_type(cls, format_type: str, valid_types: list[str]) -> UserInputError:
+        """無効なフォーマット種別が指定された場合のエラー"""
+        valid_list = "、".join(valid_types)
+        return cls(
+            f"無効なフォーマット種別です: {format_type}",
+            f"有効なフォーマット種別: {valid_list}",
+            input_value=format_type,
+            input_type="format_type",
+        )
+
+    @classmethod
+    def invalid_option_value(cls, option_name: str, value: str, expected_type: str) -> UserInputError:
+        """無効なオプション値が指定された場合のエラー"""
+        return cls(
+            f"オプション '{option_name}' の値が無効です: {value}",
+            f"期待される型: {expected_type}",
+            input_value=value,
+            input_type=option_name,
+        )
+
+    @classmethod
+    def missing_required_input(cls, input_name: str) -> UserInputError:
+        """必須入力が不足している場合のエラー"""
+        return cls(
+            f"必須項目が入力されていません: {input_name}",
+            "必要な情報を入力してください",
+            input_type=input_name,
+        )
+
+    @classmethod
+    def input_too_long(cls, input_name: str, max_length: int, actual_length: int) -> UserInputError:
+        """入力値が長すぎる場合のエラー"""
+        return cls(
+            f"入力値が長すぎます ({input_name}): {actual_length}文字 (最大: {max_length}文字)",
+            f"{max_length}文字以内で入力してください",
+            input_type=input_name,
+        )
+
+    @classmethod
+    def invalid_file_extension(cls, file_path: str, valid_extensions: list[str]) -> UserInputError:
+        """無効なファイル拡張子の場合のエラー"""
+        valid_list = "、".join(valid_extensions)
+        return cls(
+            f"無効なファイル拡張子です: {file_path}",
+            f"有効な拡張子: {valid_list}",
+            input_value=file_path,
+            input_type="file_extension",
+        )

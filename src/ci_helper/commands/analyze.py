@@ -32,7 +32,9 @@ from ..ai.integration import AIIntegration
 from ..ai.models import AnalyzeOptions
 from ..core.error_handler import ErrorHandler
 from ..core.exceptions import CIHelperError
+from ..core.japanese_messages import JapaneseErrorHandler
 from ..core.log_manager import LogManager
+from ..ui.enhanced_formatter import EnhancedAnalysisFormatter
 from ..utils.config import Config
 
 console = Console()

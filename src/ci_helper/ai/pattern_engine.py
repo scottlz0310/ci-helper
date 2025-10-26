@@ -14,6 +14,7 @@ from .confidence_calculator import ConfidenceCalculator
 from .models import AnalysisResult, Pattern, PatternMatch, RootCause
 from .pattern_database import PatternDatabase
 from .pattern_matcher import PatternMatcher
+from .performance_optimizer import PerformanceOptimizer
 
 logger = logging.getLogger(__name__)
 

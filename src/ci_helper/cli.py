@@ -19,6 +19,7 @@ from . import __version__
 from .commands.cache import cache
 from .commands.clean import clean
 from .commands.doctor import doctor
+from .commands.format_logs import format_logs, format_logs_custom_handler, format_logs_handler
 from .commands.init import init, setup
 from .commands.logs import logs
 from .commands.secrets import secrets
@@ -59,14 +60,15 @@ def cli(ctx: click.Context, verbose: bool, config_file: Path | None, menu: bool)
 
     \b
     主要コマンド:
-      init     設定ファイルテンプレートを生成
-      doctor   環境依存関係をチェック
-      test     CI/CDワークフローをローカルで実行
-      analyze  AI分析でCI失敗の根本原因を特定
-      logs     実行ログを管理・表示
-      secrets  シークレット管理と検証
-      clean    キャッシュとログをクリーンアップ
-      cache    Dockerイメージのキャッシュ管理
+      init         設定ファイルテンプレートを生成
+      doctor       環境依存関係をチェック
+      test         CI/CDワークフローをローカルで実行
+      analyze      AI分析でCI失敗の根本原因を特定
+      logs         実行ログを管理・表示
+      format-logs  ログを様々な形式で整形
+      secrets      シークレット管理と検証
+      clean        キャッシュとログをクリーンアップ
+      cache        Dockerイメージのキャッシュ管理
 
     \b
     使用例:
@@ -124,6 +126,7 @@ cli.add_command(setup)
 cli.add_command(doctor)
 cli.add_command(test)
 cli.add_command(logs)
+cli.add_command(format_logs)
 cli.add_command(secrets)
 cli.add_command(clean)
 cli.add_command(cache)
@@ -439,6 +442,10 @@ def _create_command_handlers(ctx: click.Context) -> dict[str, Any]:
         return invoke_command(cache, clear=True)
 
     handlers["cache_clear"] = cache_clear_handler
+
+    # format_logs コマンドハンドラー（メニューシステム用）
+    handlers["format_logs"] = format_logs_handler
+    handlers["format_logs_custom"] = format_logs_custom_handler
 
     return handlers
 

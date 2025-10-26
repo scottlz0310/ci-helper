@@ -148,12 +148,41 @@ class TestCommandMenuBuilder:
         assert logs_submenu.title == "ログ管理メニュー"
         assert logs_submenu.show_back is True
         assert logs_submenu.show_quit is True
-        assert len(logs_submenu.items) == 3
+        assert len(logs_submenu.items) == 4
 
         items = logs_submenu.items
         assert items[0].title == "ログ一覧表示"
         assert items[1].title == "最新ログ表示"
         assert items[2].title == "ログ比較"
+        assert items[3].title == "ログ整形"
+
+        # ログ整形サブメニューの存在確認
+        assert items[3].submenu is not None
+        assert items[3].submenu.title == "ログ整形メニュー"
+
+    def test_log_formatting_submenu_structure(self):
+        """ログ整形サブメニューの構造をテスト"""
+        formatting_submenu = self.builder._build_log_formatting_submenu()
+
+        assert isinstance(formatting_submenu, Menu)
+        assert formatting_submenu.title == "ログ整形メニュー"
+        assert formatting_submenu.show_back is True
+        assert formatting_submenu.show_quit is True
+        assert len(formatting_submenu.items) == 3
+
+        items = formatting_submenu.items
+        assert items[0].title == "最新ログ整形"
+        assert items[0].description == "最新の実行ログを様々な形式で整形"
+        assert items[1].title == "特定ログ整形"
+        assert items[1].description == "指定したログファイルを様々な形式で整形"
+        assert items[2].title == "カスタム整形"
+        assert items[2].description == "整形パラメータをカスタマイズ"
+
+        # 最新ログ整形と特定ログ整形はサブメニューを持つ
+        assert items[0].submenu is not None
+        assert items[1].submenu is not None
+        # カスタム整形はアクションを持つ
+        assert items[2].action is not None
 
     def test_secrets_submenu_structure(self):
         """シークレット管理サブメニューの構造をテスト"""
