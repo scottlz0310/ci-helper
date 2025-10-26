@@ -343,6 +343,7 @@ async def _run_analysis(
             use_cache=use_cache,
             generate_fixes=fix,
             output_format=output_format,
+            force_ai_analysis=True,  # プロバイダー指定時はAI分析を強制
         )
 
         # 対話モードの場合
@@ -919,7 +920,9 @@ def _display_detailed_fix_suggestions(fix_suggestions: list, console: Console) -
     for i, fix in enumerate(fix_suggestions, 1):
         # 優先度に応じた色分け
         priority_colors = {"urgent": "red", "high": "yellow", "medium": "blue", "low": "dim"}
-        priority_color = priority_colors.get(getattr(fix, "priority", "medium").lower(), "blue")
+        priority = getattr(fix, "priority", "medium")
+        priority_str = priority.value if hasattr(priority, "value") else str(priority)
+        priority_color = priority_colors.get(priority_str.lower(), "blue")
 
         console.print(f"\n[bold {priority_color}]修正案 {i}: {fix.title}[/bold {priority_color}]")
         console.print(f"  説明: {fix.description}")

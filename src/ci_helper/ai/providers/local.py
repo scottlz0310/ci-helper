@@ -38,9 +38,47 @@ class LocalLLMProvider(AIProvider):
             config: プロバイダー設定
         """
         super().__init__(config)
-        self.base_url = config.base_url or "http://localhost:11434"
+        # base_urlが"auto"の場合は自動検出
+        if config.base_url == "auto":
+            self.base_url = self._detect_ollama_url()
+        else:
+            self.base_url = config.base_url or "http://localhost:11434"
         self._session: aiohttp.ClientSession | None = None
 
+    def _detect_ollama_url(self) -> str:
+        """実行環境に応じてOllama URLを検出
+        
+        Returns:
+            検出されたOllama URL
+        """
+        import platform
+        import subprocess
+        
+        # WSL環境を検出
+        if platform.system() == "Linux":
+            try:
+                # /proc/versionでWSLを確認
+                with open("/proc/version", "r") as f:
+                    if "microsoft" in f.read().lower() or "wsl" in f.read().lower():
+                        # WSLの場合、デフォルトゲートウェイを取得
+                        result = subprocess.run(
+                            ["ip", "route", "show", "default"],
+                            capture_output=True,
+                            text=True,
+                            timeout=2
+                        )
+                        if result.returncode == 0:
+                            # "default via 172.20.176.1 dev eth0"のような出力からIPを抽出
+                            parts = result.stdout.split()
+                            if len(parts) >= 3 and parts[0] == "default" and parts[1] == "via":
+                                gateway_ip = parts[2]
+                                return f"http://{gateway_ip}:11434"
+            except Exception:
+                pass
+        
+        # デフォルトはlocalhost
+        return "http://localhost:11434"
+    
     async def initialize(self) -> None:
         """プロバイダーを初期化
 

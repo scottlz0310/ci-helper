@@ -301,7 +301,9 @@ class InteractiveSetup:
 
             # ローカルLLMの場合は追加設定
             if provider_name == "local":
-                provider_config["base_url"] = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+                # WSL環境を検出して適切なURLを設定
+                default_url = "auto"  # 自動検出を示す特殊値
+                provider_config["base_url"] = os.getenv("OLLAMA_BASE_URL", default_url)
                 provider_config["timeout_seconds"] = 60
 
             config["ai"]["providers"][provider_name] = provider_config
@@ -364,6 +366,8 @@ class InteractiveSetup:
             "verbose = false",
             "save_logs = true",
             "",
+            "# 注意: base_urlに\"auto\"を設定すると、WSL環境では自動的にWindowsホストのIPを検出します",
+            "",
         ]
 
         ai_config = config.get("ai", {})
@@ -404,7 +408,8 @@ class InteractiveSetup:
 
             # ローカルLLMの場合は base_url を追加
             if provider_name == "local" and "base_url" in provider_config:
-                lines.append(f'base_url = "{provider_config["base_url"]}"')
+                base_url = provider_config["base_url"]
+                lines.append(f'base_url = "{base_url}"  # "auto" で自動検出、または直接URLを指定')
 
             lines.append("")
 

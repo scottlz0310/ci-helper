@@ -128,6 +128,14 @@ cli.add_command(secrets)
 cli.add_command(clean)
 cli.add_command(cache)
 
+# フィードバックコマンドの登録
+try:
+    from .commands.feedback import feedback
+
+    cli.add_command(feedback)
+except ImportError:
+    pass
+
 # AI統合コマンドの遅延登録（循環インポート回避）
 try:
     from .commands.analyze import analyze
