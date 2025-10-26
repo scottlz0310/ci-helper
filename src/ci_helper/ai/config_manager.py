@@ -132,6 +132,14 @@ class PatternRecognitionConfigManager:
                 f"有効な値: {', '.join(valid_levels)}",
             )
 
+    def get_ai_config(self) -> AIConfig:
+        """AI設定を取得（テスト互換性のため）
+
+        Returns:
+            AIConfigオブジェクト
+        """
+        return self.create_ai_config_from_settings()
+
     def create_ai_config_from_settings(self) -> AIConfig:
         """現在の設定からAIConfigオブジェクトを作成
 

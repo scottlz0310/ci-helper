@@ -18,12 +18,12 @@ CI-Helperプロジェクトのpytestテストスイートで発生している11
   - 既存の`src/ci_helper/ui/enhanced_formatter.py`から適切にインポート
   - _要件: 1.3_
 
-- [ ] 3. AIConfigManagerクラスの作成または修正
+- [x] 3. AIConfigManagerクラスの作成または修正
   - `src/ci_helper/ai/integration.py`でAIConfigManagerクラスを作成または既存クラスをインポート
   - テストで期待されるAIConfigManagerクラスを提供
   - _要件: 1.4_
 
-- [ ] 4. FailureType.SYNTAX列挙値の追加
+- [x] 4. FailureType.SYNTAX列挙値の追加
   - `src/ci_helper/core/models.py`のFailureTypeにSYNTAX値を追加
   - テストで使用されているFailureType.SYNTAXを利用可能にする
   - _要件: 1.5_

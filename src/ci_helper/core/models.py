@@ -23,6 +23,7 @@ class FailureType(Enum):
     TIMEOUT = "timeout"
     BUILD_FAILURE = "build_failure"
     TEST_FAILURE = "test_failure"
+    SYNTAX = "syntax"
     UNKNOWN = "unknown"
 
 

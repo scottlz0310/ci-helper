@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 from ..core.models import FailureType
 from ..utils.config import Config
 from .cache_manager import CacheManager
+from .config_manager import AIConfigManager
 from .cost_manager import CostManager
 from .error_handler import AIErrorHandler
 
@@ -109,33 +110,10 @@ class AIIntegration:
         else:
             # Configオブジェクトの場合
             self.config = config
-            # AI設定をConfigから直接読み込む
-            ai_config_dict = self.config.get_ai_config()
-            providers_data = ai_config_dict.get("providers", {})
-
-            providers = {}
-            for name, provider_data in providers_data.items():
-                providers[name] = ProviderConfig(
-                    name=name,
-                    api_key=self.config.get_ai_provider_api_key(name),
-                    base_url=provider_data.get("base_url"),
-                    default_model=provider_data.get("default_model", ""),
-                    available_models=provider_data.get("available_models", []),
-                    timeout_seconds=provider_data.get("timeout_seconds", 30),
-                    max_retries=provider_data.get("max_retries", 3),
-                )
-
-            self.ai_config = AIConfig(
-                default_provider=ai_config_dict.get("default_provider", "openai"),
-                providers=providers,
-                cache_enabled=ai_config_dict.get("cache_enabled", True),
-                cache_ttl_hours=ai_config_dict.get("cache_ttl_hours", 24),
-                cache_max_size_mb=ai_config_dict.get("cache_max_size_mb", 100),
-                cost_limits=ai_config_dict.get("cost_limits", {}),
-                prompt_templates=ai_config_dict.get("prompt_templates", {}),
-                interactive_timeout=ai_config_dict.get("interactive_timeout", 300),
-            )
-            self.ai_config_manager = None
+            # AIConfigManagerを作成
+            self.ai_config_manager = AIConfigManager(self.config)
+            # AI設定はinitialize()で読み込む
+            self.ai_config = None
 
         # 他のコンポーネントを初期化
 

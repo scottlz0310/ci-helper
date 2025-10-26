@@ -21,6 +21,30 @@
     "auto_generated": true,
     "source": "unknown_error_learning",
     "occurrence_count": 11,
-    "last_updated": "2025-10-26T21:37:07.691762"
+    "last_updated": "2025-10-26T21:45:47.613939"
+  },
+  {
+    "id": "auto_generated_network_error_20251026_214504",
+    "name": "自動生成パターン: network_error",
+    "category": "network_error",
+    "regex_patterns": [
+      "FAILURES:",
+      "test_user_authentication\\.py::test_login_with_invalid_credentials\\ FAILED",
+      "AssertionError:\\ Expected\\ status\\ code\\ 401,\\ got\\ 200"
+    ],
+    "keywords": [
+      "error",
+      "invalid",
+      "connection",
+      "failure",
+      "timeout"
+    ],
+    "confidence_base": 0.6,
+    "success_rate": 0.5,
+    "created_at": "2025-10-26T21:45:35.388523",
+    "auto_generated": true,
+    "source": "unknown_error_learning",
+    "occurrence_count": 5,
+    "last_updated": "2025-10-26T21:45:47.619413"
   }
 ]
