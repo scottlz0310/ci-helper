@@ -1,0 +1,40 @@
+# AI機能を有効にしたCI-Helper設定ファイル
+# テスト用の設定例
+
+[ci-helper]
+log_dir = ".ci-helper/logs"
+cache_dir = ".ci-helper/cache"
+reports_dir = ".ci-helper/reports"
+context_lines = 3
+max_log_size_mb = 100
+verbose = false
+save_logs = true
+
+[ai]
+default_provider = "openai"
+cache_enabled = true
+cache_ttl_hours = 24
+interactive_timeout = 300
+streaming_enabled = true
+security_checks_enabled = true
+
+[ai.providers.openai]
+default_model = "gpt-4o"
+available_models = ["gpt-4o", "gpt-4o-mini"]
+timeout_seconds = 30
+max_retries = 3
+
+[ai.providers.anthropic]
+default_model = "claude-3-5-sonnet-20241022"
+available_models = ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022"]
+timeout_seconds = 30
+max_retries = 3
+
+[ai.cost_limits]
+monthly_usd = 50.0
+per_request_usd = 1.0
+
+[ai.prompt_templates]
+analysis = "templates/analysis.txt"
+fix_suggestion = "templates/fix.txt"
+interactive = "templates/interactive.txt"

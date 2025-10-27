@@ -1,0 +1,12 @@
+# 無効なCI-Helper設定ファイル
+# テスト用の設定例（エラーテスト用）
+
+[invalid_section
+# 構文エラー: セクションが閉じられていない
+
+[ai]
+default_provider = "nonexistent"
+
+[ai.providers.invalid]
+# APIキーが設定されていない
+default_model = "invalid-model"

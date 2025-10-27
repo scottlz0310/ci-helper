@@ -1,0 +1,12 @@
+{
+    "providers": {
+        "fast_mock": {
+            "api_key": "perf-test-key",
+            "default_model": "gpt-4o-mini",
+            "timeout_seconds": 5,
+            "max_retries": 1
+        }
+    },
+    "cache_enabled": true,
+    "cache_ttl_hours": 1
+}

@@ -1,0 +1,771 @@
+{
+    "metadata": {
+        "description": "包括的なパターン認識テスト用データ",
+        "version": "1.0.0",
+        "created_at": "2024-10-27T00:00:00Z",
+        "updated_at": "2024-10-27T00:00:00Z",
+        "total_patterns": 25,
+        "test_purpose": "パターン認識エンジンの精度とカバレッジテスト"
+    },
+    "patterns": [
+        {
+            "id": "test_docker_permission",
+            "name": "Docker権限エラー（テスト用）",
+            "category": "permission",
+            "regex_patterns": [
+                "permission denied.*docker",
+                "Got permission denied while trying to connect to the Docker daemon",
+                "dial unix /var/run/docker\\.sock: connect: permission denied"
+            ],
+            "keywords": [
+                "permission denied",
+                "docker daemon",
+                "docker.sock",
+                "connect: permission denied"
+            ],
+            "context_requirements": [
+                "docker",
+                "daemon",
+                "socket"
+            ],
+            "confidence_base": 0.9,
+            "success_rate": 0.95,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 5
+        },
+        {
+            "id": "test_python_import_error",
+            "name": "Pythonインポートエラー（テスト用）",
+            "category": "dependency",
+            "regex_patterns": [
+                "ModuleNotFoundError: No module named '.*'",
+                "ImportError: cannot import name '.*'",
+                "ImportError: No module named .*"
+            ],
+            "keywords": [
+                "ModuleNotFoundError",
+                "ImportError",
+                "cannot import",
+                "No module named"
+            ],
+            "context_requirements": [
+                "python",
+                "import",
+                "module"
+            ],
+            "confidence_base": 0.85,
+            "success_rate": 0.90,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 12
+        },
+        {
+            "id": "test_npm_install_failure",
+            "name": "NPMインストール失敗（テスト用）",
+            "category": "dependency",
+            "regex_patterns": [
+                "npm ERR!.*install",
+                "npm ERR!.*ENOENT",
+                "npm ERR!.*package\\.json"
+            ],
+            "keywords": [
+                "npm ERR!",
+                "install",
+                "ENOENT",
+                "package.json"
+            ],
+            "context_requirements": [
+                "npm",
+                "node",
+                "javascript"
+            ],
+            "confidence_base": 0.80,
+            "success_rate": 0.85,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 8
+        },
+        {
+            "id": "test_network_timeout",
+            "name": "ネットワークタイムアウト（テスト用）",
+            "category": "network",
+            "regex_patterns": [
+                "Connection timed out",
+                "connect: connection timed out",
+                "dial tcp.*: i/o timeout",
+                "timeout: failed to connect"
+            ],
+            "keywords": [
+                "connection timed out",
+                "timeout",
+                "failed to connect",
+                "i/o timeout"
+            ],
+            "context_requirements": [
+                "network",
+                "connection",
+                "timeout"
+            ],
+            "confidence_base": 0.75,
+            "success_rate": 0.70,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 15
+        },
+        {
+            "id": "test_yaml_syntax_error",
+            "name": "YAML構文エラー（テスト用）",
+            "category": "config",
+            "regex_patterns": [
+                "yaml: line \\d+: .*",
+                "Invalid workflow file",
+                "mapping values are not allowed here",
+                "could not find expected ':'"
+            ],
+            "keywords": [
+                "yaml:",
+                "Invalid workflow",
+                "mapping values",
+                "expected ':'"
+            ],
+            "context_requirements": [
+                "yaml",
+                "syntax",
+                "workflow"
+            ],
+            "confidence_base": 0.92,
+            "success_rate": 0.85,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 6
+        },
+        {
+            "id": "test_compilation_error",
+            "name": "コンパイルエラー（テスト用）",
+            "category": "build",
+            "regex_patterns": [
+                "compilation terminated",
+                "error: .*\\.c:\\d+:\\d+:",
+                "fatal error: .*\\.h: No such file",
+                "undefined reference to"
+            ],
+            "keywords": [
+                "compilation terminated",
+                "fatal error",
+                "undefined reference",
+                "No such file"
+            ],
+            "context_requirements": [
+                "compile",
+                "build",
+                "gcc"
+            ],
+            "confidence_base": 0.88,
+            "success_rate": 0.75,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 4
+        },
+        {
+            "id": "test_assertion_failure",
+            "name": "アサーション失敗（テスト用）",
+            "category": "test",
+            "regex_patterns": [
+                "AssertionError: .*",
+                "assert .* == .*",
+                "Expected .*, but got .*",
+                "Test failed: .*"
+            ],
+            "keywords": [
+                "AssertionError",
+                "assert",
+                "Expected",
+                "Test failed"
+            ],
+            "context_requirements": [
+                "test",
+                "assertion",
+                "pytest"
+            ],
+            "confidence_base": 0.85,
+            "success_rate": 0.90,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 20
+        },
+        {
+            "id": "test_ssl_certificate_error",
+            "name": "SSL証明書エラー（テスト用）",
+            "category": "network",
+            "regex_patterns": [
+                "SSL certificate verify failed",
+                "certificate verification failed",
+                "SSL: CERTIFICATE_VERIFY_FAILED",
+                "x509: certificate signed by unknown authority"
+            ],
+            "keywords": [
+                "SSL certificate",
+                "certificate verify",
+                "CERTIFICATE_VERIFY_FAILED",
+                "unknown authority"
+            ],
+            "context_requirements": [
+                "ssl",
+                "certificate",
+                "verify"
+            ],
+            "confidence_base": 0.90,
+            "success_rate": 0.80,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 3
+        },
+        {
+            "id": "test_environment_variable_missing",
+            "name": "環境変数不足（テスト用）",
+            "category": "config",
+            "regex_patterns": [
+                ".*: unbound variable",
+                "Environment variable .* is not set",
+                ".*: parameter null or not set",
+                "KeyError: '.*'"
+            ],
+            "keywords": [
+                "unbound variable",
+                "Environment variable",
+                "not set",
+                "parameter null",
+                "KeyError"
+            ],
+            "context_requirements": [
+                "environment",
+                "variable",
+                "set"
+            ],
+            "confidence_base": 0.87,
+            "success_rate": 0.90,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 7
+        },
+        {
+            "id": "test_disk_space_full",
+            "name": "ディスク容量不足（テスト用）",
+            "category": "system",
+            "regex_patterns": [
+                "No space left on device",
+                "disk full",
+                "write failed, filesystem is full",
+                "ENOSPC: no space left on device"
+            ],
+            "keywords": [
+                "No space left",
+                "disk full",
+                "filesystem is full",
+                "ENOSPC"
+            ],
+            "context_requirements": [
+                "disk",
+                "space",
+                "filesystem"
+            ],
+            "confidence_base": 0.95,
+            "success_rate": 0.85,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 2
+        },
+        {
+            "id": "test_memory_limit_exceeded",
+            "name": "メモリ制限超過（テスト用）",
+            "category": "system",
+            "regex_patterns": [
+                "MemoryError",
+                "Out of memory",
+                "Cannot allocate memory",
+                "killed.*memory"
+            ],
+            "keywords": [
+                "MemoryError",
+                "Out of memory",
+                "allocate memory",
+                "killed"
+            ],
+            "context_requirements": [
+                "memory",
+                "allocation",
+                "system"
+            ],
+            "confidence_base": 0.90,
+            "success_rate": 0.75,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 1
+        },
+        {
+            "id": "test_github_actions_checkout",
+            "name": "GitHub Actions チェックアウトエラー（テスト用）",
+            "category": "ci_cd",
+            "regex_patterns": [
+                "Error.*checkout.*failed",
+                "fatal: repository .* not found",
+                "Permission denied \\(publickey\\)",
+                "The process '/usr/bin/git' failed"
+            ],
+            "keywords": [
+                "checkout",
+                "failed",
+                "repository not found",
+                "Permission denied",
+                "git failed"
+            ],
+            "context_requirements": [
+                "git",
+                "checkout",
+                "github"
+            ],
+            "confidence_base": 0.85,
+            "success_rate": 0.80,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 9
+        },
+        {
+            "id": "test_port_already_in_use",
+            "name": "ポート使用中エラー（テスト用）",
+            "category": "network",
+            "regex_patterns": [
+                "Address already in use.*port",
+                "bind: address already in use",
+                "Port \\d+ is already in use",
+                "EADDRINUSE.*:\\d+"
+            ],
+            "keywords": [
+                "Address already in use",
+                "bind:",
+                "Port",
+                "already in use",
+                "EADDRINUSE"
+            ],
+            "context_requirements": [
+                "port",
+                "address",
+                "bind"
+            ],
+            "confidence_base": 0.88,
+            "success_rate": 0.85,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 4
+        },
+        {
+            "id": "test_database_connection_failed",
+            "name": "データベース接続失敗（テスト用）",
+            "category": "database",
+            "regex_patterns": [
+                "Connection.*database.*failed",
+                "could not connect to server",
+                "Access denied for user",
+                "Unknown database"
+            ],
+            "keywords": [
+                "Connection",
+                "database",
+                "failed",
+                "could not connect",
+                "Access denied",
+                "Unknown database"
+            ],
+            "context_requirements": [
+                "database",
+                "connection",
+                "server"
+            ],
+            "confidence_base": 0.82,
+            "success_rate": 0.75,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 3
+        },
+        {
+            "id": "test_python_syntax_error",
+            "name": "Python構文エラー（テスト用）",
+            "category": "syntax",
+            "regex_patterns": [
+                "SyntaxError: invalid syntax",
+                "IndentationError: .*",
+                "TabError: inconsistent use of tabs and spaces",
+                "SyntaxError: unexpected EOF"
+            ],
+            "keywords": [
+                "SyntaxError",
+                "invalid syntax",
+                "IndentationError",
+                "TabError",
+                "unexpected EOF"
+            ],
+            "context_requirements": [
+                "python",
+                "syntax",
+                "code"
+            ],
+            "confidence_base": 0.95,
+            "success_rate": 0.90,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 11
+        },
+        {
+            "id": "test_file_not_found",
+            "name": "ファイル不足エラー（テスト用）",
+            "category": "filesystem",
+            "regex_patterns": [
+                "FileNotFoundError: \\[Errno 2\\]",
+                "No such file or directory",
+                "cannot access '.*': No such file",
+                "\\[Errno 2\\] No such file or directory: '.*'"
+            ],
+            "keywords": [
+                "FileNotFoundError",
+                "No such file",
+                "cannot access",
+                "Errno 2"
+            ],
+            "context_requirements": [
+                "file",
+                "directory",
+                "path"
+            ],
+            "confidence_base": 0.90,
+            "success_rate": 0.95,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 18
+        },
+        {
+            "id": "test_mock_assertion_error",
+            "name": "モックアサーションエラー（テスト用）",
+            "category": "test_mock",
+            "regex_patterns": [
+                "AssertionError.*assert_called.*with",
+                "Expected call not found",
+                "mock object has no attribute",
+                "call\\(.*\\) not found"
+            ],
+            "keywords": [
+                "AssertionError",
+                "assert_called",
+                "Expected call",
+                "mock object",
+                "call",
+                "not found"
+            ],
+            "context_requirements": [
+                "mock",
+                "test",
+                "assertion"
+            ],
+            "confidence_base": 0.85,
+            "success_rate": 0.80,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 25
+        },
+        {
+            "id": "test_async_context_error",
+            "name": "非同期コンテキストエラー（テスト用）",
+            "category": "async",
+            "regex_patterns": [
+                "RuntimeError.*Event loop is closed",
+                "RuntimeError.*cannot be called from a running event loop",
+                "asyncio.*RuntimeError",
+                "coroutine.*was never awaited"
+            ],
+            "keywords": [
+                "RuntimeError",
+                "Event loop",
+                "closed",
+                "running event loop",
+                "asyncio",
+                "coroutine",
+                "never awaited"
+            ],
+            "context_requirements": [
+                "async",
+                "asyncio",
+                "event loop"
+            ],
+            "confidence_base": 0.88,
+            "success_rate": 0.75,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 7
+        },
+        {
+            "id": "test_attribute_error",
+            "name": "属性エラー（テスト用）",
+            "category": "attribute",
+            "regex_patterns": [
+                "AttributeError: '.*' object has no attribute '.*'",
+                "AttributeError: module '.*' has no attribute '.*'",
+                "AttributeError: type object '.*' has no attribute '.*'"
+            ],
+            "keywords": [
+                "AttributeError",
+                "object has no attribute",
+                "module",
+                "type object"
+            ],
+            "context_requirements": [
+                "attribute",
+                "object",
+                "module"
+            ],
+            "confidence_base": 0.90,
+            "success_rate": 0.85,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 16
+        },
+        {
+            "id": "test_fixture_missing",
+            "name": "テストフィクスチャ不足（テスト用）",
+            "category": "test_fixture",
+            "regex_patterns": [
+                "fixture '.*' not found",
+                "FileNotFoundError.*fixtures",
+                "pytest.*fixture.*error",
+                "No fixture named '.*'"
+            ],
+            "keywords": [
+                "fixture",
+                "not found",
+                "FileNotFoundError",
+                "fixtures",
+                "pytest",
+                "No fixture"
+            ],
+            "context_requirements": [
+                "fixture",
+                "test",
+                "pytest"
+            ],
+            "confidence_base": 0.85,
+            "success_rate": 0.90,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 13
+        },
+        {
+            "id": "test_type_error",
+            "name": "型エラー（テスト用）",
+            "category": "type",
+            "regex_patterns": [
+                "TypeError: .*",
+                "unsupported operand type\\(s\\)",
+                "argument must be .*",
+                "takes \\d+ positional arguments but \\d+ were given"
+            ],
+            "keywords": [
+                "TypeError",
+                "unsupported operand",
+                "argument must be",
+                "positional arguments"
+            ],
+            "context_requirements": [
+                "type",
+                "argument",
+                "function"
+            ],
+            "confidence_base": 0.80,
+            "success_rate": 0.85,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 14
+        },
+        {
+            "id": "test_value_error",
+            "name": "値エラー（テスト用）",
+            "category": "value",
+            "regex_patterns": [
+                "ValueError: .*",
+                "invalid literal for .*",
+                "could not convert string to .*",
+                "math domain error"
+            ],
+            "keywords": [
+                "ValueError",
+                "invalid literal",
+                "could not convert",
+                "math domain error"
+            ],
+            "context_requirements": [
+                "value",
+                "conversion",
+                "literal"
+            ],
+            "confidence_base": 0.82,
+            "success_rate": 0.80,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 9
+        },
+        {
+            "id": "test_key_error",
+            "name": "キーエラー（テスト用）",
+            "category": "key",
+            "regex_patterns": [
+                "KeyError: '.*'",
+                "KeyError: \\d+",
+                "key '.*' not found",
+                "missing key: '.*'"
+            ],
+            "keywords": [
+                "KeyError",
+                "key",
+                "not found",
+                "missing key"
+            ],
+            "context_requirements": [
+                "key",
+                "dictionary",
+                "mapping"
+            ],
+            "confidence_base": 0.85,
+            "success_rate": 0.90,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 10
+        },
+        {
+            "id": "test_index_error",
+            "name": "インデックスエラー（テスト用）",
+            "category": "index",
+            "regex_patterns": [
+                "IndexError: list index out of range",
+                "IndexError: .*",
+                "index \\d+ is out of bounds",
+                "list assignment index out of range"
+            ],
+            "keywords": [
+                "IndexError",
+                "list index",
+                "out of range",
+                "out of bounds",
+                "assignment index"
+            ],
+            "context_requirements": [
+                "index",
+                "list",
+                "range"
+            ],
+            "confidence_base": 0.88,
+            "success_rate": 0.85,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 6
+        },
+        {
+            "id": "test_zero_division_error",
+            "name": "ゼロ除算エラー（テスト用）",
+            "category": "math",
+            "regex_patterns": [
+                "ZeroDivisionError: division by zero",
+                "ZeroDivisionError: .*",
+                "division by zero",
+                "float division by zero"
+            ],
+            "keywords": [
+                "ZeroDivisionError",
+                "division by zero",
+                "float division"
+            ],
+            "context_requirements": [
+                "division",
+                "zero",
+                "math"
+            ],
+            "confidence_base": 0.95,
+            "success_rate": 0.90,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 2
+        }
+    ]
+}

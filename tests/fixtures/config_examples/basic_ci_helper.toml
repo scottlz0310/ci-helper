@@ -1,0 +1,28 @@
+# 基本的なCI-Helper設定ファイル
+# テスト用の設定例
+
+[ci-helper]
+# ログ設定
+log_dir = ".ci-helper/logs"
+cache_dir = ".ci-helper/cache"
+reports_dir = ".ci-helper/reports"
+
+# ログ処理設定
+context_lines = 3
+max_log_size_mb = 100
+max_cache_size_mb = 500
+
+# Act設定
+act_image = "ghcr.io/catthehacker/ubuntu:full-24.04"
+timeout_seconds = 1800
+
+# 出力設定
+verbose = false
+save_logs = true
+
+[logging]
+level = "INFO"
+format = "detailed"
+
+[act]
+platform = "ubuntu-latest=catthehacker/ubuntu:act-latest"

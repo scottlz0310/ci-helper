@@ -1,0 +1,5 @@
+# 権限付きAct設定
+# テスト用の設定例
+
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+--privileged

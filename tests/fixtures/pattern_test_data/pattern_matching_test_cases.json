@@ -1,0 +1,286 @@
+{
+    "metadata": {
+        "description": "パターンマッチング精度テスト用のテストケース",
+        "version": "1.0.0",
+        "created_at": "2024-10-27T00:00:00Z",
+        "updated_at": "2024-10-27T00:00:00Z",
+        "total_test_cases": 20,
+        "test_purpose": "パターンマッチング精度とエッジケースのテスト"
+    },
+    "test_cases": [
+        {
+            "id": "exact_match_test",
+            "name": "完全一致テスト",
+            "description": "パターンが完全に一致する場合のテスト",
+            "input_log": "permission denied while trying to connect to the Docker daemon",
+            "expected_matches": [
+                {
+                    "pattern_id": "test_docker_permission",
+                    "expected_confidence": 0.9,
+                    "match_type": "regex"
+                }
+            ],
+            "test_type": "positive",
+            "difficulty": "easy"
+        },
+        {
+            "id": "partial_match_test",
+            "name": "部分一致テスト",
+            "description": "パターンが部分的に一致する場合のテスト",
+            "input_log": "Error: docker permission issue occurred",
+            "expected_matches": [
+                {
+                    "pattern_id": "test_docker_permission",
+                    "expected_confidence": 0.7,
+                    "match_type": "keyword"
+                }
+            ],
+            "test_type": "positive",
+            "difficulty": "medium"
+        },
+        {
+            "id": "multiple_pattern_match_test",
+            "name": "複数パターンマッチテスト",
+            "description": "複数のパターンが同時にマッチする場合のテスト",
+            "input_log": "ModuleNotFoundError: No module named 'requests' - permission denied",
+            "expected_matches": [
+                {
+                    "pattern_id": "test_python_import_error",
+                    "expected_confidence": 0.85,
+                    "match_type": "regex"
+                },
+                {
+                    "pattern_id": "test_docker_permission",
+                    "expected_confidence": 0.6,
+                    "match_type": "keyword"
+                }
+            ],
+            "test_type": "positive",
+            "difficulty": "hard"
+        },
+        {
+            "id": "case_insensitive_test",
+            "name": "大文字小文字無視テスト",
+            "description": "大文字小文字の違いを無視したマッチングのテスト",
+            "input_log": "PERMISSION DENIED while trying to connect to docker",
+            "expected_matches": [
+                {
+                    "pattern_id": "test_docker_permission",
+                    "expected_confidence": 0.8,
+                    "match_type": "keyword"
+                }
+            ],
+            "test_type": "positive",
+            "difficulty": "medium"
+        },
+        {
+            "id": "context_based_match_test",
+            "name": "コンテキストベースマッチテスト",
+            "description": "コンテキスト要件を満たす場合のマッチングテスト",
+            "input_log": "Error connecting to docker daemon: permission denied on socket /var/run/docker.sock",
+            "expected_matches": [
+                {
+                    "pattern_id": "test_docker_permission",
+                    "expected_confidence": 0.9,
+                    "match_type": "regex"
+                }
+            ],
+            "test_type": "positive",
+            "difficulty": "medium"
+        },
+        {
+            "id": "no_match_test",
+            "name": "マッチなしテスト",
+            "description": "どのパターンにもマッチしない場合のテスト",
+            "input_log": "Everything is working perfectly fine",
+            "expected_matches": [],
+            "test_type": "negative",
+            "difficulty": "easy"
+        },
+        {
+            "id": "false_positive_test",
+            "name": "偽陽性テスト",
+            "description": "似ているが異なるエラーの偽陽性を避けるテスト",
+            "input_log": "User permission granted for docker access",
+            "expected_matches": [],
+            "test_type": "negative",
+            "difficulty": "medium"
+        },
+        {
+            "id": "multiline_log_test",
+            "name": "複数行ログテスト",
+            "description": "複数行にわたるログのパターンマッチングテスト",
+            "input_log": "Step 1: Building application\nStep 2: Running tests\nModuleNotFoundError: No module named 'pytest'\nStep 3: Failed",
+            "expected_matches": [
+                {
+                    "pattern_id": "test_python_import_error",
+                    "expected_confidence": 0.85,
+                    "match_type": "regex"
+                }
+            ],
+            "test_type": "positive",
+            "difficulty": "medium"
+        },
+        {
+            "id": "special_characters_test",
+            "name": "特殊文字テスト",
+            "description": "特殊文字を含むログのパターンマッチングテスト",
+            "input_log": "Error: /bin/sh: ./script.sh: Permission denied",
+            "expected_matches": [
+                {
+                    "pattern_id": "test_file_permission_denied",
+                    "expected_confidence": 0.85,
+                    "match_type": "regex"
+                }
+            ],
+            "test_type": "positive",
+            "difficulty": "medium"
+        },
+        {
+            "id": "unicode_test",
+            "name": "Unicode文字テスト",
+            "description": "Unicode文字を含むログのパターンマッチングテスト",
+            "input_log": "エラー: ファイルが見つかりません - FileNotFoundError: No such file",
+            "expected_matches": [
+                {
+                    "pattern_id": "test_file_not_found",
+                    "expected_confidence": 0.8,
+                    "match_type": "regex"
+                }
+            ],
+            "test_type": "positive",
+            "difficulty": "medium"
+        },
+        {
+            "id": "long_log_test",
+            "name": "長いログテスト",
+            "description": "非常に長いログでのパターンマッチング性能テスト",
+            "input_log": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Lorem ipsum dolor sit amet, consectetur adipiscing elit. ModuleNotFoundError: No module named 'test'",
+            "expected_matches": [
+                {
+                    "pattern_id": "test_python_import_error",
+                    "expected_confidence": 0.85,
+                    "match_type": "regex"
+                }
+            ],
+            "test_type": "positive",
+            "difficulty": "hard"
+        },
+        {
+            "id": "regex_edge_case_test",
+            "name": "正規表現エッジケーステスト",
+            "description": "正規表現の特殊なケースでのマッチングテスト",
+            "input_log": "npm ERR! code ENOENT\nnpm ERR! errno -2",
+            "expected_matches": [
+                {
+                    "pattern_id": "test_npm_install_failure",
+                    "expected_confidence": 0.8,
+                    "match_type": "regex"
+                }
+            ],
+            "test_type": "positive",
+            "difficulty": "medium"
+        },
+        {
+            "id": "keyword_boundary_test",
+            "name": "キーワード境界テスト",
+            "description": "キーワードの単語境界を考慮したマッチングテスト",
+            "input_log": "testing error occurred",
+            "expected_matches": [],
+            "test_type": "negative",
+            "difficulty": "medium",
+            "note": "testingに含まれるtestはマッチしないはず"
+        },
+        {
+            "id": "confidence_threshold_test",
+            "name": "信頼度閾値テスト",
+            "description": "信頼度閾値による フィルタリングのテスト",
+            "input_log": "some error with docker mentioned",
+            "expected_matches": [],
+            "test_type": "negative",
+            "difficulty": "medium",
+            "confidence_threshold": 0.8,
+            "note": "低信頼度のマッチは除外されるはず"
+        },
+        {
+            "id": "competing_patterns_test",
+            "name": "競合パターンテスト",
+            "description": "複数のパターンが競合する場合の解決テスト",
+            "input_log": "AssertionError: Expected call not found in mock object",
+            "expected_matches": [
+                {
+                    "pattern_id": "test_mock_assertion_error",
+                    "expected_confidence": 0.85,
+                    "match_type": "regex"
+                },
+                {
+                    "pattern_id": "test_assertion_failure",
+                    "expected_confidence": 0.8,
+                    "match_type": "regex"
+                }
+            ],
+            "test_type": "positive",
+            "difficulty": "hard",
+            "note": "より具体的なパターンが優先されるはず"
+        },
+        {
+            "id": "empty_log_test",
+            "name": "空ログテスト",
+            "description": "空のログでのパターンマッチングテスト",
+            "input_log": "",
+            "expected_matches": [],
+            "test_type": "negative",
+            "difficulty": "easy"
+        },
+        {
+            "id": "whitespace_only_test",
+            "name": "空白のみテスト",
+            "description": "空白文字のみのログでのパターンマッチングテスト",
+            "input_log": "   \n\t  \n  ",
+            "expected_matches": [],
+            "test_type": "negative",
+            "difficulty": "easy"
+        },
+        {
+            "id": "pattern_overlap_test",
+            "name": "パターン重複テスト",
+            "description": "パターンが重複する場合の処理テスト",
+            "input_log": "TypeError: unsupported operand type(s) for +: 'int' and 'str' - argument must be string",
+            "expected_matches": [
+                {
+                    "pattern_id": "test_type_error",
+                    "expected_confidence": 0.8,
+                    "match_type": "regex"
+                }
+            ],
+            "test_type": "positive",
+            "difficulty": "medium"
+        },
+        {
+            "id": "context_requirement_fail_test",
+            "name": "コンテキスト要件失敗テスト",
+            "description": "コンテキスト要件を満たさない場合のテスト",
+            "input_log": "permission denied for file access",
+            "expected_matches": [],
+            "test_type": "negative",
+            "difficulty": "medium",
+            "note": "dockerコンテキストがないため、docker_permissionパターンはマッチしないはず"
+        },
+        {
+            "id": "performance_stress_test",
+            "name": "性能ストレステスト",
+            "description": "大量のパターンマッチング性能テスト",
+            "input_log": "Critical system error: background noise background noise background noise background noise background noise MemoryError: Out of memory",
+            "expected_matches": [
+                {
+                    "pattern_id": "test_memory_limit_exceeded",
+                    "expected_confidence": 0.9,
+                    "match_type": "regex"
+                }
+            ],
+            "test_type": "positive",
+            "difficulty": "hard",
+            "performance_test": true
+        }
+    ]
+}

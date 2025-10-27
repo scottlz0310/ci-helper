@@ -1,0 +1,319 @@
+{
+    "metadata": {
+        "description": "パターン認識性能テスト用のデータセット",
+        "version": "1.0.0",
+        "created_at": "2024-10-27T00:00:00Z",
+        "updated_at": "2024-10-27T00:00:00Z",
+        "total_datasets": 10,
+        "test_purpose": "パターン認識エンジンの性能とスケーラビリティテスト"
+    },
+    "performance_datasets": [
+        {
+            "id": "small_dataset",
+            "name": "小規模データセット",
+            "description": "少数のパターンと短いログでの基本性能テスト",
+            "pattern_count": 5,
+            "log_size_kb": 1,
+            "expected_processing_time_ms": 50,
+            "patterns": [
+                "test_docker_permission",
+                "test_python_import_error",
+                "test_network_timeout",
+                "test_yaml_syntax_error",
+                "test_assertion_failure"
+            ],
+            "sample_log": "Error: permission denied while trying to connect to docker daemon\nModuleNotFoundError: No module named 'requests'\nConnection timed out after 30 seconds",
+            "performance_metrics": {
+                "expected_matches": 3,
+                "expected_accuracy": 0.95,
+                "max_memory_mb": 10,
+                "max_cpu_percent": 20
+            }
+        },
+        {
+            "id": "medium_dataset",
+            "name": "中規模データセット",
+            "description": "中程度のパターン数と中サイズログでの性能テスト",
+            "pattern_count": 15,
+            "log_size_kb": 50,
+            "expected_processing_time_ms": 200,
+            "patterns": [
+                "test_docker_permission",
+                "test_python_import_error",
+                "test_npm_install_failure",
+                "test_network_timeout",
+                "test_yaml_syntax_error",
+                "test_compilation_error",
+                "test_assertion_failure",
+                "test_ssl_certificate_error",
+                "test_environment_variable_missing",
+                "test_disk_space_full",
+                "test_memory_limit_exceeded",
+                "test_github_actions_checkout",
+                "test_port_already_in_use",
+                "test_database_connection_failed",
+                "test_python_syntax_error"
+            ],
+            "sample_log": "Build started at 2024-10-27T10:00:00Z\nINFO: Processing step 1\nINFO: Processing step 1\nINFO: Processing step 1\nINFO: Processing step 1\nINFO: Processing step 1\nERROR: permission denied while trying to connect to docker daemon\nDEBUG: Retrying connection\nDEBUG: Retrying connection\nDEBUG: Retrying connection\nFATAL: ModuleNotFoundError: No module named 'requests'\nWARNING: Connection timed out\nWARNING: Connection timed out",
+            "performance_metrics": {
+                "expected_matches": 3,
+                "expected_accuracy": 0.90,
+                "max_memory_mb": 50,
+                "max_cpu_percent": 40
+            }
+        },
+        {
+            "id": "large_dataset",
+            "name": "大規模データセット",
+            "description": "多数のパターンと大きなログでの性能テスト",
+            "pattern_count": 25,
+            "log_size_kb": 500,
+            "expected_processing_time_ms": 1000,
+            "patterns": [
+                "test_docker_permission",
+                "test_python_import_error",
+                "test_npm_install_failure",
+                "test_network_timeout",
+                "test_yaml_syntax_error",
+                "test_compilation_error",
+                "test_assertion_failure",
+                "test_ssl_certificate_error",
+                "test_environment_variable_missing",
+                "test_disk_space_full",
+                "test_memory_limit_exceeded",
+                "test_github_actions_checkout",
+                "test_port_already_in_use",
+                "test_database_connection_failed",
+                "test_python_syntax_error",
+                "test_file_not_found",
+                "test_mock_assertion_error",
+                "test_async_context_error",
+                "test_attribute_error",
+                "test_fixture_missing",
+                "test_type_error",
+                "test_value_error",
+                "test_key_error",
+                "test_index_error",
+                "test_zero_division_error"
+            ],
+            "sample_log": "Application startup log\nINFO: Starting application server\nINFO: Starting application server\nINFO: Starting application server\nERROR: permission denied while trying to connect to docker daemon\nDEBUG: Connection details\nDEBUG: Connection details\nCRITICAL: MemoryError: Unable to allocate memory\nTRACE: Stack trace follows\nTRACE: Stack trace follows",
+            "performance_metrics": {
+                "expected_matches": 2,
+                "expected_accuracy": 0.85,
+                "max_memory_mb": 200,
+                "max_cpu_percent": 60
+            }
+        },
+        {
+            "id": "stress_test_dataset",
+            "name": "ストレステストデータセット",
+            "description": "極限状態での性能テスト",
+            "pattern_count": 50,
+            "log_size_kb": 2000,
+            "expected_processing_time_ms": 5000,
+            "patterns": "all_available_patterns",
+            "sample_log": "Massive log file with repeated patterns\nERROR: Various error messages\nERROR: Various error messages\nERROR: Various error messages\nCRITICAL: System failure\nCRITICAL: System failure",
+            "performance_metrics": {
+                "expected_matches": 10,
+                "expected_accuracy": 0.80,
+                "max_memory_mb": 500,
+                "max_cpu_percent": 80
+            }
+        },
+        {
+            "id": "concurrent_processing_dataset",
+            "name": "並行処理データセット",
+            "description": "複数ログの並行処理性能テスト",
+            "pattern_count": 20,
+            "concurrent_logs": 10,
+            "log_size_kb": 100,
+            "expected_processing_time_ms": 800,
+            "patterns": [
+                "test_docker_permission",
+                "test_python_import_error",
+                "test_network_timeout",
+                "test_yaml_syntax_error",
+                "test_assertion_failure",
+                "test_ssl_certificate_error",
+                "test_environment_variable_missing",
+                "test_github_actions_checkout",
+                "test_python_syntax_error",
+                "test_file_not_found",
+                "test_mock_assertion_error",
+                "test_attribute_error",
+                "test_type_error",
+                "test_value_error",
+                "test_key_error",
+                "test_index_error",
+                "test_compilation_error",
+                "test_npm_install_failure",
+                "test_disk_space_full",
+                "test_memory_limit_exceeded"
+            ],
+            "sample_logs": [
+                "Log 1: permission denied docker error",
+                "Log 2: ModuleNotFoundError in Python",
+                "Log 3: Network connection timeout",
+                "Log 4: YAML syntax error in config",
+                "Log 5: Test assertion failure",
+                "Log 6: SSL certificate verification failed",
+                "Log 7: Environment variable not set",
+                "Log 8: GitHub checkout action failed",
+                "Log 9: Python syntax error detected",
+                "Log 10: File not found error"
+            ],
+            "performance_metrics": {
+                "expected_total_matches": 10,
+                "expected_accuracy": 0.90,
+                "max_memory_mb": 300,
+                "max_cpu_percent": 70,
+                "max_concurrent_threads": 10
+            }
+        },
+        {
+            "id": "memory_efficiency_dataset",
+            "name": "メモリ効率データセット",
+            "description": "メモリ使用量を最小化する性能テスト",
+            "pattern_count": 30,
+            "log_size_kb": 1000,
+            "expected_processing_time_ms": 2000,
+            "memory_constraint_mb": 100,
+            "patterns": "all_test_patterns",
+            "sample_log": "Memory constrained processing test\nVarious error patterns mixed in large log\nVarious error patterns mixed in large log\nVarious error patterns mixed in large log",
+            "performance_metrics": {
+                "expected_matches": 5,
+                "expected_accuracy": 0.85,
+                "max_memory_mb": 100,
+                "memory_growth_limit_percent": 20
+            }
+        },
+        {
+            "id": "regex_complexity_dataset",
+            "name": "正規表現複雑度データセット",
+            "description": "複雑な正規表現パターンの性能テスト",
+            "pattern_count": 10,
+            "log_size_kb": 200,
+            "expected_processing_time_ms": 1500,
+            "complex_regex_patterns": [
+                "(?:(?:error|fail|exception).*(?:(?:critical|fatal|severe).*(?:system|application|service)))",
+                "(?P<timestamp>\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}).*(?P<level>ERROR|FATAL).*(?P<message>.*)",
+                "\\b(?:(?:permission|access)\\s+(?:denied|refused))\\b.*\\b(?:(?:docker|file|directory))\\b",
+                "(?:npm|yarn|pnpm)\\s+ERR!.*(?:ENOENT|EACCES|EPERM).*(?:package\\.json|node_modules)",
+                "(?:ModuleNotFoundError|ImportError):\\s+(?:No module named|cannot import name)\\s+['\"]([^'\"]+)['\"]"
+            ],
+            "sample_log": "Complex regex matching test log with various patterns\n2024-10-27T10:00:00 ERROR System failure detected\npermission denied for docker access\nnpm ERR! ENOENT package.json not found\nModuleNotFoundError: No module named 'complex_module'",
+            "performance_metrics": {
+                "expected_matches": 4,
+                "expected_accuracy": 0.90,
+                "max_memory_mb": 150,
+                "max_cpu_percent": 50,
+                "regex_compilation_time_ms": 100
+            }
+        },
+        {
+            "id": "unicode_processing_dataset",
+            "name": "Unicode処理データセット",
+            "description": "Unicode文字を含むログの処理性能テスト",
+            "pattern_count": 15,
+            "log_size_kb": 300,
+            "expected_processing_time_ms": 800,
+            "unicode_patterns": [
+                "エラー.*発生",
+                "错误.*发生",
+                "Ошибка.*произошла",
+                "خطأ.*حدث",
+                "エラー[：:].*"
+            ],
+            "sample_log": "Unicode test log\nエラーが発生しました: permission denied\n错误发生: ModuleNotFoundError\nОшибка произошла: network timeout\nخطأ حدث: YAML syntax error\n日本語のログメッセージ: システムエラー",
+            "performance_metrics": {
+                "expected_matches": 5,
+                "expected_accuracy": 0.85,
+                "max_memory_mb": 200,
+                "max_cpu_percent": 40,
+                "unicode_processing_overhead_percent": 15
+            }
+        },
+        {
+            "id": "real_world_simulation_dataset",
+            "name": "実世界シミュレーションデータセット",
+            "description": "実際のCI/CDログを模擬した現実的な性能テスト",
+            "pattern_count": 35,
+            "log_size_kb": 800,
+            "expected_processing_time_ms": 3000,
+            "realistic_log_structure": true,
+            "patterns": "comprehensive_pattern_set",
+            "sample_log_structure": {
+                "build_start": "Build started at timestamp",
+                "dependency_installation": "Installing dependencies...",
+                "compilation": "Compiling source code...",
+                "test_execution": "Running tests...",
+                "error_occurrence": "Various errors mixed throughout",
+                "cleanup": "Cleaning up resources...",
+                "build_end": "Build completed with status"
+            },
+            "performance_metrics": {
+                "expected_matches": 8,
+                "expected_accuracy": 0.88,
+                "max_memory_mb": 400,
+                "max_cpu_percent": 65,
+                "realistic_error_distribution": true
+            }
+        },
+        {
+            "id": "edge_case_performance_dataset",
+            "name": "エッジケース性能データセット",
+            "description": "エッジケースでの性能とエラーハンドリングテスト",
+            "pattern_count": 20,
+            "log_size_kb": 100,
+            "expected_processing_time_ms": 1000,
+            "edge_cases": [
+                "empty_logs",
+                "malformed_logs",
+                "extremely_long_lines",
+                "binary_data_mixed",
+                "invalid_utf8_sequences"
+            ],
+            "patterns": "edge_case_patterns",
+            "sample_problematic_logs": [
+                "",
+                "\\x00\\x01\\x02 invalid binary data",
+                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA extremely long line",
+                "Malformed log entry without proper structure",
+                "Invalid UTF-8: \\xff\\xfe\\xfd"
+            ],
+            "performance_metrics": {
+                "expected_matches": 2,
+                "expected_accuracy": 0.70,
+                "max_memory_mb": 150,
+                "max_cpu_percent": 30,
+                "error_handling_success_rate": 0.95
+            }
+        }
+    ],
+    "benchmark_thresholds": {
+        "processing_time": {
+            "excellent": "< 100ms per 100KB",
+            "good": "< 500ms per 100KB",
+            "acceptable": "< 1000ms per 100KB",
+            "poor": "> 1000ms per 100KB"
+        },
+        "memory_usage": {
+            "excellent": "< 50MB for 1MB log",
+            "good": "< 100MB for 1MB log",
+            "acceptable": "< 200MB for 1MB log",
+            "poor": "> 200MB for 1MB log"
+        },
+        "accuracy": {
+            "excellent": "> 95%",
+            "good": "> 90%",
+            "acceptable": "> 85%",
+            "poor": "< 85%"
+        },
+        "concurrent_processing": {
+            "excellent": "10+ concurrent logs",
+            "good": "5-9 concurrent logs",
+            "acceptable": "2-4 concurrent logs",
+            "poor": "1 concurrent log only"
+        }
+    }
+}

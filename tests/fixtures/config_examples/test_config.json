@@ -1,0 +1,16 @@
+{
+    "test_mode": true,
+    "log_level": "WARNING",
+    "cache_enabled": false,
+    "providers": {
+        "mock_openai": {
+            "api_key": "mock-key-for-ci",
+            "default_model": "gpt-4o",
+            "base_url": "http://mock-api.test"
+        }
+    },
+    "cost_limits": {
+        "monthly_usd": 0.0,
+        "per_request_usd": 0.0
+    }
+}

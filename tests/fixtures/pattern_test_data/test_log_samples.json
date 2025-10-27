@@ -1,0 +1,353 @@
+{
+    "metadata": {
+        "description": "パターン認識テスト用のログサンプル",
+        "version": "1.0.0",
+        "created_at": "2024-10-27T00:00:00Z",
+        "updated_at": "2024-10-27T00:00:00Z",
+        "total_samples": 30,
+        "test_purpose": "パターンマッチング精度テスト"
+    },
+    "log_samples": [
+        {
+            "id": "docker_permission_sample_1",
+            "description": "Docker権限エラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_docker_permission"
+            ],
+            "log_content": "Got permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.24/containers/json\": dial unix /var/run/docker.sock: connect: permission denied",
+            "expected_confidence": 0.9,
+            "category": "permission",
+            "severity": "high"
+        },
+        {
+            "id": "docker_permission_sample_2",
+            "description": "Docker権限エラーのサンプル2",
+            "expected_pattern_ids": [
+                "test_docker_permission"
+            ],
+            "log_content": "docker: permission denied while trying to connect to the Docker daemon socket",
+            "expected_confidence": 0.85,
+            "category": "permission",
+            "severity": "high"
+        },
+        {
+            "id": "python_import_sample_1",
+            "description": "Pythonインポートエラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_python_import_error"
+            ],
+            "log_content": "ModuleNotFoundError: No module named 'requests'",
+            "expected_confidence": 0.9,
+            "category": "dependency",
+            "severity": "medium"
+        },
+        {
+            "id": "python_import_sample_2",
+            "description": "Pythonインポートエラーのサンプル2",
+            "expected_pattern_ids": [
+                "test_python_import_error"
+            ],
+            "log_content": "ImportError: cannot import name 'HTTPAdapter' from 'requests.adapters'",
+            "expected_confidence": 0.85,
+            "category": "dependency",
+            "severity": "medium"
+        },
+        {
+            "id": "npm_install_sample_1",
+            "description": "NPMインストール失敗のサンプル1",
+            "expected_pattern_ids": [
+                "test_npm_install_failure"
+            ],
+            "log_content": "npm ERR! code ENOENT\nnpm ERR! syscall open\nnpm ERR! path /app/package.json\nnpm ERR! errno -2\nnpm ERR! enoent ENOENT: no such file or directory, open '/app/package.json'",
+            "expected_confidence": 0.8,
+            "category": "dependency",
+            "severity": "medium"
+        },
+        {
+            "id": "network_timeout_sample_1",
+            "description": "ネットワークタイムアウトのサンプル1",
+            "expected_pattern_ids": [
+                "test_network_timeout"
+            ],
+            "log_content": "Connection timed out after 30 seconds",
+            "expected_confidence": 0.75,
+            "category": "network",
+            "severity": "medium"
+        },
+        {
+            "id": "network_timeout_sample_2",
+            "description": "ネットワークタイムアウトのサンプル2",
+            "expected_pattern_ids": [
+                "test_network_timeout"
+            ],
+            "log_content": "dial tcp 192.168.1.1:80: i/o timeout",
+            "expected_confidence": 0.8,
+            "category": "network",
+            "severity": "medium"
+        },
+        {
+            "id": "yaml_syntax_sample_1",
+            "description": "YAML構文エラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_yaml_syntax_error"
+            ],
+            "log_content": "yaml: line 15: mapping values are not allowed here",
+            "expected_confidence": 0.92,
+            "category": "config",
+            "severity": "high"
+        },
+        {
+            "id": "yaml_syntax_sample_2",
+            "description": "YAML構文エラーのサンプル2",
+            "expected_pattern_ids": [
+                "test_yaml_syntax_error"
+            ],
+            "log_content": "Invalid workflow file: could not find expected ':'",
+            "expected_confidence": 0.9,
+            "category": "config",
+            "severity": "high"
+        },
+        {
+            "id": "compilation_sample_1",
+            "description": "コンパイルエラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_compilation_error"
+            ],
+            "log_content": "main.c:25:10: fatal error: stdio.h: No such file or directory\n #include <stdio.h>\n          ^~~~~~~~~\ncompilation terminated.",
+            "expected_confidence": 0.88,
+            "category": "build",
+            "severity": "high"
+        },
+        {
+            "id": "assertion_sample_1",
+            "description": "アサーション失敗のサンプル1",
+            "expected_pattern_ids": [
+                "test_assertion_failure"
+            ],
+            "log_content": "AssertionError: Expected 'success', but got 'failure'",
+            "expected_confidence": 0.85,
+            "category": "test",
+            "severity": "medium"
+        },
+        {
+            "id": "assertion_sample_2",
+            "description": "アサーション失敗のサンプル2",
+            "expected_pattern_ids": [
+                "test_assertion_failure"
+            ],
+            "log_content": "assert result == expected\nAssertionError",
+            "expected_confidence": 0.8,
+            "category": "test",
+            "severity": "medium"
+        },
+        {
+            "id": "ssl_certificate_sample_1",
+            "description": "SSL証明書エラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_ssl_certificate_error"
+            ],
+            "log_content": "SSL certificate verify failed: certificate signed by unknown authority",
+            "expected_confidence": 0.9,
+            "category": "network",
+            "severity": "medium"
+        },
+        {
+            "id": "env_var_sample_1",
+            "description": "環境変数不足のサンプル1",
+            "expected_pattern_ids": [
+                "test_environment_variable_missing"
+            ],
+            "log_content": "KeyError: 'DATABASE_URL'",
+            "expected_confidence": 0.85,
+            "category": "config",
+            "severity": "medium"
+        },
+        {
+            "id": "env_var_sample_2",
+            "description": "環境変数不足のサンプル2",
+            "expected_pattern_ids": [
+                "test_environment_variable_missing"
+            ],
+            "log_content": "API_KEY: unbound variable",
+            "expected_confidence": 0.87,
+            "category": "config",
+            "severity": "medium"
+        },
+        {
+            "id": "disk_space_sample_1",
+            "description": "ディスク容量不足のサンプル1",
+            "expected_pattern_ids": [
+                "test_disk_space_full"
+            ],
+            "log_content": "No space left on device",
+            "expected_confidence": 0.95,
+            "category": "system",
+            "severity": "critical"
+        },
+        {
+            "id": "memory_sample_1",
+            "description": "メモリ制限超過のサンプル1",
+            "expected_pattern_ids": [
+                "test_memory_limit_exceeded"
+            ],
+            "log_content": "MemoryError: Unable to allocate 1.5 GiB for an array",
+            "expected_confidence": 0.9,
+            "category": "system",
+            "severity": "critical"
+        },
+        {
+            "id": "github_checkout_sample_1",
+            "description": "GitHub Actions チェックアウトエラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_github_actions_checkout"
+            ],
+            "log_content": "Error: checkout failed with exit code 128\nfatal: repository 'https://github.com/user/repo.git' not found",
+            "expected_confidence": 0.85,
+            "category": "ci_cd",
+            "severity": "high"
+        },
+        {
+            "id": "port_in_use_sample_1",
+            "description": "ポート使用中エラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_port_already_in_use"
+            ],
+            "log_content": "bind: address already in use\nPort 3000 is already in use",
+            "expected_confidence": 0.88,
+            "category": "network",
+            "severity": "medium"
+        },
+        {
+            "id": "database_connection_sample_1",
+            "description": "データベース接続失敗のサンプル1",
+            "expected_pattern_ids": [
+                "test_database_connection_failed"
+            ],
+            "log_content": "Connection to database failed: could not connect to server: Connection refused",
+            "expected_confidence": 0.82,
+            "category": "database",
+            "severity": "high"
+        },
+        {
+            "id": "python_syntax_sample_1",
+            "description": "Python構文エラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_python_syntax_error"
+            ],
+            "log_content": "  File \"main.py\", line 15\n    if x = 5:\n         ^\nSyntaxError: invalid syntax",
+            "expected_confidence": 0.95,
+            "category": "syntax",
+            "severity": "high"
+        },
+        {
+            "id": "file_not_found_sample_1",
+            "description": "ファイル不足エラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_file_not_found"
+            ],
+            "log_content": "FileNotFoundError: [Errno 2] No such file or directory: 'config.json'",
+            "expected_confidence": 0.9,
+            "category": "filesystem",
+            "severity": "medium"
+        },
+        {
+            "id": "mock_assertion_sample_1",
+            "description": "モックアサーションエラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_mock_assertion_error"
+            ],
+            "log_content": "AssertionError: Expected call not found. Expected: call('test_arg')\nActual: [call('different_arg')]",
+            "expected_confidence": 0.85,
+            "category": "test_mock",
+            "severity": "medium"
+        },
+        {
+            "id": "async_context_sample_1",
+            "description": "非同期コンテキストエラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_async_context_error"
+            ],
+            "log_content": "RuntimeError: Event loop is closed",
+            "expected_confidence": 0.88,
+            "category": "async",
+            "severity": "medium"
+        },
+        {
+            "id": "attribute_error_sample_1",
+            "description": "属性エラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_attribute_error"
+            ],
+            "log_content": "AttributeError: 'NoneType' object has no attribute 'get'",
+            "expected_confidence": 0.9,
+            "category": "attribute",
+            "severity": "medium"
+        },
+        {
+            "id": "fixture_missing_sample_1",
+            "description": "テストフィクスチャ不足のサンプル1",
+            "expected_pattern_ids": [
+                "test_fixture_missing"
+            ],
+            "log_content": "pytest: fixture 'sample_data' not found",
+            "expected_confidence": 0.85,
+            "category": "test_fixture",
+            "severity": "medium"
+        },
+        {
+            "id": "type_error_sample_1",
+            "description": "型エラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_type_error"
+            ],
+            "log_content": "TypeError: unsupported operand type(s) for +: 'int' and 'str'",
+            "expected_confidence": 0.8,
+            "category": "type",
+            "severity": "medium"
+        },
+        {
+            "id": "value_error_sample_1",
+            "description": "値エラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_value_error"
+            ],
+            "log_content": "ValueError: invalid literal for int() with base 10: 'abc'",
+            "expected_confidence": 0.82,
+            "category": "value",
+            "severity": "medium"
+        },
+        {
+            "id": "key_error_sample_1",
+            "description": "キーエラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_key_error"
+            ],
+            "log_content": "KeyError: 'missing_key'",
+            "expected_confidence": 0.85,
+            "category": "key",
+            "severity": "medium"
+        },
+        {
+            "id": "index_error_sample_1",
+            "description": "インデックスエラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_index_error"
+            ],
+            "log_content": "IndexError: list index out of range",
+            "expected_confidence": 0.88,
+            "category": "index",
+            "severity": "medium"
+        },
+        {
+            "id": "zero_division_sample_1",
+            "description": "ゼロ除算エラーのサンプル1",
+            "expected_pattern_ids": [
+                "test_zero_division_error"
+            ],
+            "log_content": "ZeroDivisionError: division by zero",
+            "expected_confidence": 0.95,
+            "category": "math",
+            "severity": "medium"
+        }
+    ]
+}

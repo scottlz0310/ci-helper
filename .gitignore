@@ -18,7 +18,7 @@ logs/
 test_results/
 test_results.xml
 coverage_test.json
-formatted_logs
+formatted_logs/
 
 # Auto-generated entries from templates
 $RECYCLE.BIN/

@@ -1,0 +1,25 @@
+{
+    "invalid_api_key": {
+        "providers": {
+            "openai": {
+                "api_key": "invalid-key",
+                "default_model": "gpt-4o"
+            }
+        }
+    },
+    "missing_provider": {
+        "default_provider": "nonexistent",
+        "providers": {}
+    },
+    "invalid_model": {
+        "providers": {
+            "openai": {
+                "api_key": "sk-test-key",
+                "default_model": "nonexistent-model",
+                "available_models": [
+                    "gpt-4o"
+                ]
+            }
+        }
+    }
+}

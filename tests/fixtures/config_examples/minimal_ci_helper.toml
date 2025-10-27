@@ -1,0 +1,11 @@
+# 最小限のCI-Helper設定ファイル
+# テスト用の設定例
+
+[ci-helper]
+verbose = false
+
+[ai]
+default_provider = "openai"
+
+[ai.providers.openai]
+default_model = "gpt-4o-mini"

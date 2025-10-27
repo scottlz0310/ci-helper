@@ -1,0 +1,375 @@
+{
+    "metadata": {
+        "description": "エッジケースとコーナーケース用のパターンテストデータ",
+        "version": "1.0.0",
+        "created_at": "2024-10-27T00:00:00Z",
+        "updated_at": "2024-10-27T00:00:00Z",
+        "total_patterns": 15,
+        "test_purpose": "パターン認識の堅牢性とエラーハンドリングテスト"
+    },
+    "edge_case_patterns": [
+        {
+            "id": "empty_regex_pattern",
+            "name": "空の正規表現パターン",
+            "category": "edge_case",
+            "regex_patterns": [
+                ""
+            ],
+            "keywords": [
+                "test"
+            ],
+            "context_requirements": [],
+            "confidence_base": 0.5,
+            "success_rate": 0.0,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 0,
+            "test_purpose": "空の正規表現パターンの処理テスト"
+        },
+        {
+            "id": "invalid_regex_pattern",
+            "name": "無効な正規表現パターン",
+            "category": "edge_case",
+            "regex_patterns": [
+                "[unclosed_bracket",
+                "(?P<invalid_group"
+            ],
+            "keywords": [
+                "invalid",
+                "regex"
+            ],
+            "context_requirements": [],
+            "confidence_base": 0.5,
+            "success_rate": 0.0,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 0,
+            "test_purpose": "無効な正規表現パターンのエラーハンドリングテスト"
+        },
+        {
+            "id": "empty_keywords_pattern",
+            "name": "空のキーワードパターン",
+            "category": "edge_case",
+            "regex_patterns": [
+                "test.*error"
+            ],
+            "keywords": [],
+            "context_requirements": [],
+            "confidence_base": 0.5,
+            "success_rate": 0.5,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 0,
+            "test_purpose": "キーワードが空の場合の処理テスト"
+        },
+        {
+            "id": "very_long_regex_pattern",
+            "name": "非常に長い正規表現パターン",
+            "category": "edge_case",
+            "regex_patterns": [
+                "error.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*.*failed"
+            ],
+            "keywords": [
+                "error",
+                "failed"
+            ],
+            "context_requirements": [],
+            "confidence_base": 0.7,
+            "success_rate": 0.6,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 0,
+            "test_purpose": "非常に長い正規表現の性能テスト"
+        },
+        {
+            "id": "unicode_pattern",
+            "name": "Unicode文字パターン",
+            "category": "edge_case",
+            "regex_patterns": [
+                "エラー.*発生",
+                "错误.*发生",
+                "エラー[：:].*"
+            ],
+            "keywords": [
+                "エラー",
+                "错误",
+                "発生"
+            ],
+            "context_requirements": [],
+            "confidence_base": 0.8,
+            "success_rate": 0.7,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 0,
+            "test_purpose": "Unicode文字を含むパターンのテスト"
+        },
+        {
+            "id": "special_characters_pattern",
+            "name": "特殊文字パターン",
+            "category": "edge_case",
+            "regex_patterns": [
+                "\\$\\{.*\\}",
+                "\\[.*\\]",
+                "\\(.*\\)",
+                "\\*.*\\*"
+            ],
+            "keywords": [
+                "${",
+                "}",
+                "[",
+                "]",
+                "(",
+                ")",
+                "*"
+            ],
+            "context_requirements": [],
+            "confidence_base": 0.6,
+            "success_rate": 0.5,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 0,
+            "test_purpose": "特殊文字を含むパターンのテスト"
+        },
+        {
+            "id": "case_sensitive_pattern",
+            "name": "大文字小文字区別パターン",
+            "category": "edge_case",
+            "regex_patterns": [
+                "ERROR",
+                "Error",
+                "error"
+            ],
+            "keywords": [
+                "ERROR",
+                "Error",
+                "error"
+            ],
+            "context_requirements": [],
+            "confidence_base": 0.7,
+            "success_rate": 0.8,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 0,
+            "test_purpose": "大文字小文字の区別テスト"
+        },
+        {
+            "id": "whitespace_pattern",
+            "name": "空白文字パターン",
+            "category": "edge_case",
+            "regex_patterns": [
+                "\\s+error\\s+",
+                "\\t.*\\n",
+                "\\r\\n.*error"
+            ],
+            "keywords": [
+                "error"
+            ],
+            "context_requirements": [],
+            "confidence_base": 0.6,
+            "success_rate": 0.7,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 0,
+            "test_purpose": "空白文字を含むパターンのテスト"
+        },
+        {
+            "id": "greedy_regex_pattern",
+            "name": "貪欲な正規表現パターン",
+            "category": "edge_case",
+            "regex_patterns": [
+                ".*error.*",
+                "error.*error",
+                ".+"
+            ],
+            "keywords": [
+                "error"
+            ],
+            "context_requirements": [],
+            "confidence_base": 0.3,
+            "success_rate": 0.2,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 0,
+            "test_purpose": "貪欲な正規表現の性能影響テスト"
+        },
+        {
+            "id": "overlapping_keywords_pattern",
+            "name": "重複キーワードパターン",
+            "category": "edge_case",
+            "regex_patterns": [
+                "test.*error"
+            ],
+            "keywords": [
+                "test",
+                "testing",
+                "test_case",
+                "error",
+                "err"
+            ],
+            "context_requirements": [],
+            "confidence_base": 0.5,
+            "success_rate": 0.6,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 0,
+            "test_purpose": "重複するキーワードの処理テスト"
+        },
+        {
+            "id": "extreme_confidence_pattern",
+            "name": "極端な信頼度パターン",
+            "category": "edge_case",
+            "regex_patterns": [
+                "exact_match_only"
+            ],
+            "keywords": [
+                "exact_match_only"
+            ],
+            "context_requirements": [],
+            "confidence_base": 1.0,
+            "success_rate": 1.0,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 0,
+            "test_purpose": "極端に高い信頼度の処理テスト"
+        },
+        {
+            "id": "zero_confidence_pattern",
+            "name": "ゼロ信頼度パターン",
+            "category": "edge_case",
+            "regex_patterns": [
+                "never_match"
+            ],
+            "keywords": [
+                "never_match"
+            ],
+            "context_requirements": [],
+            "confidence_base": 0.0,
+            "success_rate": 0.0,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 0,
+            "test_purpose": "ゼロ信頼度の処理テスト"
+        },
+        {
+            "id": "circular_context_pattern",
+            "name": "循環コンテキストパターン",
+            "category": "edge_case",
+            "regex_patterns": [
+                "context.*error"
+            ],
+            "keywords": [
+                "context",
+                "error"
+            ],
+            "context_requirements": [
+                "context",
+                "error",
+                "context"
+            ],
+            "confidence_base": 0.5,
+            "success_rate": 0.5,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 0,
+            "test_purpose": "循環するコンテキスト要件の処理テスト"
+        },
+        {
+            "id": "massive_keywords_pattern",
+            "name": "大量キーワードパターン",
+            "category": "edge_case",
+            "regex_patterns": [
+                "error"
+            ],
+            "keywords": [
+                "keyword1",
+                "keyword2",
+                "keyword3",
+                "keyword4",
+                "keyword5",
+                "keyword6",
+                "keyword7",
+                "keyword8",
+                "keyword9",
+                "keyword10"
+            ],
+            "context_requirements": [],
+            "confidence_base": 0.5,
+            "success_rate": 0.3,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 0,
+            "test_purpose": "大量のキーワードの性能テスト"
+        },
+        {
+            "id": "nested_regex_groups_pattern",
+            "name": "ネストした正規表現グループパターン",
+            "category": "edge_case",
+            "regex_patterns": [
+                "((error|fail).*((critical|fatal).*(system|app)))",
+                "(?:(?:test).*(?:(?:error).*(?:message)))"
+            ],
+            "keywords": [
+                "error",
+                "fail",
+                "critical",
+                "fatal",
+                "system",
+                "app",
+                "test",
+                "message"
+            ],
+            "context_requirements": [],
+            "confidence_base": 0.6,
+            "success_rate": 0.4,
+            "created_at": "2024-10-27T00:00:00Z",
+            "updated_at": "2024-10-27T00:00:00Z",
+            "user_defined": false,
+            "auto_generated": false,
+            "source": "test",
+            "occurrence_count": 0,
+            "test_purpose": "複雑にネストした正規表現グループの処理テスト"
+        }
+    ]
+}
