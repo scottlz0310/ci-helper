@@ -8,6 +8,9 @@
 from __future__ import annotations
 
 import json
+
+# テスト用のモックヘルパーをインポート
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -21,6 +24,9 @@ from ci_helper.core.models import ExecutionResult, Failure, FailureType, JobResu
 from ci_helper.formatters import get_formatter_manager
 from ci_helper.ui.command_menus import CommandMenuBuilder
 from ci_helper.ui.menu_system import MenuSystem
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from tests.utils.mock_helpers import setup_stable_prompt_mock
 
 
 class TestLogFormattingIntegration:
@@ -254,7 +260,8 @@ class TestLogFormattingIntegration:
 
         # ログ整形メニューへのナビゲーションをシミュレート
         # ログ管理 → ログ整形 → AI分析用フォーマット → 戻る → 戻る → 戻る → 終了
-        mock_prompt.side_effect = ["5", "4", "1", "1", "", "b", "b", "b", "q"]
+        # 安定したモック設定を使用してStopIterationエラーを防ぐ
+        setup_stable_prompt_mock(mock_prompt, ["5", "4", "1", "1", "", "b", "b", "b", "q"])
 
         main_menu = builder.build_main_menu()
 
@@ -281,21 +288,25 @@ class TestLogFormattingIntegration:
 
         # カスタム整形メニューへのナビゲーション
         # ログ管理 → ログ整形 → カスタム整形 → 設定 → 実行 → 戻る
-        mock_prompt.side_effect = [
-            "5",  # ログ管理
-            "4",  # ログ整形
-            "3",  # カスタム整形
-            "ai",  # フォーマット選択
-            "detailed",  # 詳細レベル
-            "y",  # エラーフィルタリング
-            "",  # 入力ファイル（デフォルト）
-            "",  # 出力ファイル（デフォルト）
-            "y",  # 実行確認
-            "b",
-            "b",
-            "b",
-            "q",  # 戻る操作
-        ]
+        # 安定したモック設定を使用してStopIterationエラーを防ぐ
+        setup_stable_prompt_mock(
+            mock_prompt,
+            [
+                "5",  # ログ管理
+                "4",  # ログ整形
+                "3",  # カスタム整形
+                "ai",  # フォーマット選択
+                "detailed",  # 詳細レベル
+                "y",  # エラーフィルタリング
+                "",  # 入力ファイル（デフォルト）
+                "",  # 出力ファイル（デフォルト）
+                "y",  # 実行確認
+                "b",
+                "b",
+                "b",
+                "q",  # 戻る操作
+            ],
+        )
 
         main_menu = builder.build_main_menu()
 
@@ -325,7 +336,29 @@ class TestLogFormattingIntegration:
         json_output_1 = formatter_manager.format_log(sample_execution_result, "json", **format_options)
         json_output_2 = formatter_manager.format_log(sample_execution_result, "json", **format_options)
 
-        assert json_output_1 == json_output_2
+        # JSON出力の構造的一貫性を確認（動的な値を除外）
+        import json
+
+        data1 = json.loads(json_output_1)
+        data2 = json.loads(json_output_2)
+
+        # 動的な値（タイムスタンプ等）を除外して比較
+        def remove_dynamic_values(data):
+            """動的な値を除外したコピーを作成"""
+            import copy
+
+            cleaned_data = copy.deepcopy(data)
+
+            # format_info内のgenerated_atを除外
+            if "format_info" in cleaned_data and "generated_at" in cleaned_data["format_info"]:
+                del cleaned_data["format_info"]["generated_at"]
+
+            return cleaned_data
+
+        cleaned_data1 = remove_dynamic_values(data1)
+        cleaned_data2 = remove_dynamic_values(data2)
+
+        assert cleaned_data1 == cleaned_data2
 
         # 異なるフォーマット間では異なる出力が生成されることを確認
         assert ai_output_1 != json_output_1
@@ -404,7 +437,8 @@ class TestLogFormattingIntegration:
         menu_system = MenuSystem(console)
 
         # エラーが発生するメニュー操作をシミュレート
-        mock_prompt.side_effect = ["5", "4", "1", "1", "", "q"]
+        # 安定したモック設定を使用してStopIterationエラーを防ぐ
+        setup_stable_prompt_mock(mock_prompt, ["5", "4", "1", "1", "", "q"])
 
         main_menu = builder.build_main_menu()
 

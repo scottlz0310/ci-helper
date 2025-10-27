@@ -285,7 +285,10 @@ class UnknownErrorDetector:
 
         try:
             with self.unknown_errors_file.open("r", encoding="utf-8") as f:
-                existing_errors = json.load(f)
+                content = f.read().strip()
+                if not content:
+                    return None
+                existing_errors = json.loads(content)
 
             for existing_error in existing_errors:
                 # カテゴリが同じかチェック
@@ -301,6 +304,8 @@ class UnknownErrorDetector:
                     if similarity > 0.7:  # 70%以上の類似度
                         return existing_error
 
+        except (json.JSONDecodeError, FileNotFoundError, PermissionError) as e:
+            logger.warning("未知エラーファイルの読み込みに失敗: %s", e)
         except Exception as e:
             logger.error("未知エラーの検索中にエラー: %s", e)
 
@@ -315,14 +320,23 @@ class UnknownErrorDetector:
         try:
             existing_errors = []
             if self.unknown_errors_file.exists():
-                with self.unknown_errors_file.open("r", encoding="utf-8") as f:
-                    existing_errors = json.load(f)
+                try:
+                    with self.unknown_errors_file.open("r", encoding="utf-8") as f:
+                        content = f.read().strip()
+                        if content:
+                            existing_errors = json.loads(content)
+                except (json.JSONDecodeError, FileNotFoundError):
+                    logger.warning("既存の未知エラーファイルが破損しています。新しいファイルを作成します。")
+                    existing_errors = []
 
             existing_errors.append(unknown_error_info)
 
-            with self.unknown_errors_file.open("w", encoding="utf-8") as f:
+            # 一時ファイルに書き込んでから移動（アトミック操作）
+            temp_file = self.unknown_errors_file.with_suffix(".tmp")
+            with temp_file.open("w", encoding="utf-8") as f:
                 json.dump(existing_errors, f, ensure_ascii=False, indent=2)
 
+            temp_file.replace(self.unknown_errors_file)
             logger.info("未知エラーを保存しました: %s", self.unknown_errors_file)
 
         except Exception as e:

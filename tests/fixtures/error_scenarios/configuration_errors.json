@@ -1,0 +1,81 @@
+{
+    "configuration_error_scenarios": {
+        "missing_api_key": {
+            "error_type": "ConfigurationError",
+            "error_message": "API key not found for provider 'openai'",
+            "context": {
+                "provider": "openai",
+                "config_file": "ci-helper.toml",
+                "environment_vars": [],
+                "expected_key_name": "OPENAI_API_KEY"
+            },
+            "expected_behavior": "clear_setup_instructions",
+            "recovery_strategy": "guide_to_api_key_setup"
+        },
+        "invalid_api_key_format": {
+            "error_type": "ConfigurationError",
+            "error_message": "Invalid API key format for OpenAI. Expected format: sk-...",
+            "context": {
+                "provider": "openai",
+                "provided_key": "invalid-key-123",
+                "expected_format": "sk-[48 characters]"
+            },
+            "expected_behavior": "format_validation_error",
+            "recovery_strategy": "show_correct_format_example"
+        },
+        "unsupported_provider": {
+            "error_type": "ProviderError",
+            "error_message": "Unsupported AI provider: 'gemini'",
+            "context": {
+                "requested_provider": "gemini",
+                "available_providers": [
+                    "openai",
+                    "anthropic",
+                    "local"
+                ],
+                "config_location": "ci-helper.toml"
+            },
+            "expected_behavior": "list_supported_providers",
+            "recovery_strategy": "suggest_alternative_provider"
+        },
+        "invalid_model_name": {
+            "error_type": "ProviderError",
+            "error_message": "Model 'gpt-5' not available for provider 'openai'",
+            "context": {
+                "provider": "openai",
+                "requested_model": "gpt-5",
+                "available_models": [
+                    "gpt-4o",
+                    "gpt-4o-mini",
+                    "gpt-3.5-turbo"
+                ]
+            },
+            "expected_behavior": "list_available_models",
+            "recovery_strategy": "suggest_closest_model"
+        },
+        "corrupted_config_file": {
+            "error_type": "ConfigurationError",
+            "error_message": "Failed to parse configuration file: Invalid TOML syntax",
+            "context": {
+                "config_file": "ci-helper.toml",
+                "line_number": 15,
+                "syntax_error": "Unterminated string literal",
+                "file_content_preview": "[ai]\ndefault_provider = \"openai"
+            },
+            "expected_behavior": "syntax_error_with_line_number",
+            "recovery_strategy": "suggest_config_validation"
+        },
+        "permission_denied_config": {
+            "error_type": "PermissionError",
+            "error_message": "Permission denied: Cannot read configuration file",
+            "context": {
+                "config_file": "/etc/ci-helper/ci-helper.toml",
+                "file_permissions": "600",
+                "current_user": "developer",
+                "file_owner": "root"
+            },
+            "expected_behavior": "permission_error_with_guidance",
+            "recovery_strategy": "suggest_permission_fix"
+        }
+    }
+}

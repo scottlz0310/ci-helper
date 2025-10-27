@@ -1,0 +1,97 @@
+{
+    "ci_execution_error_scenarios": {
+        "act_not_installed": {
+            "error_type": "ExecutionError",
+            "error_message": "act command not found",
+            "context": {
+                "command": "act",
+                "path_searched": [
+                    "/usr/local/bin",
+                    "/usr/bin",
+                    "/bin"
+                ],
+                "operating_system": "linux",
+                "installation_method": "unknown"
+            },
+            "expected_behavior": "installation_guidance",
+            "recovery_strategy": "provide_installation_instructions"
+        },
+        "docker_not_running": {
+            "error_type": "ExecutionError",
+            "error_message": "Cannot connect to the Docker daemon",
+            "context": {
+                "docker_command": "docker ps",
+                "docker_socket": "/var/run/docker.sock",
+                "docker_service_status": "stopped",
+                "user_in_docker_group": false
+            },
+            "expected_behavior": "docker_setup_guidance",
+            "recovery_strategy": "start_docker_and_add_user_to_group"
+        },
+        "workflow_file_not_found": {
+            "error_type": "WorkflowError",
+            "error_message": "No GitHub Actions workflow files found",
+            "context": {
+                "searched_paths": [
+                    ".github/workflows/",
+                    ".github/workflows/*.yml",
+                    ".github/workflows/*.yaml"
+                ],
+                "working_directory": "/home/user/project",
+                "is_git_repository": true
+            },
+            "expected_behavior": "workflow_creation_guidance",
+            "recovery_strategy": "suggest_workflow_templates"
+        },
+        "invalid_workflow_syntax": {
+            "error_type": "WorkflowError",
+            "error_message": "Invalid workflow syntax in test.yml",
+            "context": {
+                "workflow_file": ".github/workflows/test.yml",
+                "line_number": 12,
+                "syntax_error": "mapping values are not allowed here",
+                "yaml_content_preview": "jobs:\n  test:\n    runs-on ubuntu-latest:"
+            },
+            "expected_behavior": "yaml_syntax_error_with_line",
+            "recovery_strategy": "suggest_yaml_validation"
+        },
+        "act_execution_timeout": {
+            "error_type": "TimeoutError",
+            "error_message": "act execution timed out after 300 seconds",
+            "context": {
+                "workflow": "test.yml",
+                "job": "test",
+                "step": "Run tests",
+                "timeout_seconds": 300,
+                "last_output": "Installing dependencies..."
+            },
+            "expected_behavior": "timeout_with_partial_results",
+            "recovery_strategy": "suggest_timeout_increase"
+        },
+        "container_pull_failed": {
+            "error_type": "ExecutionError",
+            "error_message": "Failed to pull Docker image: ubuntu:latest",
+            "context": {
+                "image": "ubuntu:latest",
+                "registry": "docker.io",
+                "error_code": "manifest_unknown",
+                "network_status": "connected"
+            },
+            "expected_behavior": "container_pull_error_with_alternatives",
+            "recovery_strategy": "suggest_alternative_images"
+        },
+        "insufficient_resources": {
+            "error_type": "ResourceError",
+            "error_message": "Insufficient system resources to run workflow",
+            "context": {
+                "available_memory": "512MB",
+                "required_memory": "2GB",
+                "available_disk": "100MB",
+                "required_disk": "1GB",
+                "cpu_cores": 1
+            },
+            "expected_behavior": "resource_limitation_warning",
+            "recovery_strategy": "suggest_resource_optimization"
+        }
+    }
+}

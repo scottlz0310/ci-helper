@@ -1,0 +1,85 @@
+{
+    "interactive_session_error_scenarios": {
+        "session_timeout": {
+            "error_type": "SessionTimeoutError",
+            "error_message": "Interactive session timed out after 300 seconds",
+            "context": {
+                "session_id": "session_abc123",
+                "timeout_seconds": 300,
+                "last_activity": "2024-10-27T15:25:00Z",
+                "current_time": "2024-10-27T15:30:00Z",
+                "pending_operations": 2
+            },
+            "expected_behavior": "session_cleanup_and_notification",
+            "recovery_strategy": "offer_session_restart"
+        },
+        "session_memory_overflow": {
+            "error_type": "MemoryError",
+            "error_message": "Session memory limit exceeded",
+            "context": {
+                "session_id": "session_def456",
+                "memory_usage": "512MB",
+                "memory_limit": "256MB",
+                "conversation_length": 50,
+                "context_tokens": 100000
+            },
+            "expected_behavior": "memory_cleanup_and_truncation",
+            "recovery_strategy": "implement_context_window_sliding"
+        },
+        "invalid_user_input": {
+            "error_type": "ValidationError",
+            "error_message": "Invalid command in interactive session",
+            "context": {
+                "session_id": "session_ghi789",
+                "user_input": "/invalid_command with args",
+                "available_commands": [
+                    "/help",
+                    "/exit",
+                    "/clear",
+                    "/save"
+                ],
+                "input_type": "command"
+            },
+            "expected_behavior": "command_validation_error_with_help",
+            "recovery_strategy": "show_available_commands"
+        },
+        "session_state_corruption": {
+            "error_type": "SessionError",
+            "error_message": "Session state is corrupted",
+            "context": {
+                "session_id": "session_jkl012",
+                "corruption_type": "invalid_conversation_history",
+                "last_valid_state": "2024-10-27T15:20:00Z",
+                "recovery_possible": true
+            },
+            "expected_behavior": "session_state_recovery",
+            "recovery_strategy": "restore_to_last_valid_state"
+        },
+        "concurrent_session_limit": {
+            "error_type": "SessionLimitError",
+            "error_message": "Maximum concurrent sessions exceeded",
+            "context": {
+                "current_sessions": 5,
+                "max_sessions": 3,
+                "user_id": "developer",
+                "oldest_session": "session_abc123",
+                "newest_session": "session_xyz789"
+            },
+            "expected_behavior": "session_limit_enforcement",
+            "recovery_strategy": "close_oldest_session_automatically"
+        },
+        "session_authentication_failed": {
+            "error_type": "AuthenticationError",
+            "error_message": "Session authentication failed",
+            "context": {
+                "session_id": "session_mno345",
+                "authentication_method": "api_key",
+                "provider": "openai",
+                "key_status": "invalid",
+                "last_successful_auth": "2024-10-27T14:00:00Z"
+            },
+            "expected_behavior": "authentication_failure_with_guidance",
+            "recovery_strategy": "prompt_for_key_renewal"
+        }
+    }
+}

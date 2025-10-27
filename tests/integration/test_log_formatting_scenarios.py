@@ -7,6 +7,9 @@
 from __future__ import annotations
 
 import json
+
+# テスト用のモックヘルパーをインポート
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -18,6 +21,9 @@ from rich.console import Console
 from ci_helper.cli import cli
 from ci_helper.core.models import ExecutionResult, Failure, FailureType, JobResult, WorkflowResult
 from ci_helper.formatters import get_formatter_manager
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from tests.utils.mock_helpers import setup_stable_prompt_mock
 
 
 class TestLogFormattingScenarios:
@@ -123,9 +129,13 @@ class TestLogFormattingScenarios:
             pytest.fail(f"無効なJSON出力: {e}")
 
         # 必須フィールドの存在確認
-        assert "success" in data
+        assert "execution_summary" in data
         assert "workflows" in data
-        assert "total_duration" in data
+        assert "all_failures" in data
+
+        # execution_summary内の必須フィールド確認
+        assert "success" in data["execution_summary"]
+        assert "total_duration" in data["execution_summary"]
 
         # ワークフローデータの構造確認
         assert isinstance(data["workflows"], list)
@@ -294,7 +304,8 @@ class TestLogFormattingScenarios:
 
         # 深いメニューナビゲーションと戻る操作
         # ログ管理 → ログ整形 → 最新ログ整形 → AI形式 → 戻る → 戻る → 戻る → 終了
-        mock_prompt.side_effect = ["5", "4", "1", "1", "", "b", "b", "b", "b", "q"]
+        # 安定したモック設定を使用してStopIterationエラーを防ぐ
+        setup_stable_prompt_mock(mock_prompt, ["5", "4", "1", "1", "", "b", "b", "b", "b", "q"])
 
         main_menu = builder.build_main_menu()
 

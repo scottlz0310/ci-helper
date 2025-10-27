@@ -52,10 +52,10 @@ class LogFormattingErrorHandler:
             self._handle_user_input_error(error, context, verbose)
         elif isinstance(error, (PermissionError, OSError)):
             self._handle_system_error(error, context, verbose)
-        elif isinstance(error, (ValueError, TypeError)):
-            self._handle_validation_error(error, context, verbose)
         elif isinstance(error, json.JSONDecodeError):
             self._handle_json_error(error, context, verbose)
+        elif isinstance(error, (ValueError, TypeError)):
+            self._handle_validation_error(error, context, verbose)
         elif isinstance(error, MemoryError):
             self._handle_memory_error(error, context, verbose)
         else:

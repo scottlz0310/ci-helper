@@ -1,0 +1,90 @@
+{
+    "security_error_scenarios": {
+        "secret_detection_in_logs": {
+            "error_type": "SecurityError",
+            "error_message": "Potential secrets detected in log content",
+            "context": {
+                "detected_secrets": [
+                    {
+                        "type": "api_key",
+                        "pattern": "sk-[a-zA-Z0-9]{48}",
+                        "location": "line 45",
+                        "confidence": 0.95
+                    },
+                    {
+                        "type": "password",
+                        "pattern": "password=.*",
+                        "location": "line 67",
+                        "confidence": 0.8
+                    }
+                ],
+                "sanitization_enabled": true,
+                "log_file": "ci_run_20241027.log"
+            },
+            "expected_behavior": "sanitize_secrets_and_warn",
+            "recovery_strategy": "enable_automatic_secret_filtering"
+        },
+        "unsafe_file_path": {
+            "error_type": "SecurityError",
+            "error_message": "Unsafe file path detected",
+            "context": {
+                "requested_path": "../../../etc/passwd",
+                "normalized_path": "/etc/passwd",
+                "allowed_base_path": "/home/user/project",
+                "operation": "read_log_file"
+            },
+            "expected_behavior": "path_traversal_prevention",
+            "recovery_strategy": "restrict_to_project_directory"
+        },
+        "api_key_exposure_risk": {
+            "error_type": "SecurityError",
+            "error_message": "API key may be exposed in command line arguments",
+            "context": {
+                "command": "ci-run analyze --api-key sk-abc123...",
+                "exposure_type": "command_line_argument",
+                "process_list_visible": true,
+                "recommended_method": "environment_variable"
+            },
+            "expected_behavior": "api_key_exposure_warning",
+            "recovery_strategy": "guide_to_secure_key_storage"
+        },
+        "insecure_cache_permissions": {
+            "error_type": "SecurityError",
+            "error_message": "Cache directory has insecure permissions",
+            "context": {
+                "cache_directory": ".ci-helper/cache",
+                "current_permissions": "777",
+                "recommended_permissions": "700",
+                "contains_sensitive_data": true,
+                "world_readable": true
+            },
+            "expected_behavior": "permission_security_warning",
+            "recovery_strategy": "fix_cache_directory_permissions"
+        },
+        "untrusted_config_source": {
+            "error_type": "SecurityError",
+            "error_message": "Configuration loaded from untrusted source",
+            "context": {
+                "config_source": "http://example.com/ci-helper.toml",
+                "source_type": "remote_http",
+                "ssl_verified": false,
+                "local_config_available": true
+            },
+            "expected_behavior": "untrusted_source_warning",
+            "recovery_strategy": "use_local_config_only"
+        },
+        "privilege_escalation_attempt": {
+            "error_type": "SecurityError",
+            "error_message": "Potential privilege escalation attempt detected",
+            "context": {
+                "operation": "write_system_config",
+                "target_path": "/etc/ci-helper/global.toml",
+                "current_user": "developer",
+                "required_privileges": "root",
+                "escalation_method": "sudo"
+            },
+            "expected_behavior": "privilege_escalation_prevention",
+            "recovery_strategy": "use_user_level_configuration"
+        }
+    }
+}

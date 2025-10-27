@@ -73,6 +73,8 @@ class TestFixTemplateManager:
     @pytest.fixture
     def sample_pattern(self):
         """テスト用パターン"""
+        from datetime import datetime
+
         return Pattern(
             id="docker_permission_denied",
             name="Docker権限拒否",

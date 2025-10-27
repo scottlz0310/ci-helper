@@ -1,0 +1,81 @@
+{
+    "cache_error_scenarios": {
+        "cache_directory_creation_failed": {
+            "error_type": "CacheError",
+            "error_message": "Failed to create cache directory",
+            "context": {
+                "cache_directory": ".ci-helper/cache",
+                "parent_directory": ".ci-helper",
+                "permissions": "755",
+                "disk_space": "available",
+                "error_cause": "permission_denied"
+            },
+            "expected_behavior": "cache_directory_creation_error",
+            "recovery_strategy": "suggest_manual_directory_creation"
+        },
+        "cache_size_limit_exceeded": {
+            "error_type": "CacheError",
+            "error_message": "Cache size limit exceeded: 150MB > 100MB",
+            "context": {
+                "current_cache_size": 157286400,
+                "max_cache_size": 104857600,
+                "cache_directory": ".ci-helper/cache",
+                "oldest_entry": "2024-10-01T10:00:00Z",
+                "newest_entry": "2024-10-27T15:30:00Z"
+            },
+            "expected_behavior": "cache_cleanup_automatic",
+            "recovery_strategy": "implement_lru_eviction"
+        },
+        "cache_entry_expired": {
+            "error_type": "CacheError",
+            "error_message": "Cache entry has expired",
+            "context": {
+                "cache_key": "openai_gpt4o_analysis_abc123",
+                "created_at": "2024-10-26T10:00:00Z",
+                "expires_at": "2024-10-27T10:00:00Z",
+                "current_time": "2024-10-27T15:30:00Z",
+                "ttl_hours": 24
+            },
+            "expected_behavior": "cache_miss_regenerate",
+            "recovery_strategy": "fetch_fresh_data"
+        },
+        "cache_write_permission_denied": {
+            "error_type": "PermissionError",
+            "error_message": "Permission denied writing to cache",
+            "context": {
+                "cache_file": ".ci-helper/cache/responses/entry_123.json",
+                "directory_permissions": "755",
+                "file_permissions": "644",
+                "current_user": "developer",
+                "directory_owner": "root"
+            },
+            "expected_behavior": "cache_write_error_fallback",
+            "recovery_strategy": "continue_without_caching"
+        },
+        "cache_corruption_detected": {
+            "error_type": "CacheError",
+            "error_message": "Cache corruption detected in metadata",
+            "context": {
+                "cache_metadata_file": ".ci-helper/cache/metadata.json",
+                "corruption_type": "invalid_json_structure",
+                "backup_available": true,
+                "affected_entries": 15
+            },
+            "expected_behavior": "cache_corruption_recovery",
+            "recovery_strategy": "restore_from_backup_or_rebuild"
+        },
+        "concurrent_cache_access": {
+            "error_type": "CacheError",
+            "error_message": "Concurrent cache access conflict",
+            "context": {
+                "cache_file": ".ci-helper/cache/responses/entry_456.json",
+                "lock_file": ".ci-helper/cache/responses/entry_456.json.lock",
+                "process_id": 12345,
+                "lock_age_seconds": 30,
+                "operation": "write"
+            },
+            "expected_behavior": "wait_for_lock_release",
+            "recovery_strategy": "implement_file_locking"
+        }
+    }
+}

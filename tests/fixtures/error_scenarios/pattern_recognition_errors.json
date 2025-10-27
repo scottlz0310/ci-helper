@@ -1,0 +1,81 @@
+{
+    "pattern_recognition_error_scenarios": {
+        "pattern_database_not_found": {
+            "error_type": "PatternError",
+            "error_message": "Pattern database file not found",
+            "context": {
+                "pattern_file": "data/patterns/failure_patterns.json",
+                "working_directory": "/home/user/project",
+                "default_patterns_available": true,
+                "custom_patterns_configured": false
+            },
+            "expected_behavior": "fallback_to_default_patterns",
+            "recovery_strategy": "create_default_pattern_database"
+        },
+        "invalid_pattern_syntax": {
+            "error_type": "PatternError",
+            "error_message": "Invalid regex pattern in pattern database",
+            "context": {
+                "pattern_id": "python_import_error",
+                "pattern_regex": "[invalid regex (",
+                "pattern_file": "data/patterns/custom_patterns.json",
+                "line_number": 25
+            },
+            "expected_behavior": "pattern_validation_error",
+            "recovery_strategy": "skip_invalid_pattern_and_log_warning"
+        },
+        "pattern_matching_timeout": {
+            "error_type": "TimeoutError",
+            "error_message": "Pattern matching timed out",
+            "context": {
+                "log_content_size": 10485760,
+                "pattern_count": 150,
+                "timeout_seconds": 30,
+                "complex_patterns": 25,
+                "processing_time": 35
+            },
+            "expected_behavior": "timeout_with_partial_results",
+            "recovery_strategy": "optimize_patterns_or_increase_timeout"
+        },
+        "pattern_confidence_too_low": {
+            "error_type": "PatternError",
+            "error_message": "No patterns matched with sufficient confidence",
+            "context": {
+                "log_content": "Unknown error occurred during execution",
+                "highest_confidence": 0.3,
+                "confidence_threshold": 0.7,
+                "matched_patterns": 5,
+                "total_patterns": 100
+            },
+            "expected_behavior": "low_confidence_warning",
+            "recovery_strategy": "suggest_manual_analysis_or_pattern_improvement"
+        },
+        "pattern_engine_initialization_failed": {
+            "error_type": "InitializationError",
+            "error_message": "Failed to initialize pattern recognition engine",
+            "context": {
+                "engine_type": "regex_based",
+                "pattern_files": [
+                    "default_patterns.json",
+                    "custom_patterns.json"
+                ],
+                "memory_required": "128MB",
+                "available_memory": "64MB"
+            },
+            "expected_behavior": "initialization_failure_with_fallback",
+            "recovery_strategy": "use_simple_keyword_matching"
+        },
+        "pattern_learning_data_corruption": {
+            "error_type": "DataCorruptionError",
+            "error_message": "Pattern learning data is corrupted",
+            "context": {
+                "learning_data_file": ".ci-helper/learning/pattern_feedback.json",
+                "corruption_type": "invalid_json_structure",
+                "backup_available": false,
+                "affected_patterns": 30
+            },
+            "expected_behavior": "data_corruption_recovery",
+            "recovery_strategy": "reset_learning_data_and_start_fresh"
+        }
+    }
+}

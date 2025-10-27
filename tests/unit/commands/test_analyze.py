@@ -360,16 +360,25 @@ class TestAnalyzeHelperFunctions:
         mock_log_manager = Mock()
         mock_log_manager_class.return_value = mock_log_manager
 
-        # モックログエントリ
-        mock_log_entry = Mock()
-        mock_log_entry.file_path = Path("latest.log")
+        # モックログエントリ（辞書形式で実際の実装に合わせる）
+        mock_log_entry = {
+            "log_file": "latest.log",
+            "timestamp": "2024-01-01T12:00:00",
+            "success": True,
+            "total_duration": 120.5,
+            "total_failures": 0,
+            "workflows": [],
+        }
         mock_log_manager.list_logs.return_value = [mock_log_entry]
+
+        # mock_configのget_pathメソッドを設定
+        mock_config.get_path.return_value = Path("/mock/log/dir")
 
         # 最新ログファイル取得
         result = _get_latest_log_file(mock_config)
 
         # 検証
-        assert result == Path("latest.log")
+        assert result == Path("/mock/log/dir/latest.log")
         mock_log_manager_class.assert_called_once_with(mock_config)
         mock_log_manager.list_logs.assert_called_once()
 

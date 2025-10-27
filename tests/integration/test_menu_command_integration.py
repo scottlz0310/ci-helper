@@ -369,13 +369,37 @@ class TestMenuCommandIntegration:
 
         # 構造が同じであることを確認
         assert data1.keys() == data2.keys()
-        assert data1 == data2
+
+        # 動的な値（タイムスタンプ等）を除外して比較
+        def remove_dynamic_values(data):
+            """動的な値を除外したコピーを作成"""
+            import copy
+
+            cleaned_data = copy.deepcopy(data)
+
+            # format_info内のgenerated_atを除外
+            if "format_info" in cleaned_data and "generated_at" in cleaned_data["format_info"]:
+                del cleaned_data["format_info"]["generated_at"]
+
+            return cleaned_data
+
+        cleaned_data1 = remove_dynamic_values(data1)
+        cleaned_data2 = remove_dynamic_values(data2)
+
+        # 動的な値を除外した構造が同じであることを確認
+        assert cleaned_data1 == cleaned_data2
 
         # 必須フィールドの存在確認
-        required_fields = ["success", "workflows", "total_duration"]
-        for field in required_fields:
+        required_top_level_fields = ["execution_summary", "workflows", "all_failures"]
+        for field in required_top_level_fields:
             assert field in data1
             assert field in data2
+
+        # execution_summary内の必須フィールド確認
+        required_summary_fields = ["success", "total_duration"]
+        for field in required_summary_fields:
+            assert field in data1["execution_summary"]
+            assert field in data2["execution_summary"]
 
     def test_menu_command_integration_end_to_end(self):
         """メニューとコマンドの統合E2Eテスト"""

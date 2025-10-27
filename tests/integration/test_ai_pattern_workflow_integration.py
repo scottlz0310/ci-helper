@@ -410,6 +410,8 @@ Stack trace: line 42 in custom_builder.py
         confidence_calculator = ConfidenceCalculator()
 
         # サンプルパターンマッチを作成
+        from datetime import datetime
+
         pattern = Pattern(
             id="test_pattern",
             name="テストパターン",
@@ -419,6 +421,8 @@ Stack trace: line 42 in custom_builder.py
             context_requirements=["test"],
             confidence_base=0.8,
             success_rate=0.9,
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
             user_defined=False,
         )
 

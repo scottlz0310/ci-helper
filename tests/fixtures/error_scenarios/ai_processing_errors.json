@@ -1,0 +1,77 @@
+{
+    "ai_processing_error_scenarios": {
+        "token_limit_exceeded": {
+            "error_type": "TokenLimitError",
+            "error_message": "Input exceeds maximum token limit of 128,000 tokens",
+            "context": {
+                "provider": "openai",
+                "model": "gpt-4o",
+                "input_tokens": 150000,
+                "max_tokens": 128000,
+                "content_type": "large_log_file"
+            },
+            "expected_behavior": "truncate_or_split_input",
+            "recovery_strategy": "implement_chunking_strategy"
+        },
+        "cost_limit_exceeded": {
+            "error_type": "CostLimitError",
+            "error_message": "Monthly cost limit of $50.00 exceeded",
+            "context": {
+                "provider": "openai",
+                "current_cost": 52.50,
+                "monthly_limit": 50.00,
+                "remaining_days": 15,
+                "request_cost": 0.25
+            },
+            "expected_behavior": "cost_limit_warning_and_block",
+            "recovery_strategy": "suggest_cost_management"
+        },
+        "model_overloaded": {
+            "error_type": "ProviderError",
+            "error_message": "Model is currently overloaded. Please try again later",
+            "context": {
+                "provider": "openai",
+                "model": "gpt-4o",
+                "server_status": "overloaded",
+                "retry_after": 300
+            },
+            "expected_behavior": "retry_with_delay",
+            "recovery_strategy": "fallback_to_alternative_model"
+        },
+        "content_policy_violation": {
+            "error_type": "ProviderError",
+            "error_message": "Content violates usage policies",
+            "context": {
+                "provider": "anthropic",
+                "violation_type": "potentially_harmful_content",
+                "content_preview": "Error logs containing sensitive information"
+            },
+            "expected_behavior": "content_sanitization_required",
+            "recovery_strategy": "enable_content_filtering"
+        },
+        "malformed_response": {
+            "error_type": "AIError",
+            "error_message": "Received malformed response from AI provider",
+            "context": {
+                "provider": "openai",
+                "response_format": "invalid_json",
+                "expected_format": "structured_analysis",
+                "raw_response": "This is not a proper JSON response..."
+            },
+            "expected_behavior": "response_validation_error",
+            "recovery_strategy": "retry_with_different_prompt"
+        },
+        "streaming_interrupted": {
+            "error_type": "StreamingError",
+            "error_message": "Streaming response was interrupted",
+            "context": {
+                "provider": "openai",
+                "bytes_received": 1024,
+                "expected_length": 4096,
+                "interruption_cause": "network_timeout"
+            },
+            "expected_behavior": "partial_response_handling",
+            "recovery_strategy": "retry_without_streaming"
+        }
+    }
+}

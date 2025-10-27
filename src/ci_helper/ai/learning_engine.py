@@ -375,7 +375,7 @@ class LearningEngine:
         # パスや数値などの可変部分を汎用化
         # ファイルパス
         normalized = re.sub(r"/[^\s]+", "/path/to/file", normalized)
-        normalized = re.sub(r"[A-Za-z]:\\[^\s]+", "C:\\path\\to\\file", normalized)
+        normalized = re.sub(r"[A-Za-z]:\\\\[^\s]+", "C:\\\\path\\\\to\\\\file", normalized)
 
         # 数値
         normalized = re.sub(r"\b\d+\b", "N", normalized)
@@ -605,7 +605,7 @@ class LearningEngine:
         # 汎用化された部分を正規表現に変換
         pattern = escaped
         pattern = pattern.replace(r"\/path\/to\/file", r"[^\s]+")  # パス
-        pattern = pattern.replace(r"C:\\path\\to\\file", r"[A-Za-z]:\\[^\s]+")  # Windowsパス
+        pattern = pattern.replace(r"C:\\\\path\\\\to\\\\file", r"[A-Za-z]:\\\\[^\s]+")  # Windowsパス
         pattern = pattern.replace(r"\bN\b", r"\d+")  # 数値
         pattern = pattern.replace("UUID", r"[a-f0-9-]+")  # UUID
         pattern = pattern.replace("HASH", r"[a-f0-9]+")  # ハッシュ
@@ -1038,8 +1038,14 @@ class LearningEngine:
             # 既存の未知エラーデータを読み込み
             unknown_errors = []
             if self.unknown_errors_file.exists():
-                with self.unknown_errors_file.open("r", encoding="utf-8") as f:
-                    unknown_errors = json.load(f)
+                try:
+                    with self.unknown_errors_file.open("r", encoding="utf-8") as f:
+                        content = f.read().strip()
+                        if content:
+                            unknown_errors = json.loads(content)
+                except (json.JSONDecodeError, FileNotFoundError):
+                    logger.warning("未知エラーファイルが破損しています。空のリストで初期化します。")
+                    unknown_errors = []
 
             # 類似のエラーを検索
             similar_error = self._find_similar_unknown_error(unknown_error_info, unknown_errors)
@@ -1339,8 +1345,16 @@ class LearningEngine:
 
             # 未知エラー統計
             if self.unknown_errors_file.exists():
-                with self.unknown_errors_file.open("r", encoding="utf-8") as f:
-                    unknown_errors = json.load(f)
+                try:
+                    with self.unknown_errors_file.open("r", encoding="utf-8") as f:
+                        content = f.read().strip()
+                        if content:
+                            unknown_errors = json.loads(content)
+                        else:
+                            unknown_errors = []
+                except (json.JSONDecodeError, FileNotFoundError):
+                    logger.warning("未知エラーファイルが破損しています。統計をスキップします。")
+                    unknown_errors = []
 
                 stats["total_unknown_errors"] = len(unknown_errors)
 
@@ -1383,8 +1397,16 @@ class LearningEngine:
             if not self.unknown_errors_file.exists():
                 return 0
 
-            with self.unknown_errors_file.open("r", encoding="utf-8") as f:
-                unknown_errors = json.load(f)
+            try:
+                with self.unknown_errors_file.open("r", encoding="utf-8") as f:
+                    content = f.read().strip()
+                    if content:
+                        unknown_errors = json.loads(content)
+                    else:
+                        unknown_errors = []
+            except (json.JSONDecodeError, FileNotFoundError):
+                logger.warning("未知エラーファイルが破損しています。クリーンアップをスキップします。")
+                return 0
 
             cutoff_date = datetime.now() - timedelta(days=max_age_days)
 

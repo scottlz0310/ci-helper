@@ -1,0 +1,61 @@
+{
+    "network_error_scenarios": {
+        "timeout_error": {
+            "error_type": "TimeoutError",
+            "error_message": "Request timeout after 30 seconds",
+            "context": {
+                "provider": "openai",
+                "model": "gpt-4o",
+                "request_size": "large",
+                "network_conditions": "slow"
+            },
+            "expected_behavior": "retry_with_exponential_backoff",
+            "recovery_strategy": "fallback_to_cache_or_local"
+        },
+        "connection_error": {
+            "error_type": "ConnectionError",
+            "error_message": "Failed to establish connection to api.openai.com",
+            "context": {
+                "provider": "openai",
+                "endpoint": "https://api.openai.com/v1/chat/completions",
+                "network_status": "offline"
+            },
+            "expected_behavior": "immediate_failure_with_clear_message",
+            "recovery_strategy": "suggest_network_check"
+        },
+        "dns_resolution_error": {
+            "error_type": "DNSError",
+            "error_message": "Name resolution failed for api.anthropic.com",
+            "context": {
+                "provider": "anthropic",
+                "dns_server": "8.8.8.8",
+                "network_type": "corporate"
+            },
+            "expected_behavior": "immediate_failure_with_dns_guidance",
+            "recovery_strategy": "suggest_dns_configuration"
+        },
+        "ssl_certificate_error": {
+            "error_type": "SSLError",
+            "error_message": "SSL certificate verification failed",
+            "context": {
+                "provider": "openai",
+                "certificate_issue": "expired",
+                "environment": "corporate_proxy"
+            },
+            "expected_behavior": "security_warning_and_failure",
+            "recovery_strategy": "suggest_certificate_update"
+        },
+        "rate_limit_error": {
+            "error_type": "RateLimitError",
+            "error_message": "Rate limit exceeded. Please try again in 60 seconds",
+            "context": {
+                "provider": "openai",
+                "current_usage": "100%",
+                "reset_time": "60",
+                "tier": "free"
+            },
+            "expected_behavior": "wait_and_retry",
+            "recovery_strategy": "implement_exponential_backoff"
+        }
+    }
+}

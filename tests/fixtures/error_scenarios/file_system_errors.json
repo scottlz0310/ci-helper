@@ -1,0 +1,80 @@
+{
+    "file_system_error_scenarios": {
+        "log_file_not_found": {
+            "error_type": "FileNotFoundError",
+            "error_message": "Log file not found: .ci-helper/logs/latest.log",
+            "context": {
+                "requested_file": ".ci-helper/logs/latest.log",
+                "working_directory": "/home/user/project",
+                "logs_directory_exists": false,
+                "alternative_locations": [
+                    ".act/logs/",
+                    "logs/"
+                ]
+            },
+            "expected_behavior": "suggest_log_locations",
+            "recovery_strategy": "create_logs_directory_and_guide"
+        },
+        "permission_denied_log_access": {
+            "error_type": "PermissionError",
+            "error_message": "Permission denied: Cannot read log file",
+            "context": {
+                "log_file": ".ci-helper/logs/ci_run_20241027.log",
+                "file_permissions": "600",
+                "current_user": "developer",
+                "file_owner": "root"
+            },
+            "expected_behavior": "permission_error_with_fix_suggestion",
+            "recovery_strategy": "suggest_permission_change"
+        },
+        "disk_space_full": {
+            "error_type": "OSError",
+            "error_message": "No space left on device",
+            "context": {
+                "operation": "writing_cache_file",
+                "target_directory": ".ci-helper/cache",
+                "available_space": 0,
+                "required_space": 10485760,
+                "disk_usage": "100%"
+            },
+            "expected_behavior": "disk_space_error_with_cleanup_suggestion",
+            "recovery_strategy": "suggest_cache_cleanup"
+        },
+        "corrupted_cache_file": {
+            "error_type": "CacheError",
+            "error_message": "Cache file is corrupted and cannot be read",
+            "context": {
+                "cache_file": ".ci-helper/cache/responses/openai_gpt4o_abc123.json",
+                "corruption_type": "invalid_json",
+                "file_size": 2048,
+                "expected_format": "json"
+            },
+            "expected_behavior": "cache_corruption_recovery",
+            "recovery_strategy": "delete_corrupted_cache_and_regenerate"
+        },
+        "config_directory_missing": {
+            "error_type": "FileNotFoundError",
+            "error_message": "Configuration directory not found: .ci-helper",
+            "context": {
+                "config_directory": ".ci-helper",
+                "working_directory": "/home/user/project",
+                "is_git_repository": true,
+                "initialization_required": true
+            },
+            "expected_behavior": "suggest_initialization",
+            "recovery_strategy": "run_init_command"
+        },
+        "readonly_file_system": {
+            "error_type": "OSError",
+            "error_message": "Read-only file system",
+            "context": {
+                "operation": "creating_log_file",
+                "target_path": ".ci-helper/logs/",
+                "file_system_type": "readonly",
+                "mount_point": "/home/user/project"
+            },
+            "expected_behavior": "readonly_filesystem_error",
+            "recovery_strategy": "suggest_alternative_location"
+        }
+    }
+}
