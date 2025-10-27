@@ -72,7 +72,6 @@ def feedback(ctx: click.Context, analysis_id: str | None, rating: int | None) ->
     try:
         import json
         from datetime import datetime
-        from pathlib import Path
 
         # フィードバックディレクトリを作成
         feedback_dir = config.get_path("cache_dir") / "feedback"

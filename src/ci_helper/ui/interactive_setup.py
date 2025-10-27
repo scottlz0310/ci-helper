@@ -366,7 +366,7 @@ class InteractiveSetup:
             "verbose = false",
             "save_logs = true",
             "",
-            "# 注意: base_urlに\"auto\"を設定すると、WSL環境では自動的にWindowsホストのIPを検出します",
+            '# 注意: base_urlに"auto"を設定すると、WSL環境では自動的にWindowsホストのIPを検出します',
             "",
         ]
 

@@ -650,8 +650,8 @@
       "source_log_hash": -1959209726867545975,
       "created_at": "2025-10-26T21:53:54.339698"
     },
-    "occurrence_count": 13,
-    "last_seen": "2025-10-27T20:29:43.162260"
+    "occurrence_count": 14,
+    "last_seen": "2025-10-27T20:38:59.844791"
   },
   {
     "timestamp": "2025-10-26T21:53:54.374488",
@@ -4182,6 +4182,63 @@
       "auto_generated": true,
       "source_log_hash": -7410329151187895988,
       "created_at": "2025-10-27T20:29:43.600119"
+    },
+    "occurrence_count": 1,
+    "_needs_learning_processing": true
+  },
+  {
+    "timestamp": "2025-10-27T20:38:59.835293",
+    "log_content_hash": 7859503891495274093,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251027_203859",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": 7859503891495274093,
+      "created_at": "2025-10-27T20:38:59.835287"
+    },
+    "occurrence_count": 1
+  }
+]  {
+    "timestamp": "2025-10-27T20:38:59.835293",
+    "log_content_hash": 7859503891495274093,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251027_203859",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": 7859503891495274093,
+      "created_at": "2025-10-27T20:38:59.835287"
     },
     "occurrence_count": 1,
     "_needs_learning_processing": true

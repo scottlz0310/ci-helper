@@ -111,6 +111,44 @@ def temp_dir() -> Generator[Path, None, None]:
 
 
 @pytest.fixture
+def stable_file_operations():
+    """
+    安定したファイル操作環境を提供するフィクスチャ
+
+    ファイル操作のモックを一貫した動作に修正し、テスト間での状態分離を確保します。
+    並行テスト実行時の競合状態を防ぎ、テストの再現性を確保します。
+
+    Returns:
+        FileOperationMockStabilizer: 設定済みのファイル操作スタビライザー
+    """
+    from tests.utils.file_operation_mock_stabilizer import FileOperationMockStabilizer
+
+    stabilizer = FileOperationMockStabilizer()
+    try:
+        stabilizer.setup_all_mocks()
+        yield stabilizer
+    finally:
+        stabilizer.cleanup_mocks()
+
+
+@pytest.fixture
+def isolated_filesystem():
+    """
+    分離されたファイルシステム環境を提供するフィクスチャ
+
+    実際のファイルシステムに影響を与えずにファイル操作をテストできる
+    分離された環境を提供します。
+
+    Returns:
+        Path: 分離されたファイルシステムのルートパス
+    """
+    from tests.utils.file_operation_mock_stabilizer import isolated_file_system
+
+    with isolated_file_system(use_real_temp_dir=True) as temp_dir:
+        yield temp_dir
+
+
+@pytest.fixture
 def sample_config(temp_dir: Path) -> Config:
     """
     テスト用の設定を提供するフィクスチャ
