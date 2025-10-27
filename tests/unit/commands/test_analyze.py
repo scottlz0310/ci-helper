@@ -654,14 +654,14 @@ class TestAnalyzeFallbackAndRecovery:
 
         # モック設定 - configオブジェクトのメソッドを適切に設定
         mock_config.get_ai_config.return_value = {"default_provider": "openai"}
-        mock_config.get_available_ai_providers.return_value = ["openai"]
+        mock_config.get_default_ai_provider.return_value = "openai"
         mock_config.get_ai_provider_api_key.return_value = "sk-test-key-123456789"
 
         result = _validate_analysis_environment(mock_config, mock_console)
 
         assert result is True
         mock_config.get_ai_config.assert_called_once()
-        mock_config.get_available_ai_providers.assert_called_once()
+        mock_config.get_default_ai_provider.assert_called_once()
 
     def test_validate_analysis_environment_failure(self, mock_config, mock_console):
         """分析環境検証失敗のテスト"""

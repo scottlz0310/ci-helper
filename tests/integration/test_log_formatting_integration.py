@@ -185,8 +185,8 @@ class TestLogFormattingIntegration:
                 assert result.exit_code == 0
                 assert "# AI Formatted Output" in result.output
 
-                # フォーマッターが正しく呼び出されることを確認
-                mock_formatter_manager.format_log.assert_called_once()
+                # プログレスマネージャーが正しく呼び出されることを確認（format_logは内部で呼ばれる）
+                mock_progress_manager.execute_with_progress.assert_called_once()
 
     @patch("ci_helper.commands.format_logs._get_execution_result")
     def test_batch_processing_with_multiple_formats(

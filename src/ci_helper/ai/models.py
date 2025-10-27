@@ -490,6 +490,98 @@ class AIConfig:
 
         return merged_config
 
+    # 辞書ライクアクセスメソッド
+    def get(self, key: str, default: Any = None) -> Any:
+        """辞書ライクなget()メソッド
+
+        Args:
+            key: 取得するキー
+            default: キーが存在しない場合のデフォルト値
+
+        Returns:
+            キーに対応する値、またはデフォルト値
+        """
+        try:
+            return getattr(self, key)
+        except AttributeError:
+            return default
+
+    def __getitem__(self, key: str) -> Any:
+        """辞書ライクな[]アクセス
+
+        Args:
+            key: 取得するキー
+
+        Returns:
+            キーに対応する値
+
+        Raises:
+            KeyError: キーが存在しない場合
+        """
+        try:
+            return getattr(self, key)
+        except AttributeError:
+            raise KeyError(f"'{key}' not found in AIConfig")
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        """辞書ライクな[]代入
+
+        Args:
+            key: 設定するキー
+            value: 設定する値
+        """
+        if hasattr(self, key):
+            setattr(self, key, value)
+        else:
+            raise KeyError(f"'{key}' is not a valid AIConfig attribute")
+
+    def __contains__(self, key: str) -> bool:
+        """辞書ライクなin演算子サポート
+
+        Args:
+            key: チェックするキー
+
+        Returns:
+            キーが存在するかどうか
+        """
+        return hasattr(self, key)
+
+    def __iter__(self):
+        """辞書ライクな反復処理サポート
+
+        Returns:
+            フィールド名のイテレータ
+        """
+        from dataclasses import fields
+
+        return iter(field.name for field in fields(self))
+
+    def keys(self):
+        """辞書ライクなkeys()メソッド
+
+        Returns:
+            フィールド名のビュー
+        """
+        from dataclasses import fields
+
+        return [field.name for field in fields(self)]
+
+    def values(self):
+        """辞書ライクなvalues()メソッド
+
+        Returns:
+            フィールド値のイテレータ
+        """
+        return (getattr(self, key) for key in self.keys())
+
+    def items(self):
+        """辞書ライクなitems()メソッド
+
+        Returns:
+            (キー, 値)ペアのイテレータ
+        """
+        return ((key, getattr(self, key)) for key in self.keys())
+
 
 @dataclass
 class UsageRecord:
@@ -663,6 +755,20 @@ class Pattern:
     auto_generated: bool = False  # 自動生成フラグ
     source: str = "manual"  # パターンの作成元
     occurrence_count: int = 0  # 発生回数（学習用）
+
+
+@dataclass
+class Match:
+    """マッチ結果"""
+
+    pattern_id: str  # パターンID
+    match_type: str  # マッチタイプ（regex/keyword）
+    start_position: int  # 開始位置
+    end_position: int  # 終了位置
+    matched_text: str  # マッチしたテキスト
+    confidence: float  # マッチ信頼度
+    context_before: str  # 前後のコンテキスト
+    context_after: str  # 後のコンテキスト
 
 
 @dataclass

@@ -272,6 +272,7 @@ class OptimizedPatternMatcher:
 
         return Match(
             pattern_id=pattern.id,
+            match_type="regex",  # 正規表現マッチ
             matched_text=regex_match.group(),
             start_position=regex_match.start(),
             end_position=regex_match.end(),

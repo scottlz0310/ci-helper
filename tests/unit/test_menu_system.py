@@ -4,12 +4,19 @@
 MenuSystem、MenuItem、Menu クラスの機能をテストします。
 """
 
+import sys
 from io import StringIO
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 from rich.console import Console
 
 from ci_helper.ui.menu_system import Menu, MenuItem, MenuSystem
+
+# Add the project root to the path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+from tests.utils.mock_helpers import setup_stable_prompt_mock
 
 
 class TestMenuItem:
@@ -168,7 +175,7 @@ class TestMenuSystem:
     @patch("rich.prompt.Prompt.ask")
     def test_get_user_choice_invalid_then_valid(self, mock_prompt):
         """無効な選択の後に有効な選択をした場合のテスト"""
-        mock_prompt.side_effect = ["invalid", "1"]
+        setup_stable_prompt_mock(mock_prompt, ["invalid", "1"])
 
         items = [MenuItem(key="1", title="項目1", description="説明1", enabled=True)]
         menu = Menu(title="テストメニュー", items=items)

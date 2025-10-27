@@ -21,7 +21,7 @@
     "auto_generated": true,
     "source": "unknown_error_learning",
     "occurrence_count": 11,
-    "last_updated": "2025-10-26T21:54:25.017823"
+    "last_updated": "2025-10-27T20:30:03.425694"
   },
   {
     "id": "auto_generated_network_error_20251026_214504",
@@ -45,7 +45,7 @@
     "auto_generated": true,
     "source": "unknown_error_learning",
     "occurrence_count": 9,
-    "last_updated": "2025-10-26T21:54:25.020266"
+    "last_updated": "2025-10-27T20:30:03.427183"
   },
   {
     "id": "auto_generated_test_error_20251026_215354",
@@ -65,8 +65,8 @@
     "created_at": "2025-10-26T21:53:54.371456",
     "auto_generated": true,
     "source": "unknown_error_learning",
-    "occurrence_count": 4,
-    "last_updated": "2025-10-26T21:54:25.021107"
+    "occurrence_count": 13,
+    "last_updated": "2025-10-27T20:30:03.424943"
   },
   {
     "id": "auto_generated_unknown_error_20251026_213707",
@@ -83,8 +83,8 @@
     "created_at": "2025-10-26T21:53:56.456634",
     "auto_generated": true,
     "source": "unknown_error_learning",
-    "occurrence_count": 3,
-    "last_updated": "2025-10-26T21:54:25.022956"
+    "occurrence_count": 6,
+    "last_updated": "2025-10-27T20:30:03.427793"
   },
   {
     "id": "auto_generated_permission_error_20251026_215354",
@@ -107,8 +107,8 @@
     "created_at": "2025-10-26T21:53:57.288155",
     "auto_generated": true,
     "source": "unknown_error_learning",
-    "occurrence_count": 22,
-    "last_updated": "2025-10-26T21:54:25.016846"
+    "occurrence_count": 24,
+    "last_updated": "2025-10-27T20:30:03.422380"
   },
   {
     "id": "auto_generated_dependency_error_20251026_215422",
@@ -126,7 +126,68 @@
     "created_at": "2025-10-26T21:54:22.913867",
     "auto_generated": true,
     "source": "unknown_error_learning",
-    "occurrence_count": 11,
-    "last_updated": "2025-10-26T21:54:25.019408"
+    "occurrence_count": 51,
+    "last_updated": "2025-10-27T20:30:03.421707"
+  },
+  {
+    "id": "auto_generated_test_error_20251026_215419",
+    "name": "自動生成パターン: test_error",
+    "category": "test_error",
+    "regex_patterns": [
+      "ERROR:\\ Simple\\ test\\ failure"
+    ],
+    "keywords": [
+      "failure",
+      "error"
+    ],
+    "confidence_base": 0.6,
+    "success_rate": 0.5,
+    "created_at": "2025-10-27T19:50:40.982264",
+    "auto_generated": true,
+    "source": "unknown_error_learning",
+    "occurrence_count": 6,
+    "last_updated": "2025-10-27T20:30:03.429519"
+  },
+  {
+    "id": "auto_generated_dependency_error_20251026_215355",
+    "name": "自動生成パターン: dependency_error",
+    "category": "dependency_error",
+    "regex_patterns": [
+      "\\|\\ Traceback\\ \\(most\\ recent\\ call\\ last\\):",
+      "\\|\\ AssertionError:\\ Test\\ failed",
+      "\\[Python\\ Test/[^/\\s]+st\\]\\ \\ \\ ❌\\ \\ Failure\\ \\-\\ Main\\ Run\\ Python\\ tests"
+    ],
+    "keywords": [
+      "failure",
+      "error",
+      "failed",
+      "traceback"
+    ],
+    "confidence_base": 0.6,
+    "success_rate": 0.5,
+    "created_at": "2025-10-27T20:24:35.720969",
+    "auto_generated": true,
+    "source": "unknown_error_learning",
+    "occurrence_count": 5,
+    "last_updated": "2025-10-27T20:30:03.431848"
+  },
+  {
+    "id": "auto_generated_build_error_20251026_215354",
+    "name": "自動生成パターン: build_error",
+    "category": "build_error",
+    "regex_patterns": [
+      "Error\\ 2:\\ Build\\ failed"
+    ],
+    "keywords": [
+      "failed",
+      "error"
+    ],
+    "confidence_base": 0.6,
+    "success_rate": 0.5,
+    "created_at": "2025-10-27T20:24:42.064227",
+    "auto_generated": true,
+    "source": "unknown_error_learning",
+    "occurrence_count": 5,
+    "last_updated": "2025-10-27T20:30:03.430114"
   }
 ]

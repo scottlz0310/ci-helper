@@ -8,26 +8,11 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass
 from typing import Any
 
-from .models import Pattern
+from .models import Match, Pattern
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Match:
-    """マッチ結果"""
-
-    pattern_id: str  # パターンID
-    match_type: str  # マッチタイプ（regex/keyword）
-    start_position: int  # 開始位置
-    end_position: int  # 終了位置
-    matched_text: str  # マッチしたテキスト
-    confidence: float  # マッチ信頼度
-    context_before: str  # 前後のコンテキスト
-    context_after: str  # 後のコンテキスト
 
 
 class PatternMatcher:

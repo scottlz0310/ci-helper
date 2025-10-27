@@ -4,13 +4,18 @@
 メニューシステム全体の統合動作をテストします。
 """
 
+import sys
 from io import StringIO
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 from rich.console import Console
 
 from ci_helper.ui.command_menus import CommandMenuBuilder
 from ci_helper.ui.menu_system import MenuSystem
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from tests.utils.mock_helpers import setup_stable_prompt_mock
 
 
 class TestMenuIntegration:
@@ -40,7 +45,7 @@ class TestMenuIntegration:
     def test_main_menu_to_doctor_command(self, mock_prompt):
         """メインメニューから環境チェックコマンドへの統合テスト"""
         # ユーザー入力をシミュレート: 環境チェック選択 → 終了
-        mock_prompt.side_effect = ["2", "", "q"]
+        setup_stable_prompt_mock(mock_prompt, ["2", "", "q"])
 
         main_menu = self.builder.build_main_menu()
 
@@ -56,7 +61,7 @@ class TestMenuIntegration:
     def test_main_menu_to_submenu_navigation(self, mock_prompt):
         """メインメニューからサブメニューへのナビゲーションテスト"""
         # ユーザー入力をシミュレート: 初期設定選択 → 戻る → 終了
-        mock_prompt.side_effect = ["1", "b", "q"]
+        setup_stable_prompt_mock(mock_prompt, ["1", "b", "q"])
 
         main_menu = self.builder.build_main_menu()
 
@@ -72,7 +77,7 @@ class TestMenuIntegration:
     def test_submenu_command_execution(self, mock_prompt):
         """サブメニューでのコマンド実行テスト"""
         # ユーザー入力をシミュレート: 初期設定 → 標準初期設定 → 戻る → 終了
-        mock_prompt.side_effect = ["1", "2", "", "b", "q"]
+        setup_stable_prompt_mock(mock_prompt, ["1", "2", "", "b", "q"])
 
         main_menu = self.builder.build_main_menu()
 
@@ -88,7 +93,7 @@ class TestMenuIntegration:
     def test_multiple_command_execution(self, mock_prompt):
         """複数コマンドの連続実行テスト"""
         # ユーザー入力をシミュレート: 環境チェック → クリーンアップ → 終了
-        mock_prompt.side_effect = ["2", "", "8", "", "q"]
+        setup_stable_prompt_mock(mock_prompt, ["2", "", "8", "", "q"])
 
         main_menu = self.builder.build_main_menu()
 
@@ -105,7 +110,7 @@ class TestMenuIntegration:
     def test_invalid_input_handling(self, mock_prompt):
         """無効な入力の処理テスト"""
         # ユーザー入力をシミュレート: 無効な選択 → 有効な選択 → 終了
-        mock_prompt.side_effect = ["invalid", "2", "", "q"]
+        setup_stable_prompt_mock(mock_prompt, ["invalid", "2", "", "q"])
 
         main_menu = self.builder.build_main_menu()
 
@@ -140,7 +145,7 @@ class TestMenuIntegration:
         self.command_handlers["doctor"].side_effect = Exception("テストエラー")
 
         # ユーザー入力をシミュレート: 環境チェック → 終了
-        mock_prompt.side_effect = ["2", "", "q"]
+        setup_stable_prompt_mock(mock_prompt, ["2", "", "q"])
 
         main_menu = self.builder.build_main_menu()
 
@@ -156,7 +161,7 @@ class TestMenuIntegration:
     def test_deep_submenu_navigation(self, mock_prompt):
         """深いサブメニューナビゲーションテスト"""
         # ユーザー入力をシミュレート: AI分析 → 最新ログ分析 → 戻る → 戻る → 終了
-        mock_prompt.side_effect = ["4", "1", "", "b", "b", "q"]
+        setup_stable_prompt_mock(mock_prompt, ["4", "1", "", "b", "b", "q"])
 
         main_menu = self.builder.build_main_menu()
 
@@ -172,7 +177,7 @@ class TestMenuIntegration:
     def test_menu_stack_management(self, mock_prompt):
         """メニュースタック管理のテスト"""
         # ユーザー入力をシミュレート: サブメニューに入って戻る
-        mock_prompt.side_effect = ["1", "b", "q"]
+        setup_stable_prompt_mock(mock_prompt, ["1", "b", "q"])
 
         main_menu = self.builder.build_main_menu()
 
@@ -197,7 +202,7 @@ class TestMenuIntegration:
     @patch("rich.prompt.Prompt.ask")
     def test_start_method_integration(self, mock_prompt):
         """startメソッドの統合テスト"""
-        mock_prompt.return_value = "q"
+        setup_stable_prompt_mock(mock_prompt, ["q"])
 
         main_menu = self.builder.build_main_menu()
 
@@ -210,7 +215,7 @@ class TestMenuIntegration:
     @patch("rich.prompt.Prompt.ask")
     def test_menu_display_content(self, mock_prompt):
         """メニュー表示内容の統合テスト"""
-        mock_prompt.return_value = "q"
+        setup_stable_prompt_mock(mock_prompt, ["q"])
 
         main_menu = self.builder.build_main_menu()
 
@@ -246,7 +251,7 @@ class TestMenuIntegration:
         mock_detector_class.return_value = mock_detector
 
         # ユーザー入力をシミュレート: CI/CDテスト → 特定ワークフロー実行 → ワークフロー選択 → 戻る → 戻る → 終了
-        mock_prompt.side_effect = ["3", "2", "1", "b", "b", "q"]
+        setup_stable_prompt_mock(mock_prompt, ["3", "2", "1", "b", "b", "q"])
 
         main_menu = self.builder.build_main_menu()
 
@@ -265,7 +270,7 @@ class TestMenuIntegration:
         mock_confirm.return_value = True
 
         # ユーザー入力をシミュレート: キャッシュ管理 → キャッシュクリア → 確認 → 戻る → 戻る → 終了
-        mock_prompt.side_effect = ["7", "4", "b", "b", "q"]
+        setup_stable_prompt_mock(mock_prompt, ["7", "4", "b", "b", "q"])
 
         main_menu = self.builder.build_main_menu()
 

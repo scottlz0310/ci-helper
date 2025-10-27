@@ -278,11 +278,12 @@ class TestLogFileSelection:
         result = action()
 
         # ハンドラーが正しい引数で呼び出されることを確認
-        mock_handler.assert_called_once_with(
-            format_type="ai",
-            input_file=None,  # 最新ログの場合はNone
-            output_file=None,
-        )
+        # 実装では return_to_menu_func も渡されるため、それを含めて確認
+        call_args = mock_handler.call_args
+        assert call_args[1]["format_type"] == "ai"
+        assert call_args[1]["input_file"] is None  # 最新ログの場合はNone
+        assert call_args[1]["output_file"] is None
+        assert "return_to_menu_func" in call_args[1]  # return_to_menu_func が含まれることを確認
         assert result == "success"
 
     def test_log_formatting_submenu_structure(self):

@@ -34,9 +34,10 @@ class TestFailureType:
     def test_failure_type_enum_membership(self):
         """失敗タイプのエニュメーションメンバーシップテスト"""
         all_types = list(FailureType)
-        assert len(all_types) == 6
+        assert len(all_types) == 7
         assert FailureType.ERROR in all_types
         assert FailureType.ASSERTION in all_types
+        assert FailureType.SYNTAX in all_types
 
 
 class TestFailure:
