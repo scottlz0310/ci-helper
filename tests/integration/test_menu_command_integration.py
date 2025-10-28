@@ -196,25 +196,51 @@ class TestMenuCommandIntegration:
                     mock_progress_manager.show_menu_return_option = Mock()
                     mock_progress.return_value = mock_progress_manager
 
-                    # カスタムハンドラーを呼び出し
-                    result = format_logs_custom_handler(
-                        format_type="ai",
-                        detail_level="detailed",
-                        filter_errors=True,
-                        input_file=None,
-                        output_file=None,
-                        advanced_option1="value1",
-                        advanced_option2="value2",
-                    )
+                    with patch("ci_helper.commands.format_logs.Config") as mock_config_class:
+                        mock_config = Mock()
+                        mock_config_class.return_value = mock_config
 
-                    assert result is True
+                        with patch("ci_helper.commands.format_logs.LogManager") as mock_log_manager_class:
+                            mock_log_manager = Mock()
+                            mock_log_manager_class.return_value = mock_log_manager
 
-                    # フォーマッターが正しいパラメータで呼び出されることを確認
-                    call_args = mock_manager.format_log.call_args
-                    assert call_args[1]["detail_level"] == "detailed"
-                    assert call_args[1]["filter_errors"] is True
-                    assert call_args[1]["advanced_option1"] == "value1"
-                    assert call_args[1]["advanced_option2"] == "value2"
+                            # カスタムハンドラーを呼び出し
+                            result = format_logs_custom_handler(
+                                format_type="ai",
+                                detail_level="detailed",
+                                filter_errors=True,
+                                input_file=None,
+                                output_file=None,
+                                advanced_option1="value1",
+                                advanced_option2="value2",
+                            )
+
+                            assert result is True
+
+                            # プログレスマネージャーのexecute_with_progressが呼び出されることを確認
+                            mock_progress_manager.execute_with_progress.assert_called_once()
+
+                            # execute_with_progressに渡されたtask_funcを取得して実行
+                            call_args = mock_progress_manager.execute_with_progress.call_args
+                            task_func = call_args[1]["task_func"]
+
+                            # task_funcを実行してフォーマッターが呼び出されることを確認
+                            task_func()
+                            mock_manager.format_log.assert_called_once()
+
+                            # 呼び出し引数を確認
+                            format_call_args = mock_manager.format_log.call_args
+                            if format_call_args is not None:
+                                # 位置引数の確認
+                                assert format_call_args[0][0] == test_execution_result  # execution_result
+                                assert format_call_args[0][1] == "ai"  # format_type
+
+                                # キーワード引数の確認
+                                kwargs = format_call_args[1]
+                                assert kwargs["detail_level"] == "detailed"
+                                assert kwargs["filter_errors"] is True
+                                assert kwargs["advanced_option1"] == "value1"
+                                assert kwargs["advanced_option2"] == "value2"
 
     @patch("rich.prompt.Prompt.ask")
     def test_menu_error_propagation(self, mock_prompt: Mock):
@@ -345,15 +371,31 @@ class TestMenuCommandIntegration:
                     mock_progress_manager.show_menu_return_option = Mock()
                     mock_progress.return_value = mock_progress_manager
 
-                    # メニューハンドラーでの進行状況表示
-                    result = format_logs_handler(format_type="ai", input_file="test.log", output_file="output.md")
+                    with patch("ci_helper.commands.format_logs.Config") as mock_config_class:
+                        mock_config = Mock()
+                        mock_config_class.return_value = mock_config
 
-                    assert result is True
+                        with patch("ci_helper.commands.format_logs.LogManager") as mock_log_manager_class:
+                            mock_log_manager = Mock()
+                            mock_log_manager_class.return_value = mock_log_manager
 
-                    # 進行状況表示メソッドが呼び出されることを確認
-                    mock_progress_manager.show_processing_start_message.assert_called_once()
-                    mock_progress_manager.execute_with_progress.assert_called_once()
-                    mock_progress_manager.show_success_message.assert_called_once()
+                            # FileSaveManagerをモック化して成功を返すように設定
+                            with patch("ci_helper.commands.format_logs.FileSaveManager") as mock_file_manager_class:
+                                mock_file_manager = Mock()
+                                mock_file_manager.save_formatted_log.return_value = (True, "output.md")
+                                mock_file_manager_class.return_value = mock_file_manager
+
+                                # メニューハンドラーでの進行状況表示
+                                result = format_logs_handler(
+                                    format_type="ai", input_file="test.log", output_file="output.md"
+                                )
+
+                        assert result is True
+
+                        # 進行状況表示メソッドが呼び出されることを確認
+                        mock_progress_manager.show_processing_start_message.assert_called_once()
+                        mock_progress_manager.execute_with_progress.assert_called_once()
+                        mock_progress_manager.show_success_message.assert_called_once()
 
     def test_json_output_structure_consistency(self, test_execution_result: ExecutionResult):
         """JSON出力構造の一貫性テスト"""

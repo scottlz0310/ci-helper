@@ -345,9 +345,11 @@ class TestFileOperationConsistency:
         results = []
         errors = []
 
-        def file_operations(thread_id):
-            try:
-                with stabilizer.stable_file_operations():
+        # 共有のstable_file_operationsコンテキストを使用
+        with stabilizer.stable_file_operations():
+
+            def file_operations(thread_id):
+                try:
                     # ファイル作成
                     file_path = f"/test/file_{thread_id}.txt"
                     stabilizer.create_test_file(file_path, f"content_{thread_id}")
@@ -364,19 +366,19 @@ class TestFileOperationConsistency:
                     if content == f"content_{thread_id}":
                         results.append(f"read_{thread_id}")
 
-            except Exception as e:
-                errors.append(e)
+                except Exception as e:
+                    errors.append(e)
 
-        # 複数スレッドで並行実行
-        threads = []
-        for i in range(5):
-            thread = threading.Thread(target=file_operations, args=(i,))
-            threads.append(thread)
-            thread.start()
+            # 複数スレッドで並行実行
+            threads = []
+            for i in range(5):
+                thread = threading.Thread(target=file_operations, args=(i,))
+                threads.append(thread)
+                thread.start()
 
-        # 全スレッドの完了を待機
-        for thread in threads:
-            thread.join()
+            # 全スレッドの完了を待機
+            for thread in threads:
+                thread.join()
 
         # エラーが発生しないことを確認
         assert len(errors) == 0

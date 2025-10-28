@@ -212,8 +212,10 @@ class FileOperationMockStabilizer:
                 mock_file = Mock()
                 mock_file.read.return_value = content
                 mock_file.readlines.return_value = content.splitlines(keepends=True)
-                mock_file.__enter__.return_value = mock_file
-                mock_file.__exit__.return_value = None
+
+                # Context manager methods
+                mock_file.__enter__ = Mock(return_value=mock_file)
+                mock_file.__exit__ = Mock(return_value=None)
                 return mock_file
 
             elif "w" in mode or "a" in mode:
@@ -239,8 +241,10 @@ class FileOperationMockStabilizer:
 
                 mock_file.write = write_func
                 mock_file.flush = Mock()
-                mock_file.__enter__.return_value = mock_file
-                mock_file.__exit__.return_value = None
+
+                # Context manager methods
+                mock_file.__enter__ = Mock(return_value=mock_file)
+                mock_file.__exit__ = Mock(return_value=None)
                 return mock_file
 
             else:
@@ -253,10 +257,103 @@ class FileOperationMockStabilizer:
 
     def setup_pathlib_mocks(self) -> None:
         """pathlibのメソッドをモック化（安全な方法）"""
-        # pathlibの直接的なグローバルモック化は避ける
-        # 代わりに、特定のパスパターンのみをモック化するか、
-        # テスト内で明示的にモックオブジェクトを使用する
-        pass
+
+        def mock_path_mkdir(path_self, mode=0o777, parents=False, exist_ok=False):
+            """pathlib.Path.mkdir()のモック"""
+            path_str = str(path_self)
+
+            # /mockで始まるパスのみをモック化
+            if not path_str.startswith("/mock"):
+                # 実際のpathlibの動作を呼び出す
+                return path_self.__class__.mkdir(path_self, mode=mode, parents=parents, exist_ok=exist_ok)
+
+            # 親ディレクトリの作成
+            if parents:
+                parent_path = str(path_self.parent)
+                if parent_path != "/" and parent_path != path_str:
+                    self.mock_fs.create_directory(parent_path)
+
+            # ディレクトリを作成
+            if not self.mock_fs.directory_exists(path_str):
+                self.mock_fs.create_directory(path_str)
+            elif not exist_ok:
+                raise FileExistsError(f"Directory already exists: {path_str}")
+
+        def mock_path_exists(path_self):
+            """pathlib.Path.exists()のモック"""
+            path_str = str(path_self)
+
+            # /mockで始まるパスのみをモック化
+            if not path_str.startswith("/mock"):
+                return path_self.__class__.exists(path_self)
+
+            return self.mock_fs.file_exists(path_str) or self.mock_fs.directory_exists(path_str)
+
+        def mock_path_is_dir(path_self):
+            """pathlib.Path.is_dir()のモック"""
+            path_str = str(path_self)
+
+            # /mockで始まるパスのみをモック化
+            if not path_str.startswith("/mock"):
+                return path_self.__class__.is_dir(path_self)
+
+            return self.mock_fs.directory_exists(path_str)
+
+        def mock_path_is_file(path_self):
+            """pathlib.Path.is_file()のモック"""
+            path_str = str(path_self)
+
+            # /mockで始まるパスのみをモック化
+            if not path_str.startswith("/mock"):
+                return path_self.__class__.is_file(path_self)
+
+            return self.mock_fs.file_exists(path_str)
+
+        def mock_path_read_text(path_self, encoding="utf-8", errors="strict"):
+            """pathlib.Path.read_text()のモック"""
+            path_str = str(path_self)
+
+            # /mockで始まるパスのみをモック化
+            if not path_str.startswith("/mock"):
+                return path_self.__class__.read_text(path_self, encoding=encoding, errors=errors)
+
+            if not self.mock_fs.file_exists(path_str):
+                raise FileNotFoundError(f"No such file or directory: '{path_str}'")
+            return self.mock_fs.read_file(path_str)
+
+        def mock_path_write_text(path_self, data, encoding="utf-8", errors="strict", newline=None):
+            """pathlib.Path.write_text()のモック"""
+            path_str = str(path_self)
+
+            # /mockで始まるパスのみをモック化
+            if not path_str.startswith("/mock"):
+                return path_self.__class__.write_text(
+                    path_self, data, encoding=encoding, errors=errors, newline=newline
+                )
+
+            # 親ディレクトリを作成
+            parent_path = str(path_self.parent)
+            if parent_path != "/" and parent_path != path_str:
+                self.mock_fs.create_directory(parent_path)
+
+            self.mock_fs.create_file(path_str, data)
+            return len(data)
+
+        # pathlibメソッドをパッチ
+        from pathlib import Path
+
+        mkdir_patch = patch.object(Path, "mkdir", mock_path_mkdir)
+        exists_patch = patch.object(Path, "exists", mock_path_exists)
+        is_dir_patch = patch.object(Path, "is_dir", mock_path_is_dir)
+        is_file_patch = patch.object(Path, "is_file", mock_path_is_file)
+        read_text_patch = patch.object(Path, "read_text", mock_path_read_text)
+        write_text_patch = patch.object(Path, "write_text", mock_path_write_text)
+
+        patches = [mkdir_patch, exists_patch, is_dir_patch, is_file_patch, read_text_patch, write_text_patch]
+
+        for p in patches:
+            self._active_patches.append(p)
+            p.start()
 
     def setup_tempfile_mocks(self) -> None:
         """tempfileモジュールのモック化"""
@@ -372,7 +469,7 @@ class FileOperationMockStabilizer:
     def setup_all_mocks(self) -> None:
         """すべてのファイル操作モックを設定"""
         self.setup_consistent_file_mocks()
-        # pathlib mocks are skipped to avoid conflicts with pytest internals
+        self.setup_pathlib_mocks()  # pathlibモックを有効化
         self.setup_tempfile_mocks()
         self.setup_shutil_mocks()
 

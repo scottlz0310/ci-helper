@@ -61,17 +61,19 @@ class TestLogHistoryManagementWithStabilizer:
             stabilizer.create_test_file(index_file_path, '{"version": "1.0", "logs": [], "last_execution": null}')
 
             # ログを保存（モックファイルシステム内で）
-            with patch.object(log_manager, "_generate_log_filename", return_value="test_log.log"):
-                with patch.object(log_manager, "_save_log_file") as mock_save:
-                    with patch.object(log_manager, "_update_log_index") as mock_update:
-                        log_path = log_manager.save_execution_log(execution_result, raw_output)
+            # Path.stat()をモック化してファイルサイズを返す
+            with patch("pathlib.Path.stat") as mock_stat:
+                mock_stat.return_value.st_size = len(raw_output)
+                log_path = log_manager.save_execution_log(execution_result, raw_output)
 
-                        # モック呼び出しを確認
-                        mock_save.assert_called_once()
-                        mock_update.assert_called_once()
+                # 戻り値を確認
+                assert log_path is not None
+                assert log_path.name.startswith("act_")
+                assert log_path.name.endswith(".log")
 
-                        # 戻り値を確認
-                        assert log_path is not None
+                # ログファイルがモックファイルシステムに作成されたことを確認
+                assert stabilizer.mock_fs.file_exists(str(log_path))
+                assert stabilizer.mock_fs.read_file(str(log_path)) == raw_output
 
     def test_disk_error_with_stable_mocks(self):
         """安定化されたモックを使用したディスクエラーテスト"""
@@ -89,7 +91,7 @@ class TestLogHistoryManagementWithStabilizer:
             execution_result = self._create_sample_execution_result()
 
             # ファイル書き込みエラーをシミュレート
-            with patch.object(log_manager, "_save_log_file", side_effect=PermissionError("Permission denied")):
+            with patch("builtins.open", side_effect=PermissionError("Permission denied")):
                 with pytest.raises(ExecutionError) as exc_info:
                     log_manager.save_execution_log(execution_result, "test content")
 
@@ -118,12 +120,11 @@ class TestLogHistoryManagementWithStabilizer:
                     execution = self._create_sample_execution_result()
                     execution.timestamp = datetime.now() + timedelta(seconds=index)
 
-                    # ログファイル名を一意にする
-                    with patch.object(log_manager, "_generate_log_filename", return_value=f"test_log_{index}.log"):
-                        with patch.object(log_manager, "_save_log_file") as mock_save:
-                            with patch.object(log_manager, "_update_log_index") as mock_update:
-                                log_manager.save_execution_log(execution, f"Concurrent log {index}")
-                                results.append(index)
+                    # Path.stat()をモック化してファイルサイズを返す
+                    with patch("pathlib.Path.stat") as mock_stat:
+                        mock_stat.return_value.st_size = len(f"Concurrent log {index}")
+                        log_manager.save_execution_log(execution, f"Concurrent log {index}")
+                        results.append(index)
 
                 except Exception as e:
                     errors.append(e)
@@ -158,14 +159,13 @@ class TestLogHistoryManagementWithStabilizer:
         # 実行結果を作成
         execution_result = self._create_sample_execution_result()
 
-        # モックを使用してログ保存をテスト
-        with patch.object(log_manager, "_save_log_file") as mock_save:
-            with patch.object(log_manager, "_update_log_index") as mock_update:
-                log_manager.save_execution_log(execution_result, "decorator test")
+        # Path.stat()をモック化してファイルサイズを返す
+        with patch("pathlib.Path.stat") as mock_stat:
+            mock_stat.return_value.st_size = len("decorator test")
+            log_path = log_manager.save_execution_log(execution_result, "decorator test")
 
-                # モック呼び出しを確認
-                mock_save.assert_called_once()
-                mock_update.assert_called_once()
+            # 戻り値を確認
+            assert log_path is not None
 
     @ensure_file_operation_consistency
     def test_with_consistency_decorator(self):
@@ -182,14 +182,13 @@ class TestLogHistoryManagementWithStabilizer:
         # 実行結果を作成
         execution_result = self._create_sample_execution_result()
 
-        # ファイル操作が一貫して動作することを確認
-        with patch.object(log_manager, "_save_log_file") as mock_save:
-            with patch.object(log_manager, "_update_log_index") as mock_update:
-                log_manager.save_execution_log(execution_result, "consistency test")
+        # Path.stat()をモック化してファイルサイズを返す
+        with patch("pathlib.Path.stat") as mock_stat:
+            mock_stat.return_value.st_size = len("consistency test")
+            log_path = log_manager.save_execution_log(execution_result, "consistency test")
 
-                # モック呼び出しを確認
-                mock_save.assert_called_once()
-                mock_update.assert_called_once()
+            # 戻り値を確認
+            assert log_path is not None
 
 
 class TestFileOperationStabilityComparison:

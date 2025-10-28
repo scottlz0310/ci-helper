@@ -1,0 +1,2 @@
+# Updated configuration
+key=new_value
