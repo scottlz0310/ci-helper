@@ -57,11 +57,17 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
                 - include_suggestions: 修正提案を含めるか（デフォルト: True）
                 - include_related_files: 関連ファイル情報を含めるか（デフォルト: True）
                 - detail_level: 詳細レベル（minimal/normal/detailed）
+                - verbose_level: 詳細レベル（detail_levelのエイリアス、後方互換性のため）
                 - filter_errors: エラーのみをフィルタリングするか
 
         Returns:
             AI消費用に最適化されたMarkdown文字列
         """
+        # verbose_level を detail_level にマッピング（後方互換性のため）
+        if "verbose_level" in options and "detail_level" not in options:
+            options = dict(options)  # コピーを作成
+            options["detail_level"] = options.pop("verbose_level")
+
         # オプションの検証と正規化
         validated_options = self.validate_options(**options)
 
@@ -141,6 +147,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
             "include_suggestions",
             "include_related_files",
             "detail_level",
+            "verbose_level",  # 後方互換性のため
             "filter_errors",
         ]
 

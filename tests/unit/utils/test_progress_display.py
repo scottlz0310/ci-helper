@@ -20,6 +20,15 @@ class TestProgressDisplayManager:
         self.console = Mock()
         self.console.get_time = Mock(return_value=0.0)
         self.console.print = Mock()
+        # コンテキストマネージャープロトコルをサポート
+        self.console.__enter__ = Mock(return_value=self.console)
+        self.console.__exit__ = Mock(return_value=None)
+        # Rich Progress が期待する属性を追加
+        self.console.is_terminal = True
+        self.console.size = Mock(return_value=(80, 24))
+        self.console.options = Mock()
+        self.console.file = Mock()
+        self.console._live_stack = []
         self.manager = ProgressDisplayManager(self.console)
 
     def test_init(self):
@@ -89,8 +98,16 @@ class TestProgressDisplayManager:
         )
         assert progress is not None
 
-    def test_execute_with_progress_simple(self):
+    @patch("ci_helper.utils.progress_display.Progress")
+    def test_execute_with_progress_simple(self, mock_progress_class):
         """シンプルな進行状況表示付き実行のテスト"""
+        # Progress インスタンスのモック
+        mock_progress = Mock()
+        mock_progress.__enter__ = Mock(return_value=mock_progress)
+        mock_progress.__exit__ = Mock(return_value=None)
+        mock_progress.add_task = Mock(return_value="task_id")
+        mock_progress.update = Mock()
+        mock_progress_class.return_value = mock_progress
 
         def mock_task():
             return "test result"
@@ -103,9 +120,20 @@ class TestProgressDisplayManager:
         )
 
         assert result == "test result"
+        mock_progress_class.assert_called_once()
+        mock_progress.add_task.assert_called_once()
+        mock_progress.update.assert_called()
 
-    def test_execute_with_progress_detailed(self):
+    @patch("ci_helper.utils.progress_display.Progress")
+    def test_execute_with_progress_detailed(self, mock_progress_class):
         """詳細な進行状況表示付き実行のテスト"""
+        # Progress インスタンスのモック
+        mock_progress = Mock()
+        mock_progress.__enter__ = Mock(return_value=mock_progress)
+        mock_progress.__exit__ = Mock(return_value=None)
+        mock_progress.add_task = Mock(return_value="task_id")
+        mock_progress.update = Mock()
+        mock_progress_class.return_value = mock_progress
 
         def mock_task():
             return "detailed result"
@@ -118,9 +146,21 @@ class TestProgressDisplayManager:
         )
 
         assert result == "detailed result"
+        mock_progress_class.assert_called_once()
+        mock_progress.add_task.assert_called_once()
+        # 詳細モードでは複数回updateが呼ばれる
+        assert mock_progress.update.call_count >= 1
 
-    def test_execute_with_progress_auto_detection(self):
+    @patch("ci_helper.utils.progress_display.Progress")
+    def test_execute_with_progress_auto_detection(self, mock_progress_class):
         """自動判定による進行状況表示のテスト"""
+        # Progress インスタンスのモック
+        mock_progress = Mock()
+        mock_progress.__enter__ = Mock(return_value=mock_progress)
+        mock_progress.__exit__ = Mock(return_value=None)
+        mock_progress.add_task = Mock(return_value="task_id")
+        mock_progress.update = Mock()
+        mock_progress_class.return_value = mock_progress
 
         def mock_task():
             return "auto result"
@@ -136,10 +176,21 @@ class TestProgressDisplayManager:
             )
 
             assert result == "auto result"
+            mock_progress_class.assert_called_once()
+            mock_progress.add_task.assert_called_once()
+            mock_progress.update.assert_called()
             tmp_path.unlink()
 
-    def test_execute_with_progress_error(self):
+    @patch("ci_helper.utils.progress_display.Progress")
+    def test_execute_with_progress_error(self, mock_progress_class):
         """進行状況表示付き実行でのエラーハンドリングのテスト"""
+        # Progress インスタンスのモック
+        mock_progress = Mock()
+        mock_progress.__enter__ = Mock(return_value=mock_progress)
+        mock_progress.__exit__ = Mock(return_value=None)
+        mock_progress.add_task = Mock(return_value="task_id")
+        mock_progress.update = Mock()
+        mock_progress_class.return_value = mock_progress
 
         def error_task():
             raise ValueError("テストエラー")
@@ -149,6 +200,12 @@ class TestProgressDisplayManager:
                 task_func=error_task,
                 task_description="エラーテスト中...",
             )
+
+        # エラーが発生してもProgressが適切に呼ばれることを確認
+        mock_progress_class.assert_called_once()
+        mock_progress.add_task.assert_called_once()
+        # エラー時にもupdateが呼ばれる（エラーメッセージ表示のため）
+        mock_progress.update.assert_called()
 
     def test_show_success_message(self):
         """成功メッセージ表示のテスト"""

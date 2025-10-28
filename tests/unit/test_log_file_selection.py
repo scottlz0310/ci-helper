@@ -233,10 +233,12 @@ class TestLogFileSelection:
             # 例外が発生してもエラーにならないことを確認
             self.builder._show_available_logs_hint()
 
+    @patch("src.ci_helper.utils.progress_display.ProgressDisplayManager.show_menu_return_option")
     @patch("rich.prompt.Prompt.ask")
-    def test_create_latest_log_format_action_console_output(self, mock_prompt):
+    def test_create_latest_log_format_action_console_output(self, mock_prompt, mock_menu_return):
         """最新ログ整形アクション（コンソール出力）のテスト"""
         mock_prompt.return_value = "console"
+        mock_menu_return.return_value = None
 
         action = self.builder._create_latest_log_format_action("ai")
 
@@ -248,11 +250,15 @@ class TestLogFileSelection:
 
         # エラーが発生しないことを確認
         assert result is None
+        # メニューに戻るオプションが呼び出されることを確認
+        mock_menu_return.assert_called()
 
+    @patch("src.ci_helper.utils.progress_display.ProgressDisplayManager.show_menu_return_option")
     @patch("rich.prompt.Prompt.ask")
-    def test_create_latest_log_format_action_file_output(self, mock_prompt):
+    def test_create_latest_log_format_action_file_output(self, mock_prompt, mock_menu_return):
         """最新ログ整形アクション（ファイル出力）のテスト"""
         mock_prompt.side_effect = ["file", "test_output.md"]
+        mock_menu_return.return_value = None
 
         action = self.builder._create_latest_log_format_action("ai")
 
@@ -264,6 +270,8 @@ class TestLogFileSelection:
 
         # エラーが発生しないことを確認
         assert result is None
+        # メニューに戻るオプションが呼び出されることを確認
+        mock_menu_return.assert_called()
 
     @patch("rich.prompt.Prompt.ask")
     def test_create_latest_log_format_action_with_handler(self, mock_prompt):

@@ -498,8 +498,16 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
             with (
                 patch("src.ci_helper.ai.providers.openai.OpenAIProvider.count_tokens", return_value=1000),
                 patch("src.ci_helper.ai.integration.AIConfigManager") as mock_config_manager,
+                # パターンエンジンをモックしてフォールバックを防ぐ
+                patch("src.ci_helper.ai.pattern_engine.PatternRecognitionEngine") as mock_pattern_engine,
             ):
                 mock_config_manager.return_value.get_ai_config.return_value = mock_ai_config
+
+                # パターンエンジンのモック設定
+                mock_pattern_instance = Mock()
+                mock_pattern_instance.analyze_with_fallback = AsyncMock(return_value=None)
+                mock_pattern_instance.initialize = AsyncMock()
+                mock_pattern_engine.return_value = mock_pattern_instance
 
                 with patch("src.ci_helper.ai.providers.openai.AsyncOpenAI") as mock_openai:
                     mock_client = Mock()
@@ -526,6 +534,7 @@ ConnectionError: HTTPConnectionPool(host='localhost', port=5000): Max retries ex
                             model="gpt-4o",
                             use_cache=False,
                             streaming=False,
+                            force_ai_analysis=True,  # AI分析を強制してフォールバックを回避
                         )
 
                         # レスポンス時間測定

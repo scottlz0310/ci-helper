@@ -551,14 +551,28 @@ class FixSuggestionGenerator:
                 # パターンに対応するテンプレートを取得
                 templates = self.template_manager.get_templates_for_pattern(pattern_match.pattern)
 
-                for template in templates:
-                    # テンプレートをカスタマイズして修正提案を生成
-                    suggestion = self.customize_fix_for_context(template, pattern_match, context)
-                    if suggestion:
-                        suggestions.append(suggestion)
+                if templates:
+                    # テンプレートが見つかった場合
+                    for template in templates:
+                        # テンプレートをカスタマイズして修正提案を生成
+                        suggestion = self.customize_fix_for_context(template, pattern_match, context)
+                        if suggestion:
+                            suggestions.append(suggestion)
+                else:
+                    # テンプレートが見つからない場合はフォールバック修正提案を生成
+                    fallback_suggestion = self._generate_fallback_suggestion(pattern_match, context)
+                    if fallback_suggestion:
+                        suggestions.append(fallback_suggestion)
 
             except Exception as e:
                 logger.warning("パターン %s の修正提案生成に失敗: %s", pattern_match.pattern.id, e)
+                # エラーが発生した場合もフォールバック修正提案を試行
+                try:
+                    fallback_suggestion = self._generate_fallback_suggestion(pattern_match, context)
+                    if fallback_suggestion:
+                        suggestions.append(fallback_suggestion)
+                except Exception as fallback_error:
+                    logger.warning("フォールバック修正提案の生成にも失敗: %s", fallback_error)
 
         # 信頼度でソート
         suggestions.sort(key=lambda x: x.confidence, reverse=True)
@@ -987,3 +1001,191 @@ class FixSuggestionGenerator:
                 return True
 
         return False
+
+    def _generate_fallback_suggestion(
+        self, pattern_match: PatternMatch, context: dict[str, Any]
+    ) -> FixSuggestion | None:
+        """テンプレートが見つからない場合のフォールバック修正提案を生成
+
+        Args:
+            pattern_match: パターンマッチ結果
+            context: コンテキスト情報
+
+        Returns:
+            フォールバック修正提案
+        """
+        try:
+            pattern = pattern_match.pattern
+            category = pattern.category.lower()
+
+            # カテゴリに基づいてフォールバック修正提案を生成
+            if category == "permission":
+                return self._create_permission_fallback_fix(pattern, pattern_match, context)
+            elif category == "dependency":
+                return self._create_dependency_fallback_fix(pattern, pattern_match, context)
+            elif category == "configuration" or category == "config":
+                return self._create_config_fallback_fix(pattern, pattern_match, context)
+            elif category == "test":
+                return self._create_test_fallback_fix(pattern, pattern_match, context)
+            elif category == "build":
+                return self._create_build_fallback_fix(pattern, pattern_match, context)
+            else:
+                return self._create_general_fallback_fix(pattern, pattern_match, context)
+
+        except Exception as e:
+            logger.warning("フォールバック修正提案の生成に失敗: %s", e)
+            return None
+
+    def _create_permission_fallback_fix(
+        self, pattern: Pattern, pattern_match: PatternMatch, context: dict[str, Any]
+    ) -> FixSuggestion:
+        """権限エラーのフォールバック修正提案を作成"""
+        title = f"{pattern.name}の修正"
+        description = "権限エラーを解決するための修正提案"
+
+        code_changes = []
+        if "docker" in pattern_match.extracted_context.lower():
+            code_changes.append(
+                CodeChange(
+                    file_path=".actrc",
+                    line_start=1,
+                    line_end=1,
+                    old_code="# Docker設定",
+                    new_code="--privileged",
+                    description="Dockerに特権モードを追加",
+                )
+            )
+
+        return FixSuggestion(
+            title=title,
+            description=description,
+            code_changes=code_changes,
+            priority=Priority.HIGH,
+            estimated_effort="5-15分",
+            confidence=pattern_match.confidence * 0.8,  # フォールバックなので信頼度を下げる
+            references=["https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities"],
+        )
+
+    def _create_dependency_fallback_fix(
+        self, pattern: Pattern, pattern_match: PatternMatch, context: dict[str, Any]
+    ) -> FixSuggestion:
+        """依存関係エラーのフォールバック修正提案を作成"""
+        title = f"{pattern.name}の修正"
+        description = "依存関係エラーを解決するための修正提案"
+
+        code_changes = []
+        extracted_context = pattern_match.extracted_context.lower()
+
+        if "package.json" in extracted_context or "npm" in extracted_context:
+            code_changes.append(
+                CodeChange(
+                    file_path="package.json",
+                    line_start=1,
+                    line_end=1,
+                    old_code="",
+                    new_code='{\n  "name": "project",\n  "version": "1.0.0"\n}',
+                    description="基本的なpackage.jsonを作成",
+                )
+            )
+        elif "requirements.txt" in extracted_context or "pip" in extracted_context:
+            code_changes.append(
+                CodeChange(
+                    file_path="requirements.txt",
+                    line_start=1,
+                    line_end=1,
+                    old_code="",
+                    new_code="# 必要な依存関係を追加してください",
+                    description="requirements.txtファイルを作成",
+                )
+            )
+
+        return FixSuggestion(
+            title=title,
+            description=description,
+            code_changes=code_changes,
+            priority=Priority.MEDIUM,
+            estimated_effort="10-30分",
+            confidence=pattern_match.confidence * 0.7,
+            references=[],
+        )
+
+    def _create_config_fallback_fix(
+        self, pattern: Pattern, pattern_match: PatternMatch, context: dict[str, Any]
+    ) -> FixSuggestion:
+        """設定エラーのフォールバック修正提案を作成"""
+        title = f"{pattern.name}の修正"
+        description = "設定エラーを解決するための修正提案"
+
+        code_changes = []
+        if "env" in pattern_match.extracted_context.lower():
+            code_changes.append(
+                CodeChange(
+                    file_path=".env",
+                    line_start=1,
+                    line_end=1,
+                    old_code="",
+                    new_code="# 必要な環境変数を設定してください\n# EXAMPLE_VAR=value",
+                    description="環境変数ファイルを作成",
+                )
+            )
+
+        return FixSuggestion(
+            title=title,
+            description=description,
+            code_changes=code_changes,
+            priority=Priority.MEDIUM,
+            estimated_effort="15-45分",
+            confidence=pattern_match.confidence * 0.6,
+            references=[],
+        )
+
+    def _create_test_fallback_fix(
+        self, pattern: Pattern, pattern_match: PatternMatch, context: dict[str, Any]
+    ) -> FixSuggestion:
+        """テストエラーのフォールバック修正提案を作成"""
+        title = f"{pattern.name}の修正"
+        description = "テストエラーを解決するための修正提案"
+
+        return FixSuggestion(
+            title=title,
+            description=description,
+            code_changes=[],
+            priority=Priority.MEDIUM,
+            estimated_effort="30分-2時間",
+            confidence=pattern_match.confidence * 0.5,
+            references=["https://docs.pytest.org/"],
+        )
+
+    def _create_build_fallback_fix(
+        self, pattern: Pattern, pattern_match: PatternMatch, context: dict[str, Any]
+    ) -> FixSuggestion:
+        """ビルドエラーのフォールバック修正提案を作成"""
+        title = f"{pattern.name}の修正"
+        description = "ビルドエラーを解決するための修正提案"
+
+        return FixSuggestion(
+            title=title,
+            description=description,
+            code_changes=[],
+            priority=Priority.HIGH,
+            estimated_effort="1-3時間",
+            confidence=pattern_match.confidence * 0.4,
+            references=[],
+        )
+
+    def _create_general_fallback_fix(
+        self, pattern: Pattern, pattern_match: PatternMatch, context: dict[str, Any]
+    ) -> FixSuggestion:
+        """一般的なフォールバック修正提案を作成"""
+        title = f"{pattern.name}の修正"
+        description = f"パターン '{pattern.name}' に対する一般的な修正提案"
+
+        return FixSuggestion(
+            title=title,
+            description=description,
+            code_changes=[],
+            priority=Priority.MEDIUM,
+            estimated_effort="不明",
+            confidence=pattern_match.confidence * 0.3,
+            references=[],
+        )

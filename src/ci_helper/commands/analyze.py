@@ -1942,6 +1942,14 @@ def _validate_analysis_environment(config: Config, console: Console) -> bool:
     except Exception:
         warnings.append("AI設定の読み込みに失敗しました（デフォルト設定を使用します）")
 
+    # 利用可能なプロバイダーの確認
+    try:
+        available_providers = config.get_available_ai_providers()
+        if not available_providers:
+            issues.append("利用可能なAIプロバイダーが見つかりません")
+    except Exception:
+        warnings.append("利用可能なプロバイダーの取得に失敗しました")
+
     # デフォルトプロバイダーの確認
     try:
         default_provider = config.get_default_ai_provider()

@@ -1,2 +1,2 @@
-# Updated configuration
-key=new_value
+# Original configuration
+key=value

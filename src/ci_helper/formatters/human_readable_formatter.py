@@ -72,11 +72,17 @@ class HumanReadableFormatter(BaseLogFormatter):
                 - max_failures: 表示する最大失敗数（デフォルト: 20）
                 - color_output: カラー出力を有効にするか（デフォルト: True）
                 - detail_level: 詳細レベル（minimal/normal/detailed）
+                - verbose_level: 詳細レベル（detail_levelのエイリアス、後方互換性のため）
                 - filter_errors: エラーのみをフィルタリングするか
 
         Returns:
             人間可読形式でフォーマットされた文字列
         """
+        # verbose_level を detail_level にマッピング（後方互換性のため）
+        if "verbose_level" in options and "detail_level" not in options:
+            options = dict(options)  # コピーを作成
+            options["detail_level"] = options.pop("verbose_level")
+
         # オプションの検証と正規化
         validated_options = self.validate_options(**options)
 
@@ -156,6 +162,7 @@ class HumanReadableFormatter(BaseLogFormatter):
             "max_failures",
             "color_output",
             "detail_level",
+            "verbose_level",  # 後方互換性のため
             "filter_errors",
         ]
 

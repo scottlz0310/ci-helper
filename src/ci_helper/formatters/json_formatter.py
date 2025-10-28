@@ -74,10 +74,8 @@ class JSONFormatter(BaseLogFormatter):
         include_output = validated_options.get("include_output", True)
         include_context = validated_options.get("include_context", True)
         include_stack_trace = validated_options.get("include_stack_trace", True)
-        include_metadata = validated_options.get("include_metadata", True)
-        # verbose_levelをdetail_levelにマッピング
-        detail_level = validated_options.get("detail_level") or validated_options.get("verbose_level", "normal")
-        filter_errors = validated_options.get("filter_errors", False)
+        # detail_levelの取得
+        detail_level = validated_options.get("detail_level", "normal")
         max_failures = validated_options.get("max_failures", None)
 
         # pretty_printがFalseの場合はcompactをTrueに
@@ -187,6 +185,11 @@ class JSONFormatter(BaseLogFormatter):
         Raises:
             ValueError: 無効なオプションが指定された場合
         """
+        # verbose_level を detail_level にマッピング（後方互換性のため）
+        if "verbose_level" in options and "detail_level" not in options:
+            options = dict(options)  # コピーを作成
+            options["detail_level"] = options.pop("verbose_level")
+
         # サポートされているオプションのチェック
         supported_options = set(self.get_supported_options())
         for option_name in options:
@@ -235,18 +238,7 @@ class JSONFormatter(BaseLogFormatter):
         Returns:
             サポートしている場合True
         """
-        supported_options = {
-            "compact",
-            "include_output",
-            "include_context",
-            "include_stack_trace",
-            "pretty_print",
-            "include_metadata",
-            "detail_level",
-            "filter_errors",
-            "max_failures",
-        }
-        return option_name in supported_options
+        return option_name in self.get_supported_options()
 
     def get_supported_options(self) -> list[str]:
         """サポートされているオプション一覧を取得
@@ -262,15 +254,9 @@ class JSONFormatter(BaseLogFormatter):
             "pretty_print",
             "include_metadata",
             "detail_level",
-            "verbose_level",  # detail_levelのエイリアス
+            "verbose_level",  # 後方互換性のため
             "filter_errors",
             "max_failures",
-            "use_optimization",  # ストリーミング最適化オプション
-            "include_suggestions",  # AI形式との互換性
-            "include_related_files",  # AI形式との互換性
-            "max_memory_mb",  # メモリ制限オプション
-            "use_cache",  # キャッシュオプション
-            "chunk_size",  # チャンクサイズオプション
         ]
 
     def validate_json_structure(self, json_str: str) -> dict[str, Any]:

@@ -194,13 +194,21 @@ class TestLogFormattingCoreIntegration:
 
     def test_invalid_format_error_handling(self):
         """要件11.2: 無効なフォーマットでのエラーハンドリングテスト"""
+        from ci_helper.core.exceptions import LogFormattingError
+
         formatter_manager = get_formatter_manager()
 
         # 無効なフォーマットでエラーが発生することを確認
         sample_result = ExecutionResult(success=True, workflows=[], total_duration=0.0)
 
-        with pytest.raises((KeyError, ValueError)):
+        with pytest.raises(LogFormattingError) as exc_info:
             formatter_manager.format_log(sample_result, "invalid_format")
+
+        # エラーメッセージに適切な情報が含まれていることを確認
+        error = exc_info.value
+        assert "invalid_format" in str(error)
+        assert "見つかりません" in str(error)
+        assert error.formatter_name == "invalid_format"
 
     def test_menu_system_initialization(self):
         """要件11.5: メニューシステムの初期化テスト"""

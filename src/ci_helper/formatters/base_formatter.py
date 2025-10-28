@@ -157,5 +157,6 @@ class BaseLogFormatter(ABC):
             "use_optimization",
             "max_memory_mb",
             "detail_level",
+            "verbose_level",  # 後方互換性のため
             "filter_errors",
         ]

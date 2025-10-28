@@ -2,7 +2,7 @@
 
 ## 概要
 
-CI-Helperプロジェクトのpytestテストスイートで発生している残り16個のテスト失敗を体系的に修復するための実装計画です。基本的なクラス依存関係、設定互換性、フィクスチャは解決済みですが、特定のテストロジックの不一致、モック設定の問題、実装の詳細な調整が必要です。
+CI-Helperプロジェクトのpytestテストスイートで発生している残り5個のテスト失敗を体系的に修復するための実装計画です。基本的なクラス依存関係、設定互換性、フィクスチャは解決済みで、テスト失敗数を118個から5個に削減（96%改善）しました。残存する問題は主にフォーマッターオプションの互換性、AutoFixerのロールバック機能、AIキャッシュの有効期限、パターンワークフローの統合に関するものです。
 
 ## 実装タスク
 
@@ -87,52 +87,32 @@ CI-Helperプロジェクトのpytestテストスイートで発生している�
   - エラーハンドリングテスト用のフィクスチャを提供
   - _要件: 4.4_
 
-### Phase 5: 残存テスト失敗の個別修正（新規）
+### Phase 5: 残存テスト失敗の最終修正（現在進行中）
 
-- [ ] 21. JSONフォーマッターテストの修正
-  - `tests/unit/formatters/test_json_formatter.py::TestJSONFormatter::test_get_supported_options`の失敗を修正
-  - JSONフォーマッターのサポートオプション実装を修正
-  - _要件: 5.6_
+- [ ] 33. フォーマッターオプション互換性の統一
+  - `tests/unit/formatters/test_json_formatter.py::TestJSONFormatter::test_get_supported_options`の修正
+  - `tests/unit/formatters/test_formatter_architecture.py::TestBaseLogFormatter::test_get_supported_options_default`の修正
+  - JSONFormatterから`verbose_level`オプションを削除し、テスト期待値と一致させる
+  - BaseFormatterのオプション順序をテスト期待値に合わせて調整
+  - _要件: 6.1, 6.2_
 
-- [ ] 22. リアルCI検証テストの修正
-  - `tests/integration/test_real_ci_validation.py`の2つの失敗テストを修正
-  - 自動修正安全性検証とエンドツーエンドワークフロー検証の実装
-  - _要件: 5.5_
+- [ ] 34. AutoFixerロールバック機能の修正
+  - `tests/integration/test_real_ci_validation.py::TestRealCIValidation::test_auto_fix_safety_validation`の修正
+  - AutoFixerのロールバック機能でファイル内容が完全に元の状態に復元されるよう修正
+  - バックアップと復元のロジックを改善し、テスト期待値と一致させる
+  - _要件: 7.1_
 
-- [ ] 23. 分析コマンドテストの修正
-  - `tests/unit/commands/test_analyze.py::TestAnalyzeFallbackAndRecovery::test_validate_analysis_environment_failure`の修正
-  - 分析環境検証失敗時のフォールバック処理を修正
-  - _要件: 5.7_
+- [ ] 35. AIキャッシュ有効期限機能の修正
+  - `tests/unit/ai/test_cache.py::TestResponseCache::test_cache_expiration`の修正
+  - キャッシュの有効期限切れ処理を正しく実装し、期限切れ後は新しい結果を返すよう修正
+  - キャッシュエントリの有効期限判定ロジックを改善
+  - _要件: 7.2_
 
-- [ ] 24. プログレス表示テストの修正
-  - `tests/unit/utils/test_progress_display.py`の4つの失敗テストを修正
-  - プログレス表示マネージャーの実装を修正
-  - _要件: 5.8_
-
-- [ ] 25. ログファイル選択テストの修正
-  - `tests/unit/test_log_file_selection.py`の2つの失敗テストを修正
-  - ログファイル選択とフォーマットアクション出力の実装を修正
-  - _要件: 5.9_
-
-- [ ] 26. AI E2Eテストの修正
-  - `tests/integration/test_ai_e2e_comprehensive.py`の2つの失敗テストを修正
-  - ローカルLLM分析と並行分析パフォーマンステストの実装を修正
-  - _要件: 5.10_
-
-- [ ] 27. AIパターンワークフローテストの修正
-  - `tests/integration/test_ai_pattern_workflow_integration.py`の2つの失敗テストを修正
-  - 修正提案生成ワークフローと自動修正適用ワークフローの実装を修正
-  - _要件: 5.1_
-
-- [ ] 28. ログフォーマッティング統合テストの修正
-  - `tests/integration/test_log_formatting_core_integration.py::TestLogFormattingCoreIntegration::test_invalid_format_error_handling`の修正
-  - 無効フォーマットエラーハンドリングの実装を修正
-  - _要件: 5.11_
-
-- [ ] 29. AIパフォーマンス最適化テストの修正
-  - `tests/integration/test_ai_performance_optimization.py::TestAIPerformanceOptimization::test_response_time_optimization`の修正
-  - レスポンス時間最適化テストの実装を修正
-  - _要件: 5.12_
+- [ ] 36. パターンワークフロー統合の修正
+  - `tests/integration/test_ai_pattern_workflow_integration.py::TestCompletePatternWorkflow::test_auto_fix_application_workflow`の修正
+  - パターン認識からAutoFix適用までの統合ワークフローを完全に実装
+  - ワークフロー内でのNone値返却問題を解決し、適切な結果オブジェクトを返すよう修正
+  - _要件: 7.3_
 
 ## 実装順序と依存関係
 
@@ -143,9 +123,10 @@ CI-Helperプロジェクトのpytestテストスイートで発生している�
    - テストフィクスチャ整備
 
 2. **Phase 5（残存テスト修正）** - 🔧 実装中
-   - 個別テスト失敗の修正
-   - 実装とテスト期待値の調整
-   - パフォーマンステストの安定化
+   - フォーマッターオプション互換性の統一
+   - AutoFixerロールバック機能の修正
+   - AIキャッシュ有効期限機能の修正
+   - パターンワークフロー統合の修正
 
 ## 現在の状況
 
@@ -155,26 +136,35 @@ CI-Helperプロジェクトのpytestテストスイートで発生している�
 - 設定オブジェクト互換性（AIConfig辞書ライクアクセス）
 - モックインフラストラクチャ安定化（Rich Prompt、非同期モック、ファイル操作モック）
 - テストフィクスチャ整備（sample_logs、error_scenarios、pattern_test_data等）
-- テスト失敗数を118個から16個に削減（86%改善）
+- 大部分のテスト失敗修正（Phase 1-4の全タスクと多数の個別修正）
+- テスト失敗数を118個から5個に削減（96%改善）
 
 ### 残存問題 🔧
 
-現在16個のテスト失敗が残存：
+現在5個のテスト失敗が残存：
 
-- JSONフォーマッターのサポートオプション実装
-- リアルCI検証テストの実装詳細
-- 分析コマンドの環境検証フォールバック
-- プログレス表示マネージャーの実装
-- ログファイル選択の出力フォーマット
-- AI E2E統合テストの実装詳細
-- AIパターンワークフローの実装詳細
-- ログフォーマッティング統合のエラーハンドリング
-- AIパフォーマンス最適化の実装詳細
+1. **フォーマッターオプション互換性問題（2件）**
+   - `tests/unit/formatters/test_json_formatter.py::TestJSONFormatter::test_get_supported_options`
+   - `tests/unit/formatters/test_formatter_architecture.py::TestBaseLogFormatter::test_get_supported_options_default`
+   - 原因: JSONFormatterに`verbose_level`オプションが含まれているが、テストでは期待されていない
+   - 原因: BaseFormatterのオプション順序がテスト期待値と異なる
+
+2. **AutoFixerロールバック機能問題（1件）**
+   - `tests/integration/test_real_ci_validation.py::TestRealCIValidation::test_auto_fix_safety_validation`
+   - 原因: ロールバック後のファイル内容が元の内容と完全に一致しない
+
+3. **AIキャッシュ有効期限問題（1件）**
+   - `tests/unit/ai/test_cache.py::TestResponseCache::test_cache_expiration`
+   - 原因: キャッシュの有効期限切れ処理が正しく動作していない
+
+4. **パターンワークフロー統合問題（1件）**
+   - `tests/integration/test_ai_pattern_workflow_integration.py::TestCompletePatternWorkflow::test_auto_fix_application_workflow`
+   - 原因: パターン認識からAutoFix適用までのワークフローでNone値が返される
 
 ## 成功指標
 
-- pytest実行時の失敗数を16個から0個に削減
-- 全テストの成功率を100%に到達（現在99.1%）
+- pytest実行時の失敗数を5個から0個に削減
+- 全テストの成功率を100%に到達（現在99.7%）
 - テスト実行の安定性と再現性を確保
 - 既存機能の動作に影響を与えない
 
@@ -183,4 +173,7 @@ CI-Helperプロジェクトのpytestテストスイートで発生している�
 - 各タスクは段階的に実装し、実装後に関連テストを実行して効果を確認
 - 既存のコード構造を可能な限り保持し、最小限の変更で最大の効果を目指す
 - テストの期待値を実装に合わせて修正することを優先し、実装の変更は最小限に留める
-- 残存する失敗は主に実装の詳細な調整が必要な個別ケース
+- 残存する5個の失敗は具体的で修正可能な問題に絞り込まれている
+- フォーマッターオプションの問題は、`verbose_level`オプションの削除とオプション順序の調整で解決可能
+- AutoFixerの問題は、ロールバック機能の完全性を確保することで解決可能
+- キャッシュとワークフローの問題は、実装ロジックの修正で解決可能
