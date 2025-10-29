@@ -237,6 +237,13 @@ user_feedback_enabled = true
 - [カスタムパターン作成ガイド](custom-pattern-guide.md) - プロジェクト固有のエラーパターンの作成方法
 - [トラブルシューティングガイド](troubleshooting-pattern-recognition.md) - パターン認識機能の問題解決方法
 
+### 開発・テストガイド
+
+- [テストガイドライン](testing-guidelines.md) - 効果的なテスト作成とカバレッジ向上のガイドライン
+- [モック戦略ベストプラクティス](mock-strategies.md) - モック使用の詳細ガイドとベストプラクティス
+- [カバレッジ維持ガイド](coverage-maintenance.md) - 長期的なカバレッジ維持のための戦略
+- [テストクイックリファレンス](testing-quick-reference.md) - 日常開発で使えるテスト作成のクイックガイド
+
 ### その他のドキュメント
 
 - [AI設定ガイド](ai-configuration.md) - AI機能の設定方法

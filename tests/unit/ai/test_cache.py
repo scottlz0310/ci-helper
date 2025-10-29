@@ -4,8 +4,6 @@ AIレスポンスキャッシュのテスト
 キャッシュ機能、TTL管理、サイズ制限などをテストします。
 """
 
-import time
-
 import pytest
 
 from src.ci_helper.ai.cache import ResponseCache
@@ -94,20 +92,32 @@ class TestResponseCache:
     @pytest.mark.asyncio
     async def test_cache_expiration(self, response_cache, sample_analysis_result):
         """キャッシュ有効期限のテスト"""
+        from unittest.mock import patch
+
         # TTLを1秒に設定
         response_cache.ttl_hours = 1 / 3600  # 1秒
 
         cache_key = "expiring_key"
-        await response_cache.set(cache_key, sample_analysis_result)
 
-        # すぐに取得（有効）
-        result = await response_cache.get(cache_key)
-        assert result is not None
+        # 時間をモック
+        with patch("time.time") as mock_time:
+            # 初期時刻を設定
+            initial_time = 1000.0
+            mock_time.return_value = initial_time
 
-        # 少し待ってから取得（期限切れ）
-        time.sleep(1.1)
-        result = await response_cache.get(cache_key)
-        assert result is None
+            # キャッシュに保存
+            await response_cache.set(cache_key, sample_analysis_result)
+
+            # すぐに取得（有効）
+            result = await response_cache.get(cache_key)
+            assert result is not None
+
+            # 1.1秒後の時刻に設定（期限切れ）
+            mock_time.return_value = initial_time + 1.1
+
+            # 期限切れで取得（None）
+            result = await response_cache.get(cache_key)
+            assert result is None
 
     @pytest.mark.asyncio
     async def test_invalidate_cache(self, response_cache, sample_analysis_result):
@@ -160,26 +170,28 @@ class TestResponseCache:
     @pytest.mark.asyncio
     async def test_cleanup_expired_entries(self, response_cache, sample_analysis_result):
         """期限切れエントリのクリーンアップテスト"""
-        # 期限切れのキャッシュを作成
+        from unittest.mock import patch
+
         cache_key = "expired_key"
 
-        # 正しいsetメソッドを使用してキャッシュに保存
-        await response_cache.set(cache_key, sample_analysis_result, "test prompt", "test context")
+        # 時間をモック
+        with patch("time.time") as mock_time:
+            # 初期時刻を設定
+            initial_time = 1000.0
+            mock_time.return_value = initial_time
 
-        # メタデータを手動で期限切れに設定
-        import time
+            # キャッシュに保存
+            await response_cache.set(cache_key, sample_analysis_result, "test prompt", "test context")
 
-        expired_time = time.time() - (25 * 3600)  # 25時間前
-        response_cache.metadata["entries"][cache_key]["created"] = expired_time
-        response_cache.metadata["entries"][cache_key]["last_accessed"] = expired_time
-        await response_cache._save_metadata()
+            # 25時間後の時刻に設定（期限切れ）
+            mock_time.return_value = initial_time + (25 * 3600)
 
-        # クリーンアップ実行
-        cleaned_count = await response_cache.cleanup_expired()
+            # クリーンアップ実行
+            cleaned_count = await response_cache.cleanup_expired()
 
-        assert cleaned_count == 1
-        cache_file = response_cache.cache_dir / f"{cache_key}.json"
-        assert not cache_file.exists()
+            assert cleaned_count == 1
+            cache_file = response_cache.cache_dir / f"{cache_key}.json"
+            assert not cache_file.exists()
 
     @pytest.mark.asyncio
     async def test_cache_size_limit(self, cache_dir):

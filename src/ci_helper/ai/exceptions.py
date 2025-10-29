@@ -190,3 +190,15 @@ class UnknownErrorError(AIError):
             "ログの詳細を確認し、手動で調査してください",
         )
         self.error_category = error_category
+
+
+class ValidationError(AIError):
+    """検証エラー"""
+
+    def __init__(self, message: str, field: str | None = None):
+        super().__init__(
+            message,
+            f"フィールド: {field}" if field else None,
+            "入力データを確認してください",
+        )
+        self.field = field

@@ -147,7 +147,6 @@ class AutoFixer:
 
         if not files_to_backup:
             logger.info("バックアップ対象ファイルがありません")
-            # ファイルがない場合はNoneを返す（テスト期待値に合わせる）
             return None
 
         # バックアップIDを生成
@@ -155,6 +154,7 @@ class AutoFixer:
         backup_id = f"fix_{timestamp}_{hashlib.sha256(fix_suggestion.title.encode()).hexdigest()[:8]}"
 
         backup_files = []
+        nonexistent_files = []
 
         for file_path in files_to_backup:
             # ファイルパスを正規化（絶対パスと相対パスの両方に対応）
@@ -162,16 +162,24 @@ class AutoFixer:
                 full_path = Path(file_path)
                 # 絶対パスの場合、バックアップ用の相対パス名を生成
                 backup_relative_path = Path(file_path).name
-                # original_pathは相対パス形式で保存（テスト期待値に合わせる）
-                original_path_for_backup = Path(file_path).name
+                # original_pathは絶対パス形式で保存（復元時に正確な場所に戻すため）
+                original_path_for_backup = str(full_path)
             else:
                 full_path = self.project_root / file_path
                 backup_relative_path = file_path
-                # original_pathは相対パス形式で保存（テスト期待値に合わせる）
+                # original_pathは相対パス形式で保存
                 original_path_for_backup = file_path
 
             if not full_path.exists():
                 logger.warning("バックアップ対象ファイルが存在しません: %s", file_path)
+                # 存在しないファイルを記録（後でロールバック時に削除するため）
+                nonexistent_files.append(
+                    BackupFile(
+                        original_path=original_path_for_backup,
+                        backup_path="",  # 空のパス（ファイルが存在しなかったことを示す）
+                        checksum="",  # 空のチェックサム
+                    )
+                )
                 continue
 
             # バックアップファイルパスを生成
@@ -197,18 +205,34 @@ class AutoFixer:
                 logger.error("ファイルのバックアップに失敗: %s - %s", file_path, e)
                 raise FixApplicationError(f"バックアップ作成に失敗: {e}") from e
 
-        # バックアップファイルがない場合はNoneを返す
-        if not backup_files:
+        # 存在するファイルのバックアップがない場合でも、存在しないファイルの情報は保持する
+        if not backup_files and not nonexistent_files:
+            logger.info("バックアップ対象ファイルがありません")
             return None
+
+        # 存在しないファイルのみの場合は空のファイルリストでバックアップ情報を作成
+        if not backup_files and nonexistent_files:
+            logger.info("バックアップ対象の既存ファイルがありません（存在しないファイルのみ）")
+            backup_info = BackupInfo(
+                backup_id=backup_id,
+                created_at=datetime.now(),
+                files=[],  # 空のファイルリスト
+                description=f"修正提案適用前のバックアップ: {fix_suggestion.title}",
+            )
+            logger.info("バックアップを作成: %s (0 ファイル)", backup_id)
+            return backup_info
+
+        # 存在するファイルと存在しないファイルの情報を含めてバックアップ情報を作成
+        all_backup_files = backup_files + nonexistent_files
 
         backup_info = BackupInfo(
             backup_id=backup_id,
             created_at=datetime.now(),
-            files=backup_files,
+            files=all_backup_files,
             description=f"修正提案適用前のバックアップ: {fix_suggestion.title}",
         )
 
-        logger.info("バックアップを作成: %s (%d ファイル)", backup_id, len(backup_files))
+        logger.info("バックアップを作成: %s (%d ファイル)", backup_id, len(all_backup_files))
         return backup_info
 
     def rollback_changes(self, backup_info: BackupInfo) -> bool:
@@ -234,6 +258,15 @@ class AutoFixer:
                 else:
                     original_path = self.project_root / backup_file.original_path
 
+                # backup_pathが空の場合、元々ファイルが存在しなかったことを意味する
+                if not backup_file.backup_path:
+                    # 新規作成されたファイルを削除
+                    if original_path.exists():
+                        original_path.unlink()
+                        logger.debug("新規作成ファイルを削除: %s", backup_file.original_path)
+                    success_count += 1
+                    continue
+
                 backup_path = Path(backup_file.backup_path)
 
                 if not backup_path.exists():
@@ -246,15 +279,16 @@ class AutoFixer:
                 # ファイルを復元
                 shutil.copy2(backup_path, original_path)
 
-                # チェックサムを検証
-                restored_checksum = self._calculate_checksum(original_path)
-                if restored_checksum != backup_file.checksum:
-                    logger.warning(
-                        "復元後のチェックサムが一致しません: %s (期待: %s, 実際: %s)",
-                        backup_file.original_path,
-                        backup_file.checksum,
-                        restored_checksum,
-                    )
+                # チェックサムを検証（空でない場合のみ）
+                if backup_file.checksum:
+                    restored_checksum = self._calculate_checksum(original_path)
+                    if restored_checksum != backup_file.checksum:
+                        logger.warning(
+                            "復元後のチェックサムが一致しません: %s (期待: %s, 実際: %s)",
+                            backup_file.original_path,
+                            backup_file.checksum,
+                            restored_checksum,
+                        )
 
                 success_count += 1
                 logger.debug("ファイルを復元: %s", backup_file.original_path)
@@ -443,7 +477,11 @@ class AutoFixer:
         if not fix_step.file_path:
             raise FixApplicationError("ファイルパスが指定されていません")
 
-        file_path = self.project_root / fix_step.file_path
+        # 絶対パスと相対パスの両方に対応
+        if Path(fix_step.file_path).is_absolute():
+            file_path = Path(fix_step.file_path)
+        else:
+            file_path = self.project_root / fix_step.file_path
 
         if fix_step.action == "create":
             # ファイル作成

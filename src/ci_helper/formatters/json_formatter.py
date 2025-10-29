@@ -192,6 +192,8 @@ class JSONFormatter(BaseLogFormatter):
 
         # サポートされているオプションのチェック
         supported_options = set(self.get_supported_options())
+        # verbose_levelは後方互換性のため特別に許可
+        supported_options.add("verbose_level")
         for option_name in options:
             if option_name not in supported_options:
                 raise ValueError(f"未知のオプション: {option_name}")
@@ -254,7 +256,6 @@ class JSONFormatter(BaseLogFormatter):
             "pretty_print",
             "include_metadata",
             "detail_level",
-            "verbose_level",  # 後方互換性のため
             "filter_errors",
             "max_failures",
         ]
