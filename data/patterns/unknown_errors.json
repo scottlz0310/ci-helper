@@ -149,8 +149,8 @@
       "source_log_hash": 2353331590780345221,
       "created_at": "2025-10-29T21:58:18.939601"
     },
-    "occurrence_count": 19,
-    "last_seen": "2025-10-30T19:58:48.035570"
+    "occurrence_count": 25,
+    "last_seen": "2025-10-30T20:36:45.233477"
   },
   {
     "timestamp": "2025-10-29T21:58:18.950536",
@@ -186,8 +186,8 @@
       "source_log_hash": -2155740336216919940,
       "created_at": "2025-10-29T21:58:18.950529"
     },
-    "occurrence_count": 7,
-    "last_seen": "2025-10-30T19:58:48.015195"
+    "occurrence_count": 9,
+    "last_seen": "2025-10-30T20:36:45.218946"
   },
   {
     "timestamp": "2025-10-29T21:58:22.133147",
@@ -337,8 +337,8 @@
       "source_log_hash": 5692423893529324817,
       "created_at": "2025-10-29T21:58:38.807929"
     },
-    "occurrence_count": 51,
-    "last_seen": "2025-10-30T19:59:00.480498"
+    "occurrence_count": 71,
+    "last_seen": "2025-10-30T20:37:07.036358"
   },
   {
     "timestamp": "2025-10-29T22:26:37.033992",
@@ -604,8 +604,8 @@
       "source_log_hash": -9048881281294273805,
       "created_at": "2025-10-29T22:26:41.785529"
     },
-    "occurrence_count": 6,
-    "last_seen": "2025-10-30T19:58:45.738246"
+    "occurrence_count": 8,
+    "last_seen": "2025-10-30T20:36:43.984474"
   },
   {
     "timestamp": "2025-10-29T22:26:41.809302",
@@ -1816,6 +1816,584 @@
       "auto_generated": true,
       "source_log_hash": -4026230669013173544,
       "created_at": "2025-10-30T19:58:45.808766"
+    },
+    "occurrence_count": 1,
+    "_needs_learning_processing": true
+  },
+  {
+    "timestamp": "2025-10-30T20:32:11.058946",
+    "log_content_hash": 1098280140078821081,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251030_203211",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": 1098280140078821081,
+      "created_at": "2025-10-30T20:32:11.058942"
+    },
+    "occurrence_count": 1
+  },
+  {
+    "timestamp": "2025-10-30T20:32:11.058946",
+    "log_content_hash": 1098280140078821081,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251030_203211",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": 1098280140078821081,
+      "created_at": "2025-10-30T20:32:11.058942"
+    },
+    "occurrence_count": 1,
+    "_needs_learning_processing": true
+  },
+  {
+    "timestamp": "2025-10-30T20:32:13.851635",
+    "log_content_hash": 1098280140078821081,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251030_203213",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": 1098280140078821081,
+      "created_at": "2025-10-30T20:32:13.851632"
+    },
+    "occurrence_count": 1
+  },
+  {
+    "timestamp": "2025-10-30T20:32:13.851635",
+    "log_content_hash": 1098280140078821081,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251030_203213",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": 1098280140078821081,
+      "created_at": "2025-10-30T20:32:13.851632"
+    },
+    "occurrence_count": 1,
+    "_needs_learning_processing": true
+  },
+  {
+    "timestamp": "2025-10-30T20:32:13.928546",
+    "log_content_hash": 1098280140078821081,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251030_203213",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": 1098280140078821081,
+      "created_at": "2025-10-30T20:32:13.928541"
+    },
+    "occurrence_count": 1
+  },
+  {
+    "timestamp": "2025-10-30T20:32:13.928546",
+    "log_content_hash": 1098280140078821081,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251030_203213",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": 1098280140078821081,
+      "created_at": "2025-10-30T20:32:13.928541"
+    },
+    "occurrence_count": 1,
+    "_needs_learning_processing": true
+  },
+  {
+    "timestamp": "2025-10-30T20:32:13.951177",
+    "log_content_hash": 1098280140078821081,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251030_203213",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": 1098280140078821081,
+      "created_at": "2025-10-30T20:32:13.951173"
+    },
+    "occurrence_count": 1
+  },
+  {
+    "timestamp": "2025-10-30T20:32:13.951177",
+    "log_content_hash": 1098280140078821081,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251030_203213",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": 1098280140078821081,
+      "created_at": "2025-10-30T20:32:13.951173"
+    },
+    "occurrence_count": 1,
+    "_needs_learning_processing": true
+  },
+  {
+    "timestamp": "2025-10-30T20:32:45.905774",
+    "log_content_hash": -8884655955297909145,
+    "log_length": 210,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [
+        "/github/workspace/package.json"
+      ],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "dependency_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_dependency_error_20251030_203245",
+      "name": "自動生成パターン: dependency_error",
+      "category": "dependency_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": -8884655955297909145,
+      "created_at": "2025-10-30T20:32:45.905771"
+    },
+    "occurrence_count": 1
+  },
+  {
+    "timestamp": "2025-10-30T20:32:45.905774",
+    "log_content_hash": -8884655955297909145,
+    "log_length": 210,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [
+        "/github/workspace/package.json"
+      ],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "dependency_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_dependency_error_20251030_203245",
+      "name": "自動生成パターン: dependency_error",
+      "category": "dependency_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": -8884655955297909145,
+      "created_at": "2025-10-30T20:32:45.905771"
+    },
+    "occurrence_count": 1,
+    "_needs_learning_processing": true
+  },
+  {
+    "timestamp": "2025-10-30T20:36:43.704551",
+    "log_content_hash": -5053088953816716060,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251030_203643",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": -5053088953816716060,
+      "created_at": "2025-10-30T20:36:43.704548"
+    },
+    "occurrence_count": 1
+  },
+  {
+    "timestamp": "2025-10-30T20:36:43.704551",
+    "log_content_hash": -5053088953816716060,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251030_203643",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": -5053088953816716060,
+      "created_at": "2025-10-30T20:36:43.704548"
+    },
+    "occurrence_count": 1,
+    "_needs_learning_processing": true
+  },
+  {
+    "timestamp": "2025-10-30T20:36:43.925051",
+    "log_content_hash": -5053088953816716060,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251030_203643",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": -5053088953816716060,
+      "created_at": "2025-10-30T20:36:43.925047"
+    },
+    "occurrence_count": 1
+  },
+  {
+    "timestamp": "2025-10-30T20:36:43.925051",
+    "log_content_hash": -5053088953816716060,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251030_203643",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": -5053088953816716060,
+      "created_at": "2025-10-30T20:36:43.925047"
+    },
+    "occurrence_count": 1,
+    "_needs_learning_processing": true
+  },
+  {
+    "timestamp": "2025-10-30T20:36:44.004038",
+    "log_content_hash": -5053088953816716060,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251030_203644",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": -5053088953816716060,
+      "created_at": "2025-10-30T20:36:44.004034"
+    },
+    "occurrence_count": 1
+  },
+  {
+    "timestamp": "2025-10-30T20:36:44.004038",
+    "log_content_hash": -5053088953816716060,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251030_203644",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": -5053088953816716060,
+      "created_at": "2025-10-30T20:36:44.004034"
+    },
+    "occurrence_count": 1,
+    "_needs_learning_processing": true
+  },
+  {
+    "timestamp": "2025-10-30T20:36:44.027566",
+    "log_content_hash": -5053088953816716060,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251030_203644",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": -5053088953816716060,
+      "created_at": "2025-10-30T20:36:44.027562"
+    },
+    "occurrence_count": 1
+  },
+  {
+    "timestamp": "2025-10-30T20:36:44.027566",
+    "log_content_hash": -5053088953816716060,
+    "log_length": 8,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "test_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_test_error_20251030_203644",
+      "name": "自動生成パターン: test_error",
+      "category": "test_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": -5053088953816716060,
+      "created_at": "2025-10-30T20:36:44.027562"
+    },
+    "occurrence_count": 1,
+    "_needs_learning_processing": true
+  },
+  {
+    "timestamp": "2025-10-30T20:37:18.426963",
+    "log_content_hash": 3754913544280047804,
+    "log_length": 210,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [
+        "/github/workspace/package.json"
+      ],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "dependency_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_dependency_error_20251030_203718",
+      "name": "自動生成パターン: dependency_error",
+      "category": "dependency_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": 3754913544280047804,
+      "created_at": "2025-10-30T20:37:18.426958"
+    },
+    "occurrence_count": 1
+  },
+  {
+    "timestamp": "2025-10-30T20:37:18.426963",
+    "log_content_hash": 3754913544280047804,
+    "log_length": 210,
+    "error_features": {
+      "error_keywords": [],
+      "file_paths": [
+        "/github/workspace/package.json"
+      ],
+      "line_numbers": [],
+      "stack_traces": [],
+      "command_outputs": [],
+      "exit_codes": [],
+      "timestamps": []
+    },
+    "error_category": "dependency_error",
+    "failed_patterns": [],
+    "potential_pattern": {
+      "id": "auto_generated_dependency_error_20251030_203718",
+      "name": "自動生成パターン: dependency_error",
+      "category": "dependency_error",
+      "regex_patterns": [],
+      "keywords": [],
+      "confidence_base": 0.6,
+      "auto_generated": true,
+      "source_log_hash": 3754913544280047804,
+      "created_at": "2025-10-30T20:37:18.426958"
     },
     "occurrence_count": 1,
     "_needs_learning_processing": true

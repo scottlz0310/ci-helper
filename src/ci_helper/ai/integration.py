@@ -976,7 +976,13 @@ class AIIntegration:
         # プロバイダーをクリーンアップ
         for provider in self.providers.values():
             try:
-                await provider.cleanup()
+                # cleanupメソッドが存在し、コルーチン関数である場合のみ呼び出す
+                if hasattr(provider, 'cleanup') and callable(provider.cleanup):
+                    import asyncio
+                    if asyncio.iscoroutinefunction(provider.cleanup):
+                        await provider.cleanup()
+                    else:
+                        provider.cleanup()
             except Exception as e:
                 logger.warning("プロバイダーのクリーンアップに失敗: %s", e)
 

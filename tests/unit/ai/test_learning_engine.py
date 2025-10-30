@@ -72,11 +72,11 @@ class TestLearningEngine:
         """サンプルユーザーフィードバック"""
         return UserFeedback(
             pattern_id=sample_pattern.id,
-            user_rating=4,
-            effectiveness_rating=5,
+            fix_suggestion_id="fix_001",
+            rating=4,
+            success=True,
             comments="とても役に立ちました",
             timestamp=datetime.now(),
-            context={"log_content": "npm install failed"},
         )
 
     @pytest.mark.asyncio
@@ -106,8 +106,14 @@ class TestLearningEngine:
         await learning_engine.initialize()
 
         # 成功フィードバック
-        success_feedback = sample_feedback
-        success_feedback.effectiveness_rating = 5
+        success_feedback = UserFeedback(
+            pattern_id=sample_feedback.pattern_id,
+            fix_suggestion_id="fix_002",
+            rating=5,
+            success=True,
+            comments="Good fix",
+            timestamp=datetime.now(),
+        )
         await learning_engine._update_pattern_success_rate(success_feedback)
 
         tracking = learning_engine.pattern_success_tracking[sample_feedback.pattern_id]
@@ -116,8 +122,14 @@ class TestLearningEngine:
         assert tracking["success_rate"] == 1.0
 
         # 失敗フィードバック
-        failure_feedback = sample_feedback
-        failure_feedback.effectiveness_rating = 2
+        failure_feedback = UserFeedback(
+            pattern_id=sample_feedback.pattern_id,
+            fix_suggestion_id="fix_003",
+            rating=2,
+            success=False,
+            comments="Did not work",
+            timestamp=datetime.now(),
+        )
         await learning_engine._update_pattern_success_rate(failure_feedback)
 
         tracking = learning_engine.pattern_success_tracking[sample_feedback.pattern_id]
@@ -147,11 +159,11 @@ class TestLearningEngine:
         feedback_data = [
             {
                 "pattern_id": sample_feedback.pattern_id,
-                "user_rating": sample_feedback.user_rating,
-                "effectiveness_rating": sample_feedback.effectiveness_rating,
+                "fix_suggestion_id": sample_feedback.fix_suggestion_id,
+                "rating": sample_feedback.rating,
+                "success": sample_feedback.success,
                 "comments": sample_feedback.comments,
                 "timestamp": sample_feedback.timestamp.isoformat(),
-                "context": sample_feedback.context,
             }
         ]
 
@@ -164,7 +176,7 @@ class TestLearningEngine:
         assert len(learning_engine.feedback_history) == 1
         loaded_feedback = learning_engine.feedback_history[0]
         assert loaded_feedback.pattern_id == sample_feedback.pattern_id
-        assert loaded_feedback.user_rating == sample_feedback.user_rating
+        assert loaded_feedback.rating == sample_feedback.rating
 
     @pytest.mark.asyncio
     async def test_save_learning_data(self, learning_engine, temp_learning_dir, sample_feedback):
@@ -224,11 +236,11 @@ class TestLearningEngine:
             return_value=[
                 UserFeedback(
                     pattern_id="test_pattern",
-                    user_rating=4,
-                    effectiveness_rating=5,
+                    fix_suggestion_id="fix_004",
+                    rating=4,
+                    success=True,
                     comments="良い提案でした",
                     timestamp=datetime.now(),
-                    context={},
                 )
             ]
         )
@@ -590,13 +602,13 @@ class TestLearningEngine:
 
         # テストデータを設定
         learning_engine.feedback_history = [
-            Mock(
+            UserFeedback(
                 pattern_id="test",
-                user_rating=4,
-                effectiveness_rating=5,
+                fix_suggestion_id="fix_005",
+                rating=4,
+                success=True,
                 comments="test",
                 timestamp=datetime.now(),
-                context={},
             )
         ]
         learning_engine.error_frequency = {"test_error": 5}
