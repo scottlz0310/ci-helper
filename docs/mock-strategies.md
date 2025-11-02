@@ -36,7 +36,7 @@ def test_config_loading(mock_load):
 def mock_file_system(monkeypatch):
     def mock_exists(path):
         return path == "existing_file.toml"
-    
+
     monkeypatch.setattr("pathlib.Path.exists", mock_exists)
     return mock_exists
 
@@ -61,12 +61,12 @@ def test_config_file_loading():
     enabled = true
     confidence_threshold = 0.8
     """
-    
+
     with patch('builtins.open', mock_open(read_data=config_content)):
         with patch('pathlib.Path.exists', return_value=True):
             config = AutoFixConfig()
             result = config.load_from_file("config.toml")
-            
+
             assert result["auto_fix"]["enabled"] is True
             assert result["auto_fix"]["confidence_threshold"] == 0.8
 ```
@@ -77,17 +77,17 @@ def test_config_file_loading():
 def test_settings_persistence():
     """設定永続化のモックテスト"""
     mock_file = mock_open()
-    
+
     with patch('builtins.open', mock_file):
         with patch('pathlib.Path.mkdir'):
             manager = SettingsManager()
             manager.save_settings({"key": "value"})
-            
+
             # ファイルが正しく開かれたことを確認
             mock_file.assert_called_once_with(
                 manager.settings_file, 'w', encoding='utf-8'
             )
-            
+
             # 書き込み内容を確認
             written_content = ''.join(
                 call.args[0] for call in mock_file().write.call_args_list
@@ -104,7 +104,7 @@ def test_cache_directory_creation():
         with patch('pathlib.Path.exists', return_value=False):
             cache = ResponseCache()
             cache.ensure_cache_directory()
-            
+
             mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
 ```
 
@@ -118,14 +118,14 @@ def test_cache_expiration_timing(mock_time):
     """キャッシュ有効期限のタイミングテスト"""
     # 初期時刻: 2024-01-01 00:00:00
     mock_time.return_value = 1704067200
-    
+
     cache = ResponseCache(ttl=300)  # 5分のTTL
     cache.set("key", "value")
-    
+
     # 3分後: まだ有効
     mock_time.return_value = 1704067200 + 180
     assert cache.get("key") == "value"
-    
+
     # 6分後: 期限切れ
     mock_time.return_value = 1704067200 + 360
     assert cache.get("key") is None
@@ -143,10 +143,10 @@ def test_log_timestamp_formatting(mock_datetime):
     fixed_datetime = datetime(2024, 1, 1, 12, 0, 0)
     mock_datetime.now.return_value = fixed_datetime
     mock_datetime.strftime = datetime.strftime
-    
+
     logger = Logger()
     log_entry = logger.create_log_entry("Test message")
-    
+
     assert "2024-01-01 12:00:00" in log_entry
 ```
 
@@ -169,10 +169,10 @@ def test_openai_api_call(mock_post):
     }
     mock_response.status_code = 200
     mock_post.return_value = mock_response
-    
+
     provider = OpenAIProvider(api_key="test-key")
     result = provider.generate_response("Fix this error")
-    
+
     assert "Add missing import" in result
     mock_post.assert_called_once()
 ```
@@ -188,12 +188,12 @@ async def test_async_api_call(mock_post):
     mock_response = AsyncMock()
     mock_response.json = AsyncMock(return_value={"result": "success"})
     mock_response.status = 200
-    
+
     mock_post.return_value.__aenter__.return_value = mock_response
-    
+
     client = AsyncAPIClient()
     result = await client.make_request("test-endpoint")
-    
+
     assert result["result"] == "success"
 ```
 
@@ -211,13 +211,13 @@ def test_act_command_execution(mock_run):
         stdout="Job completed successfully",
         stderr=""
     )
-    
+
     runner = ActRunner()
     result = runner.run_workflow("test.yml")
-    
+
     assert result.success is True
     assert "completed successfully" in result.output
-    
+
     # 実行されたコマンドを確認
     mock_run.assert_called_once()
     called_args = mock_run.call_args[0][0]
@@ -237,12 +237,12 @@ def test_act_command_failure(mock_run):
         stdout="",
         stderr="Error: Workflow file not found"
     )
-    
+
     runner = ActRunner()
-    
+
     with pytest.raises(WorkflowExecutionError) as exc_info:
         runner.run_workflow("nonexistent.yml")
-    
+
     assert "Workflow file not found" in str(exc_info.value)
 ```
 
@@ -259,11 +259,11 @@ def test_pattern_manager_integration():
         Mock(pattern_name="import_error", confidence=0.9),
         Mock(pattern_name="syntax_error", confidence=0.7)
     ]
-    
+
     # FixGeneratorにモックを注入
     generator = FixGenerator(pattern_manager=mock_manager)
     result = generator.analyze_error("ImportError: missing module")
-    
+
     assert len(result.matched_patterns) == 2
     assert result.matched_patterns[0].confidence == 0.9
 ```
@@ -274,16 +274,16 @@ def test_pattern_manager_integration():
 def test_cache_with_partial_mock():
     """キャッシュの部分的モックテスト"""
     cache = ResponseCache()
-    
+
     # 特定のメソッドのみモック
     with patch.object(cache, '_serialize_key') as mock_serialize:
         mock_serialize.return_value = "mocked_key"
-        
+
         cache.set("original_key", "value")
-        
+
         # モックされたメソッドが呼ばれたことを確認
         mock_serialize.assert_called_once_with("original_key")
-        
+
         # 実際のキャッシュ機能は動作することを確認
         assert cache.get("original_key") == "value"
 ```
@@ -302,10 +302,10 @@ def test_api_retry_mechanism():
             Mock(status_code=429),  # 2回目: レート制限
             Mock(status_code=200, json=lambda: {"result": "success"})  # 3回目: 成功
         ]
-        
+
         client = APIClient(max_retries=3)
         result = client.make_request("test-endpoint")
-        
+
         assert result["result"] == "success"
         assert mock_post.call_count == 3  # 3回呼び出されたことを確認
 ```
@@ -318,11 +318,11 @@ def test_log_formatting_arguments():
     with patch('ci_helper.utils.logger.write_log') as mock_write:
         logger = Logger()
         logger.log_error("Test error", context={"file": "test.py", "line": 42})
-        
+
         # 呼び出し引数の詳細検証
         mock_write.assert_called_once()
         call_args = mock_write.call_args
-        
+
         assert call_args[0][0] == "ERROR"  # ログレベル
         assert "Test error" in call_args[0][1]  # メッセージ
         assert call_args[1]["context"]["file"] == "test.py"  # コンテキスト
@@ -356,23 +356,23 @@ def test_config_loading(mock_load):
 ```python
 def test_mock_configuration_issues():
     """モック設定の問題と解決方法"""
-    
+
     # 問題1: return_valueとside_effectの混同
     with patch('some_function') as mock_func:
         # ❌ 間違い: 両方設定すると side_effect が優先される
         mock_func.return_value = "value"
         mock_func.side_effect = ["different_value"]
-        
+
         # ✅ 正しい: どちらか一方を使用
         mock_func.return_value = "value"
         # または
         mock_func.side_effect = ["value1", "value2"]
-    
+
     # 問題2: specの不適切な使用
     # ❌ 間違い: specなしでは存在しないメソッドも呼べてしまう
     mock_obj = Mock()
     mock_obj.nonexistent_method()  # エラーにならない
-    
+
     # ✅ 正しい: specを使用して型安全性を確保
     mock_obj = Mock(spec=RealClass)
     # mock_obj.nonexistent_method()  # AttributeError が発生

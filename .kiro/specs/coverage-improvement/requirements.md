@@ -82,7 +82,7 @@ CI-Helperプロジェクトのコードカバレッジを現在の66%から目�
 - settings_manager.py (0% → 60%+): Core settings functionality
 - risk_calculator.py (16% → 50%+): Business logic for risk assessment
 
-### Medium Priority (Target: +2-3% coverage)  
+### Medium Priority (Target: +2-3% coverage)
 
 - custom_pattern_manager.py (0% → 40%+): Pattern management features
 - pattern_improvement.py (18% → 40%+): Learning algorithms

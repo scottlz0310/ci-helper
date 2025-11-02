@@ -229,7 +229,7 @@ CI_FAILURE_FILES = {
 ERROR: test_authentication.py::test_login_invalid_credentials FAILED
 AssertionError: Expected 401, got 200
 
-ERROR: test_database.py::test_connection_timeout FAILED  
+ERROR: test_database.py::test_connection_timeout FAILED
 TimeoutError: Database connection timed out after 30 seconds
 """,
     "build_failure.log": """

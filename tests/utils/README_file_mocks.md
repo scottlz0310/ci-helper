@@ -38,10 +38,10 @@ def test_file_operations():
     with stable_file_mocks() as stabilizer:
         # ファイルを作成
         stabilizer.create_test_file("/test/file.txt", "content")
-        
+
         # ファイルの存在確認
         assert stabilizer.mock_fs.file_exists("/test/file.txt")
-        
+
         # ファイル内容の確認
         assert stabilizer.mock_fs.read_file("/test/file.txt") == "content"
 ```
@@ -56,7 +56,7 @@ def test_with_decorator():
     # ファイル操作が自動的に安定化される
     with open("/mock/test.txt", "w") as f:
         f.write("test content")
-    
+
     with open("/mock/test.txt", "r") as f:
         content = f.read()
         assert content == "test content"
@@ -138,7 +138,7 @@ def test_concurrent_operations():
     with stable_file_mocks() as stabilizer:
         def worker(thread_id):
             stabilizer.create_test_file(f"/test/file_{thread_id}.txt", f"content_{thread_id}")
-        
+
         # 複数スレッドで同時実行
         threads = [threading.Thread(target=worker, args=(i,)) for i in range(5)]
         for t in threads:
@@ -169,16 +169,16 @@ def test_log_manager():
         # ログディレクトリを作成
         log_dir = "/mock/logs"
         stabilizer.create_test_directory(log_dir)
-        
+
         # LogManagerを初期化
         config = Mock()
         config.get_path.return_value = Path(log_dir)
         log_manager = LogManager(config)
-        
+
         # ログを保存
         execution_result = create_sample_execution_result()
         log_path = log_manager.save_execution_log(execution_result, "log content")
-        
+
         # ログファイルが作成されたことを確認
         assert stabilizer.mock_fs.file_exists(str(log_path))
 ```
@@ -191,15 +191,15 @@ def test_config_management():
         # 設定ディレクトリを作成
         config_dir = "/mock/config"
         stabilizer.create_test_directory(config_dir)
-        
+
         # デフォルト設定を作成
         default_config = f"{config_dir}/default.json"
         stabilizer.create_test_file(default_config, '{"key": "default_value"}')
-        
+
         # ユーザー設定を作成
         user_config = f"{config_dir}/user.json"
         stabilizer.create_test_file(user_config, '{"key": "user_value"}')
-        
+
         # 設定の読み込みと更新をテスト
         assert stabilizer.mock_fs.file_exists(default_config)
         assert stabilizer.mock_fs.file_exists(user_config)
@@ -229,7 +229,7 @@ def test_debug_file_operations():
         # ファイルシステムの状態を確認
         print("Files:", stabilizer.mock_fs.list_files())
         print("Directories:", stabilizer.mock_fs.directories)
-        
+
         # ファイル操作をテスト
         stabilizer.create_test_file("/debug/test.txt", "debug content")
         print("File exists:", stabilizer.mock_fs.file_exists("/debug/test.txt"))

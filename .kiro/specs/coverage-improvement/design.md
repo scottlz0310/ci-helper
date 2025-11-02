@@ -74,10 +74,10 @@ class TestResponseCache:
 class TestAutoFixConfig:
     def test_load_valid_config(self):
         # 有効な設定ファイルの読み込みテスト
-    
+
     def test_load_invalid_config(self):
         # 無効な設定ファイルのエラーハンドリングテスト
-    
+
     def test_default_values(self):
         # デフォルト値の適用テスト
 ```
@@ -94,10 +94,10 @@ class TestAutoFixConfig:
 class TestSettingsManager:
     def test_save_and_load_settings(self):
         # 設定の保存・読み込みテスト
-    
+
     def test_setting_validation(self):
         # 設定値の検証テスト
-    
+
     def test_setting_updates(self):
         # 設定の更新テスト
 ```
@@ -114,10 +114,10 @@ class TestSettingsManager:
 class TestCustomPatternManager:
     def test_register_pattern(self):
         # パターン登録テスト
-    
+
     def test_pattern_matching(self):
         # パターンマッチングテスト
-    
+
     def test_pattern_persistence(self):
         # パターン永続化テスト
 ```
@@ -139,10 +139,10 @@ class TestCustomPatternManager:
 class TestRiskCalculator:
     def test_calculate_risk_low_confidence(self):
         # 低信頼度でのリスク計算
-    
+
     def test_calculate_risk_edge_cases(self):
         # 境界値でのリスク計算
-    
+
     def test_risk_factors_weighting(self):
         # リスク要因の重み付けテスト
 ```

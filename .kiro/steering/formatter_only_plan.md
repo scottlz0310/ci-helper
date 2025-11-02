@@ -95,7 +95,7 @@ AssertionError: Expected 'production' but got 'development'
 # 1. pyproject.tomlを編集
 # 削除する依存関係:
 - openai
-- anthropic  
+- anthropic
 - aiohttp (AI用のみの場合)
 - aiofiles (AI用のみの場合)
 
@@ -109,7 +109,7 @@ AssertionError: Expected 'production' but got 'development'
 ```python
 class ContextEnrichedFormatter:
     """コンテキストを強化したAI消費用フォーマッター"""
-    
+
     def format_for_ai(self, execution_result: ExecutionResult) -> str:
         """AIに最適化されたMarkdownを生成"""
         sections = [
@@ -121,61 +121,61 @@ class ContextEnrichedFormatter:
             self._format_full_logs(execution_result),         # 最後に詳細
         ]
         return "\n\n---\n\n".join(filter(None, sections))
-    
+
     def _format_critical_failures(self, execution_result: ExecutionResult) -> str:
         """クリティカルな失敗を優先度順に整形"""
         failures = self._prioritize_failures(execution_result.all_failures)
-        
+
         output = ["## 🚨 Critical Failures (Must Fix)\n"]
-        
+
         for i, failure in enumerate(failures[:5], 1):  # トップ5のみ
             output.append(self._format_single_failure_detailed(failure, i))
-        
+
         return "\n\n".join(output)
-    
+
     def _format_single_failure_detailed(self, failure: Failure, num: int) -> str:
         """1つの失敗を詳細に整形"""
         parts = [f"### {num}. {failure.type.value.title()} Error"]
-        
+
         # ロケーション
         if failure.file_path:
             location = f"`{failure.file_path}`"
             if failure.line_number:
                 location += f":{failure.line_number}"
             parts.append(f"**Location**: {location}")
-        
+
         # コードコンテキスト（前後3行）
         if failure.context_before or failure.context_after:
             parts.append("\n**Code Context**:")
             parts.append("```python")
-            
+
             # 行番号を計算
             start_line = (failure.line_number or 1) - len(failure.context_before)
-            
+
             for i, line in enumerate(failure.context_before):
                 parts.append(f"{start_line + i:4d} | {line}")
-            
+
             parts.append(f"{failure.line_number:4d} | {failure.message}  # ❌ ERROR")
-            
+
             for i, line in enumerate(failure.context_after):
                 parts.append(f"{failure.line_number + i + 1:4d} | {line}")
-            
+
             parts.append("```")
-        
+
         # エラーメッセージ
         parts.append("\n**Error Message**:")
         parts.append(f"```\n{failure.message}\n```")
-        
+
         # 根本原因分析（パターンマッチング）
         if root_cause := self._analyze_root_cause(failure):
             parts.append(f"\n**Root Cause**: {root_cause}")
-        
+
         # 修正提案
         if fix_suggestion := self._suggest_fix(failure):
             parts.append(f"\n**Suggested Fix**:\n{fix_suggestion}")
-        
+
         return "\n".join(parts)
-    
+
     def _prioritize_failures(self, failures: list[Failure]) -> list[Failure]:
         """失敗を優先度順にソート"""
         def priority_score(f: Failure) -> int:
@@ -190,7 +190,7 @@ class ContextEnrichedFormatter:
             if f.stack_trace:
                 score += 25
             return score
-        
+
         return sorted(failures, key=priority_score, reverse=True)
 ```
 

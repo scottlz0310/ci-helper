@@ -201,15 +201,15 @@ def test_fast_version(mock_expensive):
 ```python
 class TestRiskCalculator:
     """リスク計算機能のテストクラス"""
-    
+
     def test_calculate_risk_with_valid_input(self):
         """有効な入力でのリスク計算テスト"""
         # Given: テスト条件の設定
         calculator = RiskCalculator()
-        
+
         # When: テスト対象の実行
         result = calculator.calculate_risk(confidence=0.8, impact=0.6)
-        
+
         # Then: 結果の検証
         assert result.level == RiskLevel.MEDIUM
         assert 0.4 <= result.score <= 0.8
@@ -268,17 +268,17 @@ uv run pytest --cov=ci_helper.ai.risk_calculator --cov-report=term-missing
 def test_config_validation_comprehensive():
     """設定検証の包括的テスト"""
     config = AutoFixConfig()
-    
+
     # 有効な設定
     assert config.validate({"confidence_threshold": 0.8}) is True
-    
+
     # 無効な設定（複数パターン）
     invalid_configs = [
         {"confidence_threshold": 1.5},  # 範囲外
         {"confidence_threshold": "invalid"},  # 型エラー
         {},  # 必須項目なし
     ]
-    
+
     for invalid_config in invalid_configs:
         with pytest.raises(ConfigurationError):
             config.validate(invalid_config)
@@ -305,12 +305,12 @@ uv run pytest -x
 def test_debug_example():
     """デバッグ用のテスト例"""
     calculator = RiskCalculator()
-    
+
     # デバッグ情報の出力
     print(f"Calculator state: {calculator.__dict__}")
-    
+
     result = calculator.calculate_risk(confidence=0.8)
-    
+
     # 詳細な検証
     assert result is not None, "Result should not be None"
     assert hasattr(result, 'level'), "Result should have level attribute"

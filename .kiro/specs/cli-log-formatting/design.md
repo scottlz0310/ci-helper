@@ -48,23 +48,23 @@ from ..core.models import ExecutionResult
 
 class BaseLogFormatter(ABC):
     """ログフォーマッターの基底クラス"""
-    
+
     def __init__(self, sanitize_secrets: bool = True):
         self.sanitize_secrets = sanitize_secrets
         if sanitize_secrets:
             from ..core.security import SecurityValidator
             self.security_validator = SecurityValidator()
-    
+
     @abstractmethod
     def format(self, execution_result: ExecutionResult, **options) -> str:
         """ログを指定形式でフォーマット"""
         pass
-    
+
     @abstractmethod
     def get_format_name(self) -> str:
         """フォーマット名を取得"""
         pass
-    
+
     def _sanitize_content(self, content: str) -> str:
         """コンテンツのサニタイズ（共通処理）"""
         if not self.sanitize_secrets:
@@ -78,7 +78,7 @@ class BaseLogFormatter(ABC):
 # src/ci_helper/formatters/ai_context_formatter.py
 class AIContextFormatter(BaseLogFormatter):
     """AI分析に最適化されたコンテキスト強化フォーマッター"""
-    
+
     def format(self, execution_result: ExecutionResult, **options) -> str:
         """AIに最適化されたMarkdownを生成"""
         sections = [
@@ -90,12 +90,12 @@ class AIContextFormatter(BaseLogFormatter):
             self._format_full_logs(execution_result),
         ]
         return "\n\n---\n\n".join(filter(None, sections))
-    
+
     def _format_critical_failures(self, execution_result: ExecutionResult) -> str:
         """クリティカルな失敗を優先度順に整形"""
         failures = self._prioritize_failures(execution_result.all_failures)
         # 実装詳細...
-    
+
     def _prioritize_failures(self, failures: list) -> list:
         """失敗を優先度順にソート"""
         # アサーションエラー、ファイル情報、スタックトレースの有無で優先度付け
@@ -107,7 +107,7 @@ class AIContextFormatter(BaseLogFormatter):
 # src/ci_helper/formatters/human_readable_formatter.py
 class HumanReadableFormatter(BaseLogFormatter):
     """人間が読みやすい形式のフォーマッター"""
-    
+
     def format(self, execution_result: ExecutionResult, **options) -> str:
         """色付けと構造化された人間可読形式を生成"""
         # Rich ライブラリを使用した色付け出力
@@ -121,7 +121,7 @@ class HumanReadableFormatter(BaseLogFormatter):
 # src/ci_helper/formatters/json_formatter.py
 class JSONFormatter(BaseLogFormatter):
     """JSON形式専用フォーマッター"""
-    
+
     def format(self, execution_result: ExecutionResult, **options) -> str:
         """構造化されたJSONデータを生成"""
         # 既存のAIFormatter.format_json()を基盤として拡張
@@ -134,7 +134,7 @@ class JSONFormatter(BaseLogFormatter):
 # src/ci_helper/formatters/__init__.py
 class FormatterManager:
     """フォーマッター管理クラス"""
-    
+
     def __init__(self):
         self.formatters = {
             'ai': AIContextFormatter(),
@@ -142,10 +142,10 @@ class FormatterManager:
             'json': JSONFormatter(),
             'markdown': self._get_legacy_formatter(),  # 既存AIFormatterとの互換性
         }
-    
+
     def get_formatter(self, format_name: str) -> BaseLogFormatter:
         """指定されたフォーマッターを取得"""
-        
+
     def list_available_formats(self) -> list[str]:
         """利用可能なフォーマット一覧を取得"""
 ```
@@ -166,7 +166,7 @@ def _build_logs_submenu(self) -> Menu:
             MenuItem(key="1", title="ログ一覧表示", ...),
             MenuItem(key="2", title="最新ログ表示", ...),
             MenuItem(key="3", title="ログ比較", ...),
-            
+
             # 新規追加項目
             MenuItem(
                 key="4",
@@ -222,20 +222,20 @@ def _build_log_formatting_submenu(self) -> Menu:
 # src/ci_helper/commands/format_logs.py
 @click.command()
 @click.option(
-    "--format", 
+    "--format",
     "output_format",
     type=click.Choice(["ai", "human", "json", "markdown"], case_sensitive=False),
     default="ai",
     help="出力フォーマット（デフォルト: ai）"
 )
 @click.option(
-    "--input", 
+    "--input",
     "input_file",
     type=click.Path(exists=True, path_type=Path),
     help="入力ログファイル（省略時は最新ログを使用）"
 )
 @click.option(
-    "--output", 
+    "--output",
     "output_file",
     type=click.Path(path_type=Path),
     help="出力ファイル（省略時は標準出力）"
@@ -261,7 +261,7 @@ def format_logs(
     verbose_level: str,
 ) -> None:
     """ログを指定された形式で整形
-    
+
     \b
     使用例:
       ci-run format-logs                           # 最新ログをAI形式で標準出力
@@ -330,10 +330,10 @@ def format_with_progress(self, execution_result: ExecutionResult) -> str:
         console=self.console,
     ) as progress:
         task = progress.add_task("ログを整形中...", total=None)
-        
+
         # 整形処理実行
         result = self.format(execution_result)
-        
+
         progress.update(task, description="完了")
         return result
 ```

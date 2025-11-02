@@ -35,10 +35,10 @@ def test_with_stable_mocks():
     with stable_file_mocks() as stabilizer:
         # ファイルを作成
         stabilizer.create_test_file("/test/file.txt", "test content")
-        
+
         # ファイル存在確認
         assert stabilizer.mock_fs.file_exists("/test/file.txt")
-        
+
         # ファイル内容確認
         assert stabilizer.mock_fs.read_file("/test/file.txt") == "test content"
 ```
@@ -111,28 +111,28 @@ def test_concurrent_file_operations():
     with stable_file_mocks() as stabilizer:
         results = []
         errors = []
-        
+
         def file_operation(thread_id):
             try:
                 # スレッドセーフなファイル操作
                 file_path = f"/test/file_{thread_id}.txt"
                 stabilizer.create_test_file(file_path, f"content_{thread_id}")
-                
+
                 if stabilizer.mock_fs.file_exists(file_path):
                     results.append(thread_id)
             except Exception as e:
                 errors.append(e)
-        
+
         # 複数スレッドで並行実行
         threads = []
         for i in range(5):
             thread = threading.Thread(target=file_operation, args=(i,))
             threads.append(thread)
             thread.start()
-        
+
         for thread in threads:
             thread.join()
-        
+
         # エラーが発生しないことを確認
         assert len(errors) == 0
         assert len(results) == 5
@@ -146,10 +146,10 @@ def test_error_handling():
         # 存在しないファイルへのアクセスは一貫してエラーになる
         with pytest.raises(FileNotFoundError):
             stabilizer.mock_fs.read_file("/nonexistent/file.txt")
-        
+
         with pytest.raises(FileNotFoundError):
             stabilizer.mock_fs.write_file("/nonexistent/file.txt", "content")
-        
+
         with pytest.raises(FileNotFoundError):
             stabilizer.mock_fs.delete_file("/nonexistent/file.txt")
 ```
@@ -239,7 +239,7 @@ def test_operation_2():
 def test_permission_error():
     with stable_file_mocks() as stabilizer:
         # 権限エラーをシミュレート
-        with patch.object(stabilizer.mock_fs, 'read_file', 
+        with patch.object(stabilizer.mock_fs, 'read_file',
                          side_effect=PermissionError("Permission denied")):
             with pytest.raises(PermissionError):
                 stabilizer.mock_fs.read_file("/protected/file.txt")
@@ -289,7 +289,7 @@ def test_large_file_operations():
         # 大量のファイル操作でもメモリ効率的
         for i in range(1000):
             stabilizer.create_test_file(f"/test/file_{i}.txt", f"content_{i}")
-        
+
         # すべてのファイルが正しく作成されることを確認
         assert len(stabilizer.mock_fs.list_files()) == 1000
 ```

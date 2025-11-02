@@ -77,7 +77,7 @@ def test_with_config_file(temp_dir):
     config_source = get_config_file_path("basic_ci_helper.toml")
     config_dest = temp_dir / "ci-helper.toml"
     shutil.copy(config_source, config_dest)
-    
+
     # テストを実行
     # ...
 ```

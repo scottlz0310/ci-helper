@@ -148,7 +148,7 @@ npm ERR! file sh
 npm ERR! errno ENOENT
 npm ERR! test@1.0.0 test: `jest`
 npm ERR! spawn jest ENOENT
-npm ERR! 
+npm ERR!
 npm ERR! Failed at the test@1.0.0 test script.
 npm ERR! This is probably not a problem with npm. There is likely additional logging output above.
 Error: Process completed with exit code 1.

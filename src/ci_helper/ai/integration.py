@@ -977,8 +977,9 @@ class AIIntegration:
         for provider in self.providers.values():
             try:
                 # cleanupメソッドが存在し、コルーチン関数である場合のみ呼び出す
-                if hasattr(provider, 'cleanup') and callable(provider.cleanup):
+                if hasattr(provider, "cleanup") and callable(provider.cleanup):
                     import asyncio
+
                     if asyncio.iscoroutinefunction(provider.cleanup):
                         await provider.cleanup()
                     else:

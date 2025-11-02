@@ -44,7 +44,7 @@
 ```python
 class MissingClassResolver:
     """欠損クラスの検出と解決を担当"""
-    
+
     def detect_missing_classes(self, test_results: TestResults) -> List[MissingClass]
     def resolve_performance_optimizer(self) -> None
     def resolve_japanese_error_handler(self) -> None
@@ -60,7 +60,7 @@ class MissingClassResolver:
 ```python
 class ClassDefinitionGenerator:
     """必要なクラス定義を生成"""
-    
+
     def generate_performance_optimizer(self) -> str
     def generate_japanese_error_handler(self) -> str
     def generate_enhanced_analysis_formatter(self) -> str
@@ -75,7 +75,7 @@ class ClassDefinitionGenerator:
 ```python
 class AIConfigCompatibilityAdapter:
     """AIConfigオブジェクトの辞書ライクアクセスを提供"""
-    
+
     def __init__(self, config_data: Dict[str, Any])
     def get(self, key: str, default: Any = None) -> Any
     def __getitem__(self, key: str) -> Any
@@ -95,7 +95,7 @@ class AIConfigCompatibilityAdapter:
 ```python
 class MockStabilizer:
     """モックオブジェクトの安定性を確保"""
-    
+
     def stabilize_rich_prompt_mocks(self, mock_obj: Mock) -> None
     def fix_method_call_expectations(self, mock_obj: Mock, expected_calls: int) -> None
     def setup_async_mock_context(self, mock_obj: AsyncMock) -> None
@@ -107,7 +107,7 @@ class MockStabilizer:
 ```python
 class RichPromptMockFixer:
     """Rich Promptモッキングの問題を修正"""
-    
+
     def fix_stop_iteration_errors(self, mock_prompt: Mock) -> None
     def setup_proper_side_effects(self, mock_prompt: Mock, responses: List[str]) -> None
     def handle_prompt_interruption(self, mock_prompt: Mock) -> None
@@ -120,7 +120,7 @@ class RichPromptMockFixer:
 ```python
 class TestFixtureManager:
     """テストフィクスチャの管理と提供"""
-    
+
     def ensure_sample_log_files(self) -> None
     def provide_config_examples(self) -> Dict[str, Any]
     def setup_pattern_test_data(self) -> None
@@ -132,7 +132,7 @@ class TestFixtureManager:
 ```python
 class FixtureValidator:
     """フィクスチャファイルの存在と整合性を検証"""
-    
+
     def validate_log_fixtures(self) -> ValidationResult
     def validate_config_fixtures(self) -> ValidationResult
     def validate_pattern_fixtures(self) -> ValidationResult
@@ -219,7 +219,7 @@ class FixtureAvailabilityIssue:
 ```python
 class TestFailureRecoveryStrategy:
     """テスト失敗からの復旧戦略"""
-    
+
     def create_recovery_plan(self, failures: List[TestFailure]) -> RecoveryPlan
     def prioritize_fixes(self, issues: List[Issue]) -> List[Issue]
     def validate_fix_safety(self, fix: Fix) -> SafetyAssessment
@@ -235,7 +235,7 @@ class TestFailureRecoveryStrategy:
    ```python
    def test_performance_optimizer_resolution():
        """PerformanceOptimizerクラスが正しく解決されることを確認"""
-   
+
    def test_japanese_error_handler_resolution():
        """JapaneseErrorHandlerクラスが正しく解決されることを確認"""
    ```
@@ -245,7 +245,7 @@ class TestFailureRecoveryStrategy:
    ```python
    def test_ai_config_dict_interface():
        """AIConfigが辞書インターフェースを提供することを確認"""
-   
+
    def test_config_mock_compatibility():
        """設定オブジェクトがモックフレームワークと互換性があることを確認"""
    ```
@@ -255,7 +255,7 @@ class TestFailureRecoveryStrategy:
    ```python
    def test_rich_prompt_mock_stability():
        """Rich Promptモックが安定して動作することを確認"""
-   
+
    def test_async_mock_context_management():
        """非同期モックが適切にコンテキストを管理することを確認"""
    ```
@@ -265,7 +265,7 @@ class TestFailureRecoveryStrategy:
    ```python
    def test_sample_log_files_availability():
        """サンプルログファイルが利用可能であることを確認"""
-   
+
    def test_pattern_test_data_completeness():
        """パターンテストデータが完全であることを確認"""
    ```
@@ -274,7 +274,7 @@ class TestFailureRecoveryStrategy:
 
 1. **段階的テスト実行**
    - Phase 1: クラス依存関係テスト
-   - Phase 2: 設定互換性テスト  
+   - Phase 2: 設定互換性テスト
    - Phase 3: モック安定性テスト
    - Phase 4: フィクスチャ可用性テスト
    - Phase 5: 統合テスト

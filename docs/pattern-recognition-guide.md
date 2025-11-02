@@ -28,7 +28,7 @@ ci-run analyze --log-file path/to/logfile.txt
   ✅ Docker権限エラー (信頼度: 95%)
      カテゴリ: permission
      マッチ理由: 正規表現 "permission denied.*docker" にマッチ
-     
+
 🛠️  修正提案:
   1. .actrcファイルに--privilegedオプションを追加
      リスクレベル: 低

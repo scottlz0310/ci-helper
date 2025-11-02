@@ -145,24 +145,24 @@ from tests.utils.async_mock_stabilizer import (
 )
 
 class TestAIIntegrationWithStabilizer:
-    
+
     @pytest.mark.asyncio
     async def test_ai_analysis_with_timeout_error(self):
         """タイムアウトエラーのテスト"""
         stabilizer = get_async_mock_stabilizer()
-        
+
         async with stabilizer.stable_async_context() as context:
             # エラーを発生させるプロバイダーモックを作成
             provider_mock = stabilizer.create_stable_provider_mock(
                 "openai_provider",
                 analyze={"side_effect": TimeoutError("Request timeout")}
             )
-            
+
             integration_mock = stabilizer.create_stable_integration_mock(
                 "ai_integration",
                 providers={"openai": provider_mock}
             )
-            
+
             # タイムアウトエラーが正しく伝播されることを確認
             with pytest.raises(TimeoutError, match="Request timeout"):
                 await integration_mock.providers["openai"].analyze()
@@ -173,18 +173,18 @@ class TestAIIntegrationWithStabilizer:
         async with stable_async_test_context() as context:
             # 複数のモックを作成
             provider1 = context.create_stable_async_mock(
-                "provider1_analyze", 
+                "provider1_analyze",
                 return_value={"result": "analysis1"}
             )
             provider2 = context.create_stable_async_mock(
                 "provider2_analyze",
                 return_value={"result": "analysis2"}
             )
-            
+
             # 順次実行
             result1 = await provider1()
             result2 = await provider2()
-            
+
             # 結果を検証
             assert result1["result"] == "analysis1"
             assert result2["result"] == "analysis2"
@@ -223,7 +223,7 @@ mock = create_stable_async_mock_with_error_handling(
 ```python
 # ✅ 推奨 - 循環する値のリスト
 stabilizer.setup_async_side_effects_with_fallback(
-    mock, 
+    mock,
     effects=["first", "second", ValueError("error")],
     fallback_value="fallback"
 )

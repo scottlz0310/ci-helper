@@ -69,10 +69,10 @@ for sample in log_samples["log_samples"]:
     log_content = sample["log_content"]
     expected_patterns = sample["expected_pattern_ids"]
     expected_confidence = sample["expected_confidence"]
-    
+
     # パターン認識を実行
     matches = pattern_engine.analyze_log(log_content)
-    
+
     # 結果を検証
     assert len(matches) > 0
     assert matches[0].pattern.id in expected_patterns
@@ -112,14 +112,14 @@ for dataset in perf_data["performance_datasets"]:
     if dataset["id"] == "large_dataset":
         log_content = dataset["sample_log"]
         expected_time_ms = dataset["expected_processing_time_ms"]
-        
+
         # 処理時間を測定
         start_time = time.time()
         matches = pattern_engine.analyze_log(log_content)
         end_time = time.time()
-        
+
         processing_time_ms = (end_time - start_time) * 1000
-        
+
         # 性能要件を満たすことを確認
         assert processing_time_ms <= expected_time_ms * 1.2  # 20%の許容誤差
 ```

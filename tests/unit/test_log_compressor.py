@@ -300,10 +300,10 @@ class TestLogCompressor:
         2024-01-01 10:00:02 ERROR: Database connection failed
         2024-01-01 10:00:03 WARNING: Retrying connection
         2024-01-01 10:00:04 CRITICAL: System shutdown initiated
-        
+
         # This is a comment
         // Another comment
-        
+
         2024-01-01 10:00:05 INFO: Cleanup completed
         """
 

@@ -42,11 +42,11 @@ def test_get_name():
 def test_pattern_matching_accuracy():
     manager = CustomPatternManager()
     manager.register_pattern("build_failure", r"Error: Build failed")
-    
+
     # 実際のログメッセージでテスト
     log_message = "Error: Build failed at step 3"
     matches = manager.find_matches(log_message)
-    
+
     assert len(matches) == 1
     assert matches[0].pattern_name == "build_failure"
     assert matches[0].confidence > 0.8
@@ -59,10 +59,10 @@ def test_pattern_matching_accuracy():
 ```python
 def test_config_loading_with_invalid_file():
     config = AutoFixConfig()
-    
+
     with pytest.raises(ConfigurationError) as exc_info:
         config.load_from_file("nonexistent.toml")
-    
+
     assert "Configuration file not found" in str(exc_info.value)
     assert config.use_defaults()  # フォールバック動作を確認
 ```
@@ -78,10 +78,10 @@ def test_config_loading_with_invalid_file():
 @patch('builtins.open', new_callable=mock_open, read_data='{"key": "value"}')
 def test_settings_persistence(mock_file, mock_exists):
     mock_exists.return_value = True
-    
+
     manager = SettingsManager()
     settings = manager.load_settings()
-    
+
     assert settings["key"] == "value"
     mock_file.assert_called_once()
 ```
@@ -95,13 +95,13 @@ def test_settings_persistence(mock_file, mock_exists):
 def test_cache_expiration(mock_time):
     # 初期時刻を設定
     mock_time.return_value = 1000
-    
+
     cache = ResponseCache(ttl=300)  # 5分のTTL
     cache.set("key", "value")
-    
+
     # 6分後をシミュレート
     mock_time.return_value = 1360
-    
+
     assert cache.get("key") is None  # 期限切れ
 ```
 
@@ -117,10 +117,10 @@ def test_fix_generation(mock_generate):
         "confidence": 0.85,
         "steps": ["Add 'import os' at the top of the file"]
     }
-    
+
     generator = FixGenerator()
     result = generator.generate_fix("ImportError: No module named 'os'")
-    
+
     assert result.confidence == 0.85
     assert "import os" in result.steps[0]
 ```
@@ -134,22 +134,22 @@ def test_fix_generation(mock_generate):
 ```python
 class TestAutoFixConfig:
     """自動修正設定のテストクラス"""
-    
+
     def test_load_valid_config(self):
         """有効な設定ファイルの読み込みテスト"""
         pass
-    
+
     def test_load_invalid_config(self):
         """無効な設定ファイルのエラーハンドリングテスト"""
         pass
-    
+
     def test_default_values_application(self):
         """デフォルト値の適用テスト"""
         pass
 
 class TestAutoFixConfigValidation:
     """設定検証機能のテストクラス"""
-    
+
     def test_validate_confidence_threshold(self):
         """信頼度閾値の検証テスト"""
         pass
@@ -212,11 +212,11 @@ def test_large_log_processing():
     """大きなログファイルの処理テスト"""
     # 実際のファイルではなく、メモリ上のデータを使用
     large_log_data = "ERROR: " * 10000
-    
+
     start_time = time.time()
     result = process_log_data(large_log_data)
     execution_time = time.time() - start_time
-    
+
     assert execution_time < 1.0  # 1秒以内
     assert result.error_count == 10000
 ```
@@ -228,17 +228,17 @@ def test_memory_usage_during_processing():
     """処理中のメモリ使用量テスト"""
     import psutil
     import os
-    
+
     process = psutil.Process(os.getpid())
     initial_memory = process.memory_info().rss
-    
+
     # 大量データの処理
     processor = LogProcessor()
     processor.process_large_dataset(generate_test_data(size=1000))
-    
+
     final_memory = process.memory_info().rss
     memory_increase = final_memory - initial_memory
-    
+
     # メモリ増加が100MB以下であることを確認
     assert memory_increase < 100 * 1024 * 1024
 ```
@@ -251,21 +251,21 @@ def test_memory_usage_during_processing():
 def test_risk_calculation_for_high_impact_low_confidence_scenario():
     """
     高影響度・低信頼度シナリオでのリスク計算テスト
-    
+
     期待される動作:
     - 影響度が高い場合、信頼度が低くてもMEDIUMリスクとなる
     - リスクスコアは0.6-0.8の範囲になる
     """
     # Given: 高影響度・低信頼度の条件
     calculator = RiskCalculator()
-    
+
     # When: リスク計算を実行
     result = calculator.calculate_risk(
         confidence=0.3,  # 低信頼度
         complexity=0.5,
         impact=0.9       # 高影響度
     )
-    
+
     # Then: 期待される結果を検証
     assert result.level == RiskLevel.MEDIUM
     assert 0.6 <= result.score <= 0.8
@@ -284,9 +284,9 @@ class TestConstants:
 def test_fix_generation_with_standard_error():
     """標準的なエラーメッセージでの修正生成テスト"""
     generator = FixGenerator()
-    
+
     result = generator.generate_fix(TestConstants.SAMPLE_ERROR_MESSAGE)
-    
+
     assert result.confidence >= TestConstants.DEFAULT_CONFIDENCE_THRESHOLD
     assert len(result.steps) > 0
 ```
@@ -332,15 +332,15 @@ uv run pytest --cov=ci_helper --cov-fail-under=70
 # tests/fixtures/sample_data.py
 class SampleData:
     """テスト用サンプルデータ"""
-    
+
     VALID_CONFIG = {
         "auto_fix": {"enabled": True, "confidence_threshold": 0.8}
     }
-    
+
     INVALID_CONFIG = {
         "auto_fix": {"enabled": "invalid_boolean"}
     }
-    
+
     SAMPLE_LOG_ENTRIES = [
         "INFO: Application started",
         "ERROR: Database connection failed",
@@ -354,10 +354,10 @@ class SampleData:
 def test_configuration_error_messages():
     """設定エラーメッセージの内容テスト"""
     config = AutoFixConfig()
-    
+
     with pytest.raises(ConfigurationError) as exc_info:
         config.validate({"confidence_threshold": 1.5})  # 無効な値
-    
+
     error_message = str(exc_info.value)
     assert "confidence_threshold" in error_message
     assert "0.0 and 1.0" in error_message  # 有効範囲の説明
@@ -372,14 +372,14 @@ def test_end_to_end_fix_generation_workflow():
     # 実際のコンポーネントを使用（重要な統合ポイントのみ）
     pattern_manager = CustomPatternManager()
     fix_generator = FixGenerator()
-    
+
     # テストデータの準備
     error_log = "ImportError: No module named 'requests'"
-    
+
     # ワークフローの実行
     patterns = pattern_manager.find_matches(error_log)
     fix_suggestion = fix_generator.generate_fix(error_log, patterns)
-    
+
     # 結果の検証
     assert fix_suggestion is not None
     assert fix_suggestion.confidence > 0.5
