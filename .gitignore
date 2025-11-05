@@ -20,6 +20,11 @@ test_results.xml
 coverage_test.json
 formatted_logs/
 
+# 学習・実行時蓄積データ
+data/patterns/unknown_errors.json
+data/learning/
+data/patterns/custom/*.json
+
 # Auto-generated entries from templates
 $RECYCLE.BIN/
 *$py.class
