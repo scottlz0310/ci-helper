@@ -24,6 +24,7 @@ formatted_logs/
 data/patterns/unknown_errors.json
 data/learning/
 data/patterns/custom/*.json
+test_data/unknown_errors.json
 
 # Auto-generated entries from templates
 $RECYCLE.BIN/
