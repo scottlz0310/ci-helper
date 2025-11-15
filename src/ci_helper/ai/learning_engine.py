@@ -11,6 +11,7 @@ import logging
 import re
 from collections import Counter, defaultdict
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -234,15 +235,17 @@ class LearningEngine:
 
         # パターンデータベースの成功率も更新
         pattern = self.pattern_database.get_pattern(pattern_id)
-        if pattern:
+        if isinstance(pattern, Pattern):
+            updated_pattern = replace(pattern)
             # 指数移動平均で成功率を更新
-            alpha = 0.2  # 学習率
-            new_success_rate = alpha * (1.0 if feedback.success else 0.0) + (1 - alpha) * pattern.success_rate
-            pattern.success_rate = max(0.1, min(1.0, new_success_rate))
-            pattern.updated_at = datetime.now()
+            alpha = 0.2
+            success_value = 1.0 if feedback.success else 0.0
+            new_success_rate = alpha * success_value + (1 - alpha) * updated_pattern.success_rate
+            updated_pattern.success_rate = max(0.1, min(1.0, new_success_rate))
+            updated_pattern.updated_at = datetime.now()
 
-            self.pattern_database.update_pattern(pattern)
-            logger.info("パターン %s の成功率を %.3f に更新", pattern_id, pattern.success_rate)
+            self.pattern_database.update_pattern(updated_pattern)
+            logger.info("パターン %s の成功率を %.3f に更新", pattern_id, updated_pattern.success_rate)
 
     async def _adjust_pattern_confidence(self, feedback: UserFeedback) -> None:
         """フィードバックに基づいてパターンの信頼度を調整
@@ -251,8 +254,9 @@ class LearningEngine:
             feedback: ユーザーフィードバック
         """
         pattern = self.pattern_database.get_pattern(feedback.pattern_id)
-        if not pattern:
+        if not isinstance(pattern, Pattern):
             return
+        updated_pattern = replace(pattern)
 
         # 評価に基づく調整
         rating_adjustment = (feedback.rating - 3) * self.confidence_adjustment_factor / 2  # -1.0 to 1.0
@@ -266,12 +270,16 @@ class LearningEngine:
         total_adjustment = (rating_adjustment + success_adjustment) / 2
 
         # 信頼度を更新
-        new_confidence = pattern.confidence_base + total_adjustment
-        pattern.confidence_base = max(0.1, min(1.0, new_confidence))
-        pattern.updated_at = datetime.now()
+        new_confidence = updated_pattern.confidence_base + total_adjustment
+        updated_pattern.confidence_base = max(0.1, min(1.0, new_confidence))
+        updated_pattern.updated_at = datetime.now()
 
-        self.pattern_database.update_pattern(pattern)
-        logger.info("パターン %s の信頼度を %.3f に調整", feedback.pattern_id, pattern.confidence_base)
+        self.pattern_database.update_pattern(updated_pattern)
+        logger.info(
+            "パターン %s の信頼度を %.3f に調整",
+            feedback.pattern_id,
+            updated_pattern.confidence_base,
+        )
 
     async def discover_new_patterns(self, failed_logs: list[str]) -> list[Pattern]:
         """失敗ログから新しいパターンを発見
@@ -635,17 +643,24 @@ class LearningEngine:
 
         # パターンデータベースの信頼度を更新
         pattern = self.pattern_database.get_pattern(pattern_id)
-        if pattern:
-            # 成功率に基づいて信頼度を調整
+        if isinstance(pattern, Pattern):
             success_rate = tracking["success_rate"]
-            adjustment = (success_rate - 0.5) * self.confidence_adjustment_factor
+            updated_pattern = replace(pattern)
+            updated_pattern.confidence_base = self._calculate_adjusted_confidence(
+                updated_pattern.confidence_base,
+                success_rate,
+            )
+            updated_pattern.updated_at = datetime.now()
 
-            new_confidence = pattern.confidence_base + adjustment
-            pattern.confidence_base = max(0.1, min(1.0, new_confidence))
-            pattern.updated_at = datetime.now()
+            self.pattern_database.update_pattern(updated_pattern)
+            logger.info("パターン %s の信頼度を更新: %.3f", pattern_id, updated_pattern.confidence_base)
 
-            self.pattern_database.update_pattern(pattern)
-            logger.info("パターン %s の信頼度を更新: %.3f", pattern_id, pattern.confidence_base)
+    def _calculate_adjusted_confidence(self, base_confidence: float, success_rate: float) -> float:
+        """成功率を元に信頼度を調整"""
+
+        adjustment = (success_rate - 0.5) * self.confidence_adjustment_factor
+        new_confidence = base_confidence + adjustment
+        return max(0.1, min(1.0, new_confidence))
 
     async def _save_feedback_data(self) -> None:
         """フィードバックデータを保存"""
@@ -692,15 +707,19 @@ class LearningEngine:
         except Exception as e:
             logger.error("学習済みパターンデータの保存に失敗: %s", e)
 
+    async def _save_learning_data(self) -> None:
+        """学習関連データをまとめて保存"""
+
+        await self._save_feedback_data()
+        await self._save_error_frequency_data()
+        await self._save_learned_patterns_data()
+
     def get_learning_statistics(self) -> dict[str, Any]:
         """学習統計情報を取得
 
         Returns:
             学習統計情報の辞書
         """
-        if not self._initialized:
-            return {"error": "学習エンジンが初期化されていません"}
-
         # フィードバック統計
         total_feedback = len(self.feedback_history)
         successful_feedback = sum(1 for fb in self.feedback_history if fb.success)
@@ -725,6 +744,7 @@ class LearningEngine:
             "success_rate": successful_feedback / total_feedback if total_feedback > 0 else 0.0,
             "recent_feedback_count": len(recent_feedback),
             "learned_patterns_count": len(self.learned_patterns),
+            "error_frequency_count": len(self.error_frequency),
             "tracked_errors_count": len(self.error_frequency),
             "pattern_success_stats": pattern_stats,
             "min_pattern_occurrences": self.min_pattern_occurrences,
