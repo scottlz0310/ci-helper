@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import logging
 import re
@@ -16,7 +17,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from .models import Pattern, PatternMatch, UserFeedback
+from .models import FixSuggestion, Pattern, PatternMatch, UserFeedback
 from .pattern_database import PatternDatabase
 
 if TYPE_CHECKING:
@@ -79,6 +80,7 @@ class LearningEngine:
         self.pattern_success_tracking: dict[str, dict[str, Any]] = defaultdict(
             lambda: {"successes": 0, "failures": 0, "total_uses": 0}
         )
+        self.fix_application_history: list[dict[str, Any]] = []
 
         self._initialized = False
 
@@ -722,11 +724,18 @@ class LearningEngine:
         """
         # フィードバック統計
         total_feedback = len(self.feedback_history)
-        successful_feedback = sum(1 for fb in self.feedback_history if fb.success)
-
-        # 最近のフィードバック（過去30日）
+        successful_feedback = 0
+        recent_feedback: list[UserFeedback] = []
         recent_cutoff = datetime.now() - timedelta(days=30)
-        recent_feedback = [fb for fb in self.feedback_history if fb.timestamp >= recent_cutoff]
+
+        for feedback in self.feedback_history:
+            success_flag = getattr(feedback, "success", False)
+            if isinstance(success_flag, bool) and success_flag:
+                successful_feedback += 1
+
+            timestamp = getattr(feedback, "timestamp", None)
+            if isinstance(timestamp, datetime) and timestamp >= recent_cutoff:
+                recent_feedback.append(feedback)
 
         # パターン成功率統計
         pattern_stats = {}
@@ -775,7 +784,7 @@ class LearningEngine:
     async def collect_and_process_feedback(
         self,
         pattern_matches: list[PatternMatch],
-        fix_suggestions: list[Any],
+        fix_suggestions_or_log: list[FixSuggestion | Any] | str | None = None,
         interactive: bool = True,
         feedback_callback: Callable[[str], str] | None = None,
     ) -> list[UserFeedback]:
@@ -783,7 +792,7 @@ class LearningEngine:
 
         Args:
             pattern_matches: パターンマッチ結果のリスト
-            fix_suggestions: 修正提案のリスト
+            fix_suggestions_or_log: 修正提案リストまたはログ文字列
             interactive: 対話的フィードバック収集フラグ
             feedback_callback: フィードバック収集用コールバック関数
 
@@ -796,18 +805,58 @@ class LearningEngine:
         await self._ensure_feedback_collector_initialized()
         logger.info("フィードバック収集と学習処理を開始")
 
-        collected_feedback = []
+        collected_feedback: list[UserFeedback] = []
+        log_content: str | None = None
+        fix_suggestions: list[Any] | None = None
+
+        if isinstance(fix_suggestions_or_log, str):
+            log_content = fix_suggestions_or_log
+        elif isinstance(fix_suggestions_or_log, list):
+            fix_suggestions = fix_suggestions_or_log
 
         try:
-            # フィードバックを収集
-            for pattern_match, fix_suggestion in zip(pattern_matches, fix_suggestions, strict=False):
-                feedback = await self.feedback_collector.collect_feedback_for_suggestion(
-                    pattern_match, fix_suggestion, interactive, feedback_callback
-                )
+            fallback_collect: Callable[..., Any] | None = None
+            collector_fallback = getattr(
+                self.feedback_collector,
+                "collect_feedback",
+                None,
+            )
+            if callable(collector_fallback):
+                fallback_collect = collector_fallback
 
-                if feedback:
+            suggestion_collector = self.feedback_collector.collect_feedback_for_suggestion
+
+            if fix_suggestions is not None:
+                iterable = zip(pattern_matches, fix_suggestions, strict=False)
+            else:
+                iterable = ((pattern_match, None) for pattern_match in pattern_matches)
+
+            for pattern_match, fix_suggestion in iterable:
+                feedback_result: UserFeedback | list[UserFeedback] | None
+
+                if fix_suggestion is not None:
+                    feedback_result = await suggestion_collector(
+                        pattern_match,
+                        fix_suggestion,
+                        interactive,
+                        feedback_callback,
+                    )
+                elif fallback_collect is not None:
+                    feedback_result = fallback_collect(
+                        pattern_match,
+                        log_content,
+                        interactive,
+                        feedback_callback,
+                    )
+                    if inspect.isawaitable(feedback_result):
+                        feedback_result = await feedback_result
+                else:
+                    continue
+
+                feedback_items = self._normalize_feedback_results(feedback_result)
+
+                for feedback in feedback_items:
                     collected_feedback.append(feedback)
-                    # 即座に学習に反映
                     await self.learn_from_feedback(feedback)
 
             logger.info("フィードバック収集と学習処理完了: %d 件処理", len(collected_feedback))
@@ -817,12 +866,26 @@ class LearningEngine:
             logger.error("フィードバック収集と学習処理中にエラー: %s", e)
             return collected_feedback
 
+    def _normalize_feedback_results(
+        self, feedback_result: UserFeedback | list[UserFeedback] | None
+    ) -> list[UserFeedback]:
+        """フィードバック収集の結果をリスト形式に正規化"""
+
+        if isinstance(feedback_result, list):
+            return [fb for fb in feedback_result if isinstance(fb, UserFeedback)]
+
+        if isinstance(feedback_result, UserFeedback):
+            return [feedback_result]
+
+        return []
+
     async def process_fix_application_feedback(
         self,
         pattern_id: str,
         fix_suggestion_id: str,
         success: bool,
         error_message: str | None = None,
+        **metadata: Any,
     ) -> None:
         """修正適用結果のフィードバックを処理
 
@@ -839,8 +902,21 @@ class LearningEngine:
 
         # フィードバック収集システムに結果を記録
         await self.feedback_collector.record_fix_application_result(
-            pattern_id, fix_suggestion_id, success, error_message
+            pattern_id,
+            fix_suggestion_id,
+            success,
+            error_message,
         )
+
+        record = {
+            "pattern_id": pattern_id,
+            "fix_suggestion_id": fix_suggestion_id,
+            "success": success,
+            "error_message": error_message,
+            "metadata": metadata,
+            "recorded_at": datetime.now().isoformat(),
+        }
+        self.fix_application_history.append(record)
 
         # 学習エンジンでパターン信頼度を更新
         await self.update_pattern_confidence(pattern_id, success)
@@ -848,25 +924,22 @@ class LearningEngine:
         logger.info("修正適用フィードバックを処理: パターン=%s, 成功=%s", pattern_id, success)
 
     def get_pattern_feedback_summary(self, pattern_id: str) -> dict[str, Any]:
-        """指定されたパターンのフィードバック要約を取得
+        """指定されたパターンのフィードバック要約を取得"""
 
-        Args:
-            pattern_id: パターンID
+        feedback_stats: dict[str, Any]
+        if self.feedback_collector is not None:
+            feedback_stats = self.feedback_collector.get_feedback_statistics(pattern_id)
+        else:
+            feedback_stats = self._calculate_local_feedback_statistics(pattern_id)
 
-        Returns:
-            フィードバック要約情報
-        """
-        if not self._initialized:
-            return {"error": "学習エンジンが初期化されていません"}
-
-        if self.feedback_collector is None:
-            return {"error": "フィードバック収集システムが初期化されていません"}
-
-        # フィードバック収集システムから統計を取得
-        feedback_stats = self.feedback_collector.get_feedback_statistics(pattern_id)
-
-        # 学習エンジンの追跡データを取得
-        tracking = self.pattern_success_tracking.get(pattern_id, {})
+        tracking_source = self.pattern_success_tracking.get(pattern_id, {})
+        tracking = dict(tracking_source)
+        total_uses = tracking.get("total_uses", 0) or 0
+        successes = tracking.get("successes", 0)
+        if total_uses > 0:
+            tracking.setdefault("success_rate", successes / total_uses)
+        else:
+            tracking.setdefault("success_rate", 0.0)
 
         return {
             "pattern_id": pattern_id,
@@ -875,6 +948,44 @@ class LearningEngine:
             "total_feedback": feedback_stats.get("total_feedback", 0),
             "success_rate": feedback_stats.get("success_rate", 0.0),
             "average_rating": feedback_stats.get("average_rating", 0.0),
+            "average_effectiveness": feedback_stats.get("success_rate", 0.0),
+        }
+
+    def _calculate_local_feedback_statistics(
+        self,
+        pattern_id: str,
+    ) -> dict[str, Any]:
+        """フィードバック収集システムが未初期化の場合の簡易統計"""
+
+        relevant_feedback = [fb for fb in self.feedback_history if getattr(fb, "pattern_id", None) == pattern_id]
+
+        if not relevant_feedback:
+            return {
+                "total_feedback": 0,
+                "average_rating": 0.0,
+                "success_rate": 0.0,
+                "successful_feedback": 0,
+                "failed_feedback": 0,
+            }
+
+        total_feedback = len(relevant_feedback)
+        rating_sum = sum(getattr(fb, "rating", 0) or 0 for fb in relevant_feedback)
+        success_count = sum(
+            1
+            for fb in relevant_feedback
+            if isinstance(getattr(fb, "success", False), bool) and getattr(fb, "success", False)
+        )
+        failed_count = total_feedback - success_count
+
+        average_rating = rating_sum / total_feedback if total_feedback else 0.0
+        success_rate = success_count / total_feedback if total_feedback else 0.0
+
+        return {
+            "total_feedback": total_feedback,
+            "average_rating": average_rating,
+            "success_rate": success_rate,
+            "successful_feedback": success_count,
+            "failed_feedback": failed_count,
         }
 
     async def suggest_pattern_improvements(self) -> list[Any]:
@@ -895,7 +1006,8 @@ class LearningEngine:
             all_feedback = self.feedback_collector.feedback_history
 
             # パターン改善システムで改善提案を生成
-            improvements = await self.pattern_improvement.suggest_pattern_improvements(all_feedback)
+            suggest_improvements = self.pattern_improvement.suggest_pattern_improvements
+            improvements = await suggest_improvements(all_feedback)
 
             logger.info("パターン改善提案完了: %d 件の提案", len(improvements))
             return improvements
@@ -932,7 +1044,10 @@ class LearningEngine:
             logger.error("パターン改善適用中にエラー: %s", e)
             return False
 
-    async def get_improvement_recommendations(self, max_recommendations: int = 10) -> list[Any]:
+    async def get_improvement_recommendations(
+        self,
+        max_recommendations: int = 10,
+    ) -> list[Any]:
         """改善推奨事項を取得
 
         Args:
@@ -952,8 +1067,10 @@ class LearningEngine:
             all_feedback = self.feedback_collector.feedback_history
 
             # 改善推奨事項を取得
-            recommendations = await self.pattern_improvement.get_improvement_recommendations(
-                all_feedback, max_recommendations
+            get_recommendations = self.pattern_improvement.get_improvement_recommendations
+            recommendations = await get_recommendations(
+                all_feedback,
+                max_recommendations,
             )
 
             logger.info("改善推奨事項を %d 件取得", len(recommendations))
@@ -980,7 +1097,8 @@ class LearningEngine:
             all_feedback = self.feedback_collector.feedback_history
 
             # パフォーマンス分析を実行
-            performance_data = await self.pattern_improvement.analyze_pattern_performance(all_feedback)
+            analyze_performance = self.pattern_improvement.analyze_pattern_performance
+            performance_data = await analyze_performance(all_feedback)
 
             logger.info("パターンパフォーマンス分析完了: %d パターンを分析", len(performance_data))
             return performance_data
@@ -1002,6 +1120,7 @@ class LearningEngine:
 
         update_stats = {
             "new_patterns_added": 0,
+            "patterns_added": 0,
             "patterns_improved": 0,
             "patterns_analyzed": 0,
             "errors": [],
@@ -1015,6 +1134,8 @@ class LearningEngine:
             for pattern in new_patterns:
                 if self.pattern_database.add_pattern(pattern):
                     update_stats["new_patterns_added"] += 1
+
+            update_stats["patterns_added"] = update_stats["new_patterns_added"]
 
             # 2. 既存パターンの改善提案を取得
             improvements = await self.suggest_pattern_improvements()
@@ -1040,75 +1161,101 @@ class LearningEngine:
             update_stats["errors"].append(str(e))
             return update_stats
 
-    async def process_unknown_error(self, unknown_error_info: dict[str, Any]) -> dict[str, Any]:
-        """未知エラー情報を処理して学習データに追加
+    async def process_unknown_error(
+        self,
+        unknown_error_info: dict[str, Any],
+    ) -> dict[str, Any]:
+        """未知エラー情報を処理して学習データに追加"""
 
-        Args:
-            unknown_error_info: 未知エラー情報
-
-        Returns:
-            処理結果
-        """
         if not self._initialized:
             await self.initialize()
 
-        logger.info("未知エラーを処理中: カテゴリ=%s", unknown_error_info.get("error_category"))
+        normalized_info = self._normalize_unknown_error_payload(unknown_error_info)
+        logger.info(
+            "未知エラーを処理中: カテゴリ=%s",
+            normalized_info.get("error_category"),
+        )
 
         try:
-            # 既存の未知エラーデータを読み込み
-            unknown_errors = []
+            unknown_errors: list[dict[str, Any]] = []
             if self.unknown_errors_file.exists():
                 try:
-                    with self.unknown_errors_file.open("r", encoding="utf-8") as f:
-                        content = f.read().strip()
+                    with self.unknown_errors_file.open(
+                        "r",
+                        encoding="utf-8",
+                    ) as file_obj:
+                        content = file_obj.read().strip()
                         if content:
-                            unknown_errors = json.loads(content)
+                            stored_errors = json.loads(content)
+                            unknown_errors = [
+                                self._normalize_unknown_error_payload(error)
+                                for error in stored_errors
+                                if isinstance(error, dict)
+                            ]
                 except (json.JSONDecodeError, FileNotFoundError):
                     logger.warning("未知エラーファイルが破損しています。空のリストで初期化します。")
-                    unknown_errors = []
 
-            # 類似のエラーを検索
-            similar_error = self._find_similar_unknown_error(unknown_error_info, unknown_errors)
+            similar_error = self._find_similar_unknown_error(
+                normalized_info,
+                unknown_errors,
+            )
 
             if similar_error:
-                # 既存エラーの発生回数を更新
-                similar_error["occurrence_count"] += 1
+                similar_error["occurrence_count"] = similar_error.get("occurrence_count", 0) + 1
                 similar_error["last_seen"] = datetime.now().isoformat()
-                logger.info("既存の未知エラーを更新: %s", similar_error["error_category"])
+                logger.info(
+                    "既存の未知エラーを更新: %s",
+                    similar_error.get("error_category"),
+                )
             else:
-                # 新しい未知エラーとして追加
-                unknown_errors.append(unknown_error_info)
-                logger.info("新しい未知エラーを追加: %s", unknown_error_info["error_category"])
+                unknown_errors.append(normalized_info)
+                logger.info(
+                    "新しい未知エラーを追加: %s",
+                    normalized_info.get("error_category"),
+                )
 
-            # ファイルに保存
-            with self.unknown_errors_file.open("w", encoding="utf-8") as f:
-                json.dump(unknown_errors, f, ensure_ascii=False, indent=2)
+            with self.unknown_errors_file.open(
+                "w",
+                encoding="utf-8",
+            ) as file_obj:
+                json.dump(
+                    unknown_errors,
+                    file_obj,
+                    ensure_ascii=False,
+                    indent=2,
+                )
 
-            # 頻繁に発生するエラーをチェック
             frequent_errors = self._get_frequent_unknown_errors(unknown_errors)
 
-            # 潜在的なパターンを生成
             potential_patterns_created = 0
-            for error in frequent_errors:
-                if error.get("occurrence_count", 0) >= self.min_pattern_occurrences:
-                    if await self._create_potential_pattern(error):
+            for frequent_error in frequent_errors:
+                occurrence_count = frequent_error.get("occurrence_count", 0)
+                if occurrence_count >= self.min_pattern_occurrences:
+                    created = await self._create_potential_pattern(frequent_error)
+                    if created:
                         potential_patterns_created += 1
 
             return {
                 "processed": True,
-                "error_category": unknown_error_info.get("error_category"),
+                "status": "processed",
+                "error_category": normalized_info.get("error_category"),
                 "is_new": similar_error is None,
-                "occurrence_count": similar_error["occurrence_count"] if similar_error else 1,
+                "occurrence_count": (
+                    similar_error.get("occurrence_count")
+                    if similar_error
+                    else normalized_info.get("occurrence_count", 1)
+                ),
                 "potential_patterns_created": potential_patterns_created,
                 "frequent_errors_count": len(frequent_errors),
             }
 
-        except Exception as e:
-            logger.error("未知エラー処理中にエラー: %s", e)
+        except Exception as exc:
+            logger.error("未知エラー処理中にエラー: %s", exc)
             return {
                 "processed": False,
-                "error": str(e),
-                "error_category": unknown_error_info.get("error_category"),
+                "status": "error",
+                "error": str(exc),
+                "error_category": normalized_info.get("error_category"),
             }
 
     def _find_similar_unknown_error(
@@ -1161,6 +1308,30 @@ class LearningEngine:
         # 発生回数でソート
         frequent_errors.sort(key=lambda x: x.get("occurrence_count", 1), reverse=True)
         return frequent_errors
+
+    def _normalize_unknown_error_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """未知エラー情報のフォーマットを正規化"""
+
+        normalized: dict[str, Any] = dict(payload) if payload is not None else {}
+
+        normalized.setdefault("error_category", "unknown")
+        normalized.setdefault("context", {})
+        normalized.setdefault("error_features", {})
+
+        if "occurrence_count" not in normalized:
+            occurrences = normalized.pop("occurrences", None)
+            if isinstance(occurrences, int):
+                normalized["occurrence_count"] = max(1, occurrences)
+            else:
+                normalized["occurrence_count"] = 1
+
+        timestamp = normalized.get("timestamp")
+        if not timestamp:
+            timestamp = datetime.now().isoformat()
+        normalized["timestamp"] = timestamp
+        normalized.setdefault("last_seen", timestamp)
+
+        return normalized
 
     async def _create_potential_pattern(self, unknown_error_info: dict[str, Any]) -> bool:
         """未知エラーから潜在的なパターンを作成
