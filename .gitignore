@@ -158,3 +158,26 @@ venv.bak/
 venv/
 yarn-debug.log*
 yarn-error.log*
+
+# Auto-generated entries from templates
+!.vscode/extensions.json
+*-output.txt
+*.diff
+*.patch
+*.rej
+.env.*.local
+.git-credential-cache/**
+.git-credential-store/**
+.git-credentials
+.git/refs/backup/
+.git/refs/bisect/
+.git/refs/original/
+.gitconfig-worktree
+.gitconfig.local
+.gitconfig.user
+.gitmodules.bak
+.gitmodules.local
+.pnpm-store/
+.vscode/*
+PATCHES/
+out/
