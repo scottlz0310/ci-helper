@@ -22,6 +22,6 @@ recursive-exclude * .DS_Store
 recursive-exclude .git *
 recursive-exclude .pytest_cache *
 recursive-exclude .ruff_cache *
-recursive-exclude .mypy_cache *
+recursive-exclude .basedpyright *
 recursive-exclude htmlcov *
 recursive-exclude .coverage *

@@ -226,16 +226,6 @@ class TestSecurityIntegration:
             assert result["security_level"] == "basic"
 
 
-class MockFormatter(BaseLogFormatter):
-    """テスト用のモックフォーマッター"""
-
-    def format(self, execution_result, **options):
-        return "formatted content"
-
-    def get_format_name(self):
-        return "mock"
-
-
 class TestFormatterSecurityIntegration:
     """フォーマッターのセキュリティ統合テスト"""
 

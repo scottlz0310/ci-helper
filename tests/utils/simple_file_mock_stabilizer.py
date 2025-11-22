@@ -243,7 +243,7 @@ def with_simple_stable_file_operations(test_func):
 # ファイル操作の一貫性を確保するヘルパー関数
 
 
-def create_consistent_file_mocks(files: dict[str, str] = None) -> dict[str, Any]:
+def create_consistent_file_mocks(files: dict[str, str] | None = None) -> dict[str, Any]:
     """一貫したファイル操作モックを作成
 
     Args:

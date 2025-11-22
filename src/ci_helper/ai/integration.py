@@ -212,8 +212,11 @@ class AIIntegration:
             raise
         except Exception as e:
             logger.error("AI統合システムの初期化に失敗: %s", e)
-            error_info = self.error_handler.process_error(e)
-            raise ConfigurationError(f"AI統合システムの初期化に失敗しました: {error_info['message']}") from e
+            if self.error_handler:
+                error_info = self.error_handler.process_error(e)
+                raise ConfigurationError(f"AI統合システムの初期化に失敗しました: {error_info['message']}") from e
+            else:
+                raise ConfigurationError(f"AI統合システムの初期化に失敗しました: {e}") from e
 
     async def _initialize_providers(self) -> None:
         """利用可能なプロバイダーを初期化"""
@@ -411,15 +414,26 @@ class AIIntegration:
         except Exception as e:
             logger.error("ログ分析中にエラーが発生: %s", e)
             # エラーハンドラーでエラーを処理
-            error_info = await self.error_handler.handle_error_with_retry(e, "analyze_log")
+            error_info = {"message": str(e), "can_retry": False, "auto_retry": False}
+            if self.error_handler:
+                error_info = await self.error_handler.handle_error_with_retry(e, "analyze_log")
 
             # フォールバック処理を実行
             if error_info.get("can_retry", False) and not error_info.get("auto_retry", False):
                 # 手動リトライが可能な場合はフォールバック結果を返す
-                return await self.fallback_handler.handle_analysis_failure(e, log_content, options)
-            else:
-                # その他の場合はエラー結果を作成
+                if self.fallback_handler:
+                    return await self.fallback_handler.handle_analysis_failure(e, log_content, options)
+
+            # その他の場合はエラー結果を作成
+            if self.error_handler:
                 return self.error_handler.create_fallback_result(error_info["message"], start_time)
+            else:
+                # 簡易的なフォールバック結果
+                return AnalysisResult(
+                    summary=f"エラーが発生しました: {error_info['message']}",
+                    status=AnalysisStatus.FAILED,
+                    analysis_time=(datetime.now() - start_time).total_seconds(),
+                )
 
     async def stream_analyze(self, log_content: str, options: AnalyzeOptions) -> AsyncIterator[str]:
         """ストリーミング分析を実行
@@ -467,8 +481,11 @@ class AIIntegration:
 
         except Exception as e:
             logger.error("ストリーミング分析中にエラーが発生: %s", e)
-            error_info = self.error_handler.process_error(e)
-            yield f"エラー: {error_info['message']}"
+            if self.error_handler:
+                error_info = self.error_handler.process_error(e)
+                yield f"エラー: {error_info['message']}"
+            else:
+                yield f"エラー: {e}"
 
     async def start_interactive_session(self, initial_log: str, options: AnalyzeOptions) -> InteractiveSession:
         """対話的なAIセッションを開始
@@ -519,8 +536,11 @@ class AIIntegration:
             raise
         except Exception as e:
             logger.error("対話セッション開始に失敗: %s", e)
-            error_info = self.error_handler.process_error(e)
-            raise AIError(f"対話セッションの開始に失敗しました: {error_info['message']}") from e
+            if self.error_handler:
+                error_info = self.error_handler.process_error(e)
+                raise AIError(f"対話セッションの開始に失敗しました: {error_info['message']}") from e
+            else:
+                raise AIError(f"対話セッションの開始に失敗しました: {e}") from e
 
     async def generate_fix_suggestions(
         self, analysis_result: AnalysisResult, log_content: str, project_context: dict[str, Any] | None = None
@@ -556,8 +576,11 @@ class AIIntegration:
 
         except Exception as e:
             logger.error("修正提案の生成に失敗: %s", e)
-            error_info = self.error_handler.process_error(e)
-            raise AIError(f"修正提案の生成に失敗しました: {error_info['message']}") from e
+            if self.error_handler:
+                error_info = self.error_handler.process_error(e)
+                raise AIError(f"修正提案の生成に失敗しました: {error_info['message']}") from e
+            else:
+                raise AIError(f"修正提案の生成に失敗しました: {e}") from e
 
     async def apply_fix_suggestions(
         self, fix_suggestions: list[FixSuggestion], auto_approve: bool = False, interactive: bool = True
@@ -612,8 +635,11 @@ class AIIntegration:
 
         except Exception as e:
             logger.error("修正適用に失敗: %s", e)
-            error_info = self.error_handler.process_error(e)
-            raise AIError(f"修正適用に失敗しました: {error_info['message']}") from e
+            if self.error_handler:
+                error_info = self.error_handler.process_error(e)
+                raise AIError(f"修正適用に失敗しました: {error_info['message']}") from e
+            else:
+                raise AIError(f"修正適用に失敗しました: {e}") from e
 
     async def analyze_and_fix(
         self, log_content: str, options: AnalyzeOptions, apply_fixes: bool = False, auto_approve: bool = False
@@ -658,8 +684,11 @@ class AIIntegration:
 
         except Exception as e:
             logger.error("ログ分析と修正処理に失敗: %s", e)
-            error_info = self.error_handler.process_error(e)
-            raise AIError(f"ログ分析と修正処理に失敗しました: {error_info['message']}") from e
+            if self.error_handler:
+                error_info = self.error_handler.process_error(e)
+                raise AIError(f"ログ分析と修正処理に失敗しました: {error_info['message']}") from e
+            else:
+                raise AIError(f"ログ分析と修正処理に失敗しました: {e}") from e
 
     def rollback_fixes(self, backup_paths: list[str]) -> dict[str, Any]:
         """修正をロールバック
@@ -684,8 +713,11 @@ class AIIntegration:
 
         except Exception as e:
             logger.error("修正のロールバックに失敗: %s", e)
-            error_info = self.error_handler.process_error(e)
-            raise AIError(f"修正のロールバックに失敗しました: {error_info['message']}") from e
+            if self.error_handler:
+                error_info = self.error_handler.process_error(e)
+                raise AIError(f"修正のロールバックに失敗しました: {error_info['message']}") from e
+            else:
+                raise AIError(f"修正のロールバックに失敗しました: {e}") from e
 
     def _select_provider(self, provider_name: str | None = None) -> AIProvider:
         """使用するプロバイダーを選択
@@ -856,8 +888,11 @@ class AIIntegration:
             raise
         except Exception as e:
             logger.error("AI分析の実行に失敗: %s", e)
-            error_info = self.error_handler.process_error(e)
-            raise AIError(f"AI分析の実行に失敗しました: {error_info['message']}") from e
+            if self.error_handler:
+                error_info = self.error_handler.process_error(e)
+                raise AIError(f"AI分析の実行に失敗しました: {error_info['message']}") from e
+            else:
+                raise AIError(f"AI分析の実行に失敗しました: {e}") from e
 
     async def get_usage_stats(self) -> dict[str, Any]:
         """使用統計を取得
@@ -896,6 +931,8 @@ class AIIntegration:
 
         try:
             # 部分的な結果からリトライ情報を取得
+            if not self.fallback_handler:
+                return None
             retry_info = await self.fallback_handler.retry_from_partial_result(operation_id)
             if not retry_info:
                 logger.warning("操作ID %s のリトライ情報が見つかりません", operation_id)
@@ -949,7 +986,9 @@ class AIIntegration:
                 ]
             )
         elif isinstance(error, ProviderError):
-            alternatives = self.fallback_handler._suggest_alternative_providers(error.provider)
+            alternatives = []
+            if self.fallback_handler:
+                alternatives = self.fallback_handler._suggest_alternative_providers(error.provider)
             if alternatives:
                 suggestions.append(f"代替プロバイダーを試してください: {', '.join(alternatives)}")
             suggestions.extend(
@@ -992,7 +1031,8 @@ class AIIntegration:
 
         # 古いフォールバック結果をクリーンアップ
         try:
-            self.fallback_handler.cleanup_old_partial_results()
+            if self.fallback_handler:
+                self.fallback_handler.cleanup_old_partial_results()
         except Exception as e:
             logger.warning("フォールバック結果のクリーンアップに失敗: %s", e)
 
@@ -1044,8 +1084,11 @@ class AIIntegration:
 
         except Exception as e:
             logger.error("対話入力処理中にエラー: %s", e)
-            error_info = self.error_handler.process_error(e)
-            yield f"エラーが発生しました: {error_info['message']}"
+            if self.error_handler:
+                error_info = self.error_handler.process_error(e)
+                yield f"エラーが発生しました: {error_info['message']}"
+            else:
+                yield f"エラーが発生しました: {e}"
 
     async def close_interactive_session(self, session_id: str) -> bool:
         """対話セッションを終了
@@ -1085,8 +1128,11 @@ class AIIntegration:
         try:
             await self.fix_applier.apply_fix(fix_suggestion)
         except Exception as e:
-            error_info = self.error_handler.process_error(e)
-            raise AIError(f"修正の適用に失敗しました: {error_info['message']}") from e
+            if self.error_handler:
+                error_info = self.error_handler.process_error(e)
+                raise AIError(f"修正の適用に失敗しました: {error_info['message']}") from e
+            else:
+                raise AIError(f"修正の適用に失敗しました: {e}") from e
 
     def __str__(self) -> str:
         """文字列表現"""

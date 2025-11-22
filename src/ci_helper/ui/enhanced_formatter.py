@@ -496,7 +496,7 @@ class EnhancedAnalysisFormatter:
 
         # 推奨理由
         reasons = []
-        effectiveness, safety, risk_score, overall = scored_fixes[0][1:]
+        effectiveness, safety, risk_score, _overall = scored_fixes[0][1:]
 
         if effectiveness >= 0.8:
             reasons.append("高い効果が期待できます" if self.language == "ja" else "High effectiveness expected")
@@ -518,7 +518,7 @@ class EnhancedAnalysisFormatter:
         # エラーを重要度でソート
         sorted_errors = self._sort_errors_by_importance(related_errors)
 
-        for i, error in enumerate(sorted_errors[:5], 1):  # 上位5つ
+        for _i, error in enumerate(sorted_errors[:5], 1):  # 上位5つ
             # エラーの重要度を判定
             importance = self._calculate_error_importance(error)
             if importance >= 0.8:
@@ -660,7 +660,7 @@ class EnhancedAnalysisFormatter:
 
     def _score_fix_suggestions(
         self, fix_suggestions: list[FixSuggestion]
-    ) -> list[Tuple[FixSuggestion, float, float, float, float]]:
+    ) -> list[tuple[FixSuggestion, float, float, float, float]]:
         """修正提案をスコア付けしてソート"""
         scored_fixes = []
 

@@ -773,7 +773,7 @@ class CommandMenuBuilder:
                     return f"模擬整形結果: {format_type}形式"
 
                 try:
-                    result = progress_manager.execute_with_progress(
+                    progress_manager.execute_with_progress(
                         task_func=mock_format_task,
                         task_description="ログを整形中...",
                         completion_description="整形完了",
@@ -983,7 +983,7 @@ class CommandMenuBuilder:
                     return f"模擬整形結果: 最新ログの{format_type}形式"
 
                 try:
-                    result = progress_manager.execute_with_progress(
+                    progress_manager.execute_with_progress(
                         task_func=mock_format_task,
                         task_description="最新ログを整形中...",
                         completion_description="整形完了",
@@ -1480,7 +1480,7 @@ class CommandMenuBuilder:
             return f"模擬カスタム整形結果: {custom_options['format_type']}形式"
 
         try:
-            result = progress_manager.execute_with_progress(
+            progress_manager.execute_with_progress(
                 task_func=mock_custom_format_task,
                 task_description="カスタム設定でログを整形中...",
                 completion_description="カスタム整形完了",

@@ -135,7 +135,7 @@ class PatternImprovementSystem:
 
         logger.info("パターンパフォーマンス分析を開始")
 
-        pattern_performance = defaultdict(
+        pattern_performance: dict[str, dict[str, Any]] = defaultdict(
             lambda: {
                 "total_feedback": 0,
                 "successful_feedback": 0,

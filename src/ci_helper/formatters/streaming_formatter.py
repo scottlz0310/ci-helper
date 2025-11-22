@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -188,7 +188,7 @@ class ChunkedLogProcessor:
         """
         self.performance_optimizer = performance_optimizer or PerformanceOptimizer()
 
-    def process_log_chunks(self, log_path: Path, processor_func: callable, **processor_options: Any) -> Iterator[str]:
+    def process_log_chunks(self, log_path: Path, processor_func: Callable, **processor_options: Any) -> Iterator[str]:
         """ログをチャンク単位で処理
 
         Args:
@@ -211,7 +211,7 @@ class ChunkedLogProcessor:
                 continue
 
     def process_log_lines(
-        self, log_path: Path, line_processor_func: callable, batch_size: int = 1000, **processor_options: Any
+        self, log_path: Path, line_processor_func: Callable, batch_size: int = 1000, **processor_options: Any
     ) -> Iterator[str]:
         """ログを行単位でバッチ処理
 
@@ -281,8 +281,7 @@ class ChunkedLogProcessor:
         # 行単位でバッチ処理して失敗情報を抽出
         for batch_failures in self.process_log_lines(log_path, extract_failures_from_lines, batch_size=500):
             if batch_failures:
-                for failure in batch_failures:
-                    yield failure
+                yield from batch_failures
 
 
 class ProgressTrackingFormatter:

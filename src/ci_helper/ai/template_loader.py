@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import tomllib
 from pathlib import Path
+from typing import Any
 
 from .exceptions import ConfigurationError
 
@@ -140,7 +141,7 @@ class TemplateLoader:
         template_path = self.template_dir / f"{template_name}.txt"
         return template_path.exists()
 
-    def get_template_info(self, template_name: str) -> dict[str, any]:
+    def get_template_info(self, template_name: str) -> dict[str, Any]:
         """テンプレートの情報を取得
 
         Args:

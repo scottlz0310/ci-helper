@@ -12,13 +12,9 @@ from unittest.mock import AsyncMock, Mock, patch
 
 # 新しい非同期モック安定化システムをインポート
 try:
-    from .async_mock_stabilizer import AsyncMockStabilizer as NewAsyncMockStabilizer
     from .async_mock_stabilizer import (
         create_stable_async_mock_with_error_handling,
-        ensure_async_mock_cleanup,
         get_async_mock_stabilizer,
-        patch_with_stable_async_mock,
-        stable_async_test_context,
     )
 
     ASYNC_STABILIZER_AVAILABLE = True
@@ -413,7 +409,7 @@ def fix_integration_mock_for_async_cleanup(integration_mock: Mock) -> Mock:
         integration_mock.providers = {}
 
     # 既存のプロバイダーモックに非同期クリーンアップを追加
-    for provider_name, provider_mock in integration_mock.providers.items():
+    for _provider_name, provider_mock in integration_mock.providers.items():
         if isinstance(provider_mock, Mock):
             setup_provider_mock_with_async_cleanup(provider_mock)
 
@@ -468,7 +464,7 @@ class FileOperationMockHelper:
         return mock_file
 
     @staticmethod
-    def create_stable_directory_mock(dir_exists: bool = True, files: list = None) -> Mock:
+    def create_stable_directory_mock(dir_exists: bool = True, files: list | None = None) -> Mock:
         """安定したディレクトリモックを作成
 
         Args:
@@ -500,7 +496,9 @@ class FileOperationMockHelper:
         return mock_dir
 
     @staticmethod
-    def setup_consistent_pathlib_mocks(mock_path_class: Mock, files: dict = None, directories: set = None) -> None:
+    def setup_consistent_pathlib_mocks(
+        mock_path_class: Mock, files: dict | None = None, directories: set | None = None
+    ) -> None:
         """一貫したpathlibモックを設定
 
         Args:
@@ -547,7 +545,7 @@ class FileOperationMockHelper:
         mock_path_class.side_effect = mock_path_init
 
     @staticmethod
-    def create_stable_open_mock(files: dict = None) -> Mock:
+    def create_stable_open_mock(files: dict | None = None) -> Mock:
         """安定したopen関数モックを作成
 
         Args:
@@ -637,7 +635,7 @@ class FileOperationMockHelper:
         }
 
 
-def setup_stable_file_operation_mocks(files: dict = None, directories: set = None) -> dict:
+def setup_stable_file_operation_mocks(files: dict | None = None, directories: set | None = None) -> dict:
     """安定したファイル操作モックを一括設定
 
     Args:
@@ -688,7 +686,7 @@ def ensure_file_operation_consistency(test_func):
 # モック呼び出し安定化機能の統合
 
 
-def stabilize_test_mocks(test_instance, mock_attributes: list = None):
+def stabilize_test_mocks(test_instance, mock_attributes: list | None = None):
     """テストインスタンスのモック呼び出しを安定化
 
     Args:
@@ -797,7 +795,7 @@ def fix_integration_test_mock_expectations(test_class):
 
 
 def create_enhanced_async_mock_with_error_handling(
-    return_value: Any = None, side_effect: Any = None, exception_on_call: Exception = None, **mock_kwargs
+    return_value: Any = None, side_effect: Any = None, exception_on_call: Exception | None = None, **mock_kwargs
 ) -> AsyncMock:
     """エラーハンドリング機能を強化したAsyncMockを作成
 
@@ -853,7 +851,7 @@ def create_enhanced_provider_mock_with_async_cleanup(provider_name: str = "test_
 
 
 def create_enhanced_integration_mock_with_async_cleanup(
-    integration_name: str = "test_integration", providers: dict = None
+    integration_name: str = "test_integration", providers: dict | None = None
 ) -> Mock:
     """非同期クリーンアップ機能を強化した統合モックを作成
 

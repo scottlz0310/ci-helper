@@ -8,7 +8,7 @@ AIレスポンスキャッシュの高レベル管理機能を提供します。
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 # ResponseCacheは遅延インポートしてテストのパッチが正しく適用されるようにする
 from .models import AnalysisResult
@@ -115,7 +115,7 @@ class CacheManager:
             # キャッシュエラーは無視
             return False
 
-    async def get_cache_stats(self) -> dict[str, any]:
+    async def get_cache_stats(self) -> dict[str, Any]:
         """キャッシュ統計を取得
 
         Returns:
@@ -137,7 +137,17 @@ class CacheManager:
                 "error": f"統計の取得に失敗しました: {e}",
             }
 
-    async def cleanup_cache(self) -> dict[str, any]:
+    async def _is_valid_cache(self, cache_data: dict[str, Any]) -> bool:
+        """キャッシュのクリーンアップを実行
+
+        Returns:
+            クリーンアップ結果
+        """
+        # この関数はまだ実装されていません。
+        # キャッシュデータの有効性をチェックするロジックをここに追加します。
+        return True
+
+    async def cleanup_cache(self) -> dict[str, Any]:
         """キャッシュのクリーンアップを実行
 
         Returns:
@@ -162,7 +172,7 @@ class CacheManager:
                 "error": f"クリーンアップに失敗しました: {e}",
             }
 
-    async def clear_cache(self) -> dict[str, any]:
+    async def clear_cache(self) -> dict[str, Any]:
         """全キャッシュを削除
 
         Returns:
@@ -186,7 +196,7 @@ class CacheManager:
                 "error": f"キャッシュの削除に失敗しました: {e}",
             }
 
-    async def invalidate_cache_by_provider(self, provider: str) -> dict[str, any]:
+    async def invalidate_cache_by_provider(self, provider: str) -> dict[str, Any]:
         """指定されたプロバイダーのキャッシュを無効化
 
         Args:

@@ -133,6 +133,7 @@ class OpenAIProvider(AIProvider):
         """
         if not self._client:
             await self.initialize()
+        assert self._client is not None
 
         model = self.get_model(options.model)
         start_time = time.time()
@@ -212,6 +213,7 @@ class OpenAIProvider(AIProvider):
         """
         if not self._client:
             await self.initialize()
+        assert self._client is not None
 
         model = self.get_model(options.model)
 

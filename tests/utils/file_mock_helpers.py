@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch
 from tests.utils.file_operation_mock_stabilizer import FileOperationMockStabilizer
 
 
-def create_mock_file_system(files: dict[str, str] = None) -> dict[str, Any]:
+def create_mock_file_system(files: dict[str, str] | None = None) -> dict[str, Any]:
     """
     モックファイルシステムを作成
 
@@ -82,7 +82,7 @@ def create_mock_file_system(files: dict[str, str] = None) -> dict[str, Any]:
 
 
 @contextmanager
-def mock_file_operations(files: dict[str, str] = None) -> Generator[dict[str, Any], None, None]:
+def mock_file_operations(files: dict[str, str] | None = None) -> Generator[dict[str, Any], None, None]:
     """
     ファイル操作をモック化するコンテキストマネージャー
 
@@ -116,7 +116,7 @@ def stable_file_environment() -> Generator[FileOperationMockStabilizer, None, No
         yield stab
 
 
-def with_mock_files(files: dict[str, str] = None):
+def with_mock_files(files: dict[str, str] | None = None):
     """
     ファイル操作をモック化するデコレータ
 

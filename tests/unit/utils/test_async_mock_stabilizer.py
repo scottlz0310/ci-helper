@@ -96,7 +96,7 @@ class TestAsyncMockErrorHandler:
         mock = handler.create_network_error_mock("Network failure")
 
         # aiohttp.ClientConnectorErrorが発生することを確認
-        with pytest.raises(Exception):  # aiohttp依存を避けるため汎用的にテスト
+        with pytest.raises(Exception):  # noqa: B017 aiohttp依存を避けるため汎用的にテスト
             await mock()
 
 
@@ -108,7 +108,7 @@ class TestAsyncMockStabilizer:
         """安定したプロバイダーモックのテスト"""
         stabilizer = AsyncMockStabilizer()
 
-        async with stabilizer.stable_async_context() as context:
+        async with stabilizer.stable_async_context():
             provider_mock = stabilizer.create_stable_provider_mock(
                 "test_provider", custom_method={"return_value": "custom_result"}
             )
@@ -135,7 +135,7 @@ class TestAsyncMockStabilizer:
         """安定した統合モックのテスト"""
         stabilizer = AsyncMockStabilizer()
 
-        async with stabilizer.stable_async_context() as context:
+        async with stabilizer.stable_async_context():
             integration_mock = stabilizer.create_stable_integration_mock("test_integration")
 
             # 統合メソッドが設定されていることを確認
@@ -233,7 +233,7 @@ class TestAsyncMockStabilizerIntegration:
         """複雑な非同期シナリオのテスト"""
         stabilizer = get_async_mock_stabilizer()
 
-        async with stabilizer.stable_async_context() as context:
+        async with stabilizer.stable_async_context():
             # 複数のモックを作成
             provider_mock = stabilizer.create_stable_provider_mock("complex_provider")
             integration_mock = stabilizer.create_stable_integration_mock(

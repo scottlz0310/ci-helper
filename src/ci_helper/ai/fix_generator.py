@@ -12,7 +12,7 @@ from typing import Any
 
 from .exceptions import AIError
 from .fix_templates import FixTemplateManager
-from .models import AnalysisResult, CodeChange, FixSuggestion, PatternMatch, Priority, Severity
+from .models import AnalysisResult, CodeChange, FixSuggestion, Pattern, PatternMatch, Priority, Severity
 from .prompts import PromptManager
 from .risk_calculator import RiskCalculator, TimeEstimator
 

@@ -14,13 +14,11 @@ repos:
       - id: ruff-format
         types_or: [python, pyi]
 
-  # MyPy - Static type checking (pyproject.toml設定を使用)
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
+  # basedpyright - Static type checking (pyproject.toml設定を使用)
+  - repo: https://github.com/DetachHead/basedpyright
+    rev: v1.20.0
     hooks:
-      - id: mypy
-        additional_dependencies: [types-toml, types-requests, types-aiofiles]
-        # pyproject.tomlの設定を使用（引数なし）
+      - id: basedpyright
         files: ^src/
 
   # Bandit - Security linting

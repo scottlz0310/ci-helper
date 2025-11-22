@@ -172,7 +172,7 @@ class TestConfigValidation:
 
         # プロバイダー設定の確認
         providers = config["providers"]
-        for provider_name, provider_config in providers.items():
+        for _provider_name, provider_config in providers.items():
             assert "name" in provider_config
             assert "default_model" in provider_config
             assert "available_models" in provider_config

@@ -354,7 +354,7 @@ class AsyncMockValidator:
     """非同期モックの状態を検証するクラス"""
 
     @staticmethod
-    def validate_async_mock_calls(mock_obj: AsyncMock, expected_calls: int = None):
+    def validate_async_mock_calls(mock_obj: AsyncMock, expected_calls: int | None = None):
         """AsyncMockの呼び出し状態を検証"""
         if expected_calls is not None:
             actual_calls = mock_obj.call_count
@@ -377,14 +377,6 @@ class AsyncMockValidator:
         for method in required_methods:
             if not hasattr(mock_obj, method):
                 logger.warning(f"AsyncMock missing {method} for context manager usage")
-
-
-# 便利な関数エイリアス
-create_stable_provider_mock = lambda **kwargs: get_async_mock_stabilizer().create_stable_provider_mock(**kwargs)
-create_stable_integration_mock = lambda **kwargs: get_async_mock_stabilizer().create_stable_integration_mock(**kwargs)
-create_async_stream_mock = lambda chunks, **kwargs: get_async_mock_stabilizer().create_async_stream_mock(
-    chunks, **kwargs
-)
 
 
 # 便利な関数エイリアス

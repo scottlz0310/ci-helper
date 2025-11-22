@@ -8,6 +8,7 @@ AI分析に最適化されたMarkdown形式でCI実行結果をフォーマッ�
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -82,7 +83,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
         include_suggestions = validated_options.get("include_suggestions", True)
         include_related_files = validated_options.get("include_related_files", True)
         detail_level = validated_options.get("detail_level", "normal")
-        filter_errors = validated_options.get("filter_errors", False)
+        validated_options.get("filter_errors", False)
 
         # 詳細レベルに基づく調整
         if detail_level == "minimal":

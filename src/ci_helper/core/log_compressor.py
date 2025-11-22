@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -397,7 +398,7 @@ class LogCompressor:
 
         return min(score, 1.0)
 
-    def get_compression_statistics(self, original_content: str, compressed_content: str) -> dict[str, any]:
+    def get_compression_statistics(self, original_content: str, compressed_content: str) -> dict[str, Any]:
         """圧縮統計情報を取得
 
         Args:
@@ -434,7 +435,7 @@ class LogCompressor:
         }
 
 
-def compress_log_for_ai_analysis(log_content: str, max_tokens: int = 8000) -> tuple[str, dict[str, any]]:
+def compress_log_for_ai_analysis(log_content: str, max_tokens: int = 8000) -> tuple[str, dict[str, Any]]:
     """AI分析用のログ圧縮
 
     Args:

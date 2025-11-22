@@ -417,7 +417,7 @@ uv run ruff check
 uv run ruff format
 
 # 型チェック
-uv run mypy src/ci_helper
+uv run basedpyright src/ci_helper
 
 # 全チェックを実行
 uv run pre-commit run --all-files

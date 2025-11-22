@@ -195,7 +195,7 @@ class TestErrorScenarioUsageExamples:
 
         # シナリオデータを使用してエラーハンドリングをテスト
         error_type = scenario["error_type"]
-        error_message = scenario["error_message"]
+        scenario["error_message"]
         context = scenario["context"]
 
         # エラーハンドリングロジックのテスト（例）

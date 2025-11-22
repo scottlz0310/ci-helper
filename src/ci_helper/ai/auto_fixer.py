@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import shutil
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -50,7 +51,7 @@ class AutoFixer:
         self.fix_history: list[dict[str, Any]] = []
 
     async def apply_fix(
-        self, fix_suggestion: FixSuggestion, auto_approve: bool = False, approval_callback: callable | None = None
+        self, fix_suggestion: FixSuggestion, auto_approve: bool = False, approval_callback: Callable | None = None
     ) -> FixResult:
         """修正提案を適用
 

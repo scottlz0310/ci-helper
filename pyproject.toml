@@ -65,7 +65,7 @@ dev = [
     "pytest-xdist>=3.8.0",
     "pytest-mock>=3.15.0",
     "ruff>=0.14.0",
-    "mypy>=1.18.0",
+    "basedpyright>=1.20.0",
     "pre-commit>=4.3.0",
     "bandit[toml]>=1.8.0",
     "pytest-asyncio>=1.2.0",
@@ -79,7 +79,7 @@ test = [
     "pytest-xdist>=3.6.0",
     "pytest-mock>=3.14.0",
 ]
-lint = ["ruff>=0.14.0", "mypy>=1.18.0", "bandit[toml]>=1.8.0"]
+lint = ["ruff>=0.14.0", "basedpyright>=1.20.0", "bandit[toml]>=1.8.0"]
 
 [[tool.uv.index]]
 url = "https://pkgs.safetycli.com/repository/public/pypi/simple/"
@@ -132,74 +132,61 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 
-[tool.mypy]
-python_version = "3.13"
+[tool.basedpyright]
+pythonVersion = "3.13"
 # 緩和された設定でCI/pre-commitの整合性を保つ
 # CI設定(.github/workflows/ci.yml)とpre-commit設定(.pre-commit-config.yaml)は
 # このpyproject.tomlの設定を参照するため、設定変更はここで一元管理する
-strict = false
-warn_return_any = false
-warn_unused_configs = false
-disallow_any_generics = false
-disallow_subclassing_any = false
-disallow_untyped_calls = false
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-check_untyped_defs = false
-disallow_untyped_decorators = false
-warn_redundant_casts = false
-warn_unused_ignores = false
-warn_no_return = false
-warn_unreachable = false
-strict_equality = false
-explicit_package_bases = true
-mypy_path = "src"
-ignore_missing_imports = true
-# 大量のエラーコードを無効化（CI/pre-commit統一）
-disable_error_code = [
-    "import-untyped",
-    "no-any-return",
-    "attr-defined",
-    "operator",
-    "arg-type",
-    "assignment",
-    "override",
-    "call-arg",
-    "return-value",
-    "var-annotated",
-    "index",
-    "dict-item",
-    "valid-type",
-    "no-untyped-def",
-    "unreachable",
-    "union-attr",
+typeCheckingMode = "basic"
+reportMissingImports = false
+reportMissingTypeStubs = false
+reportUnknownParameterType = false
+reportUnknownArgumentType = false
+reportUnknownLambdaType = false
+reportUnknownVariableType = false
+reportUnknownMemberType = false
+reportMissingTypeArgument = false
+reportUnnecessaryIsInstance = false
+reportUnnecessaryCast = false
+reportUnusedVariable = false
+reportUnusedImport = false
+reportUntypedFunctionDecorator = false
+reportUntypedClassDecorator = false
+reportUntypedBaseClass = false
+reportUntypedNamedTuple = false
+reportPrivateUsage = false
+reportConstantRedefinition = false
+reportIncompatibleMethodOverride = false
+reportIncompatibleVariableOverride = false
+reportInconsistentConstructor = false
+reportOverlappingOverload = false
+reportUninitializedInstanceVariable = false
+reportCallInDefaultInitializer = false
+reportUnreachable = false
+reportGeneralTypeIssues = true
+reportOptionalSubscript = true
+reportOptionalMemberAccess = true
+reportOptionalCall = true
+reportOptionalIterable = false
+reportOptionalContextManager = false
+reportOptionalOperand = false
+reportArgumentType = false
+reportAttributeAccessIssue = false
+reportReturnType = false
+reportAssignmentType = false
+reportUndefinedVariable = true
+reportOperatorIssue = false
+reportTypedDictNotRequiredAccess = false
+reportCallIssue = false
+reportUnusedCoroutine = false
+include = ["src"]
+exclude = [
+    ".venv",
+    "**/__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
 ]
-
-[[tool.mypy.overrides]]
-module = "tests.*"
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-disallow_untyped_decorators = false
-
-[[tool.mypy.overrides]]
-module = "ci_helper.commands.*"
-disallow_untyped_decorators = false
-
-[[tool.mypy.overrides]]
-module = "ci_helper.cli"
-disallow_untyped_decorators = false
-
-[[tool.mypy.overrides]]
-module = [
-    "ci_helper.core.security",
-    "ci_helper.core.log_analyzer",
-    "tests.unit.test_error_handler",
-]
-warn_unreachable = false
-
-[[tool.mypy.overrides]]
-module = "click.*"
-ignore_missing_imports = true
 
 [tool.coverage.run]
 source = ["src"]

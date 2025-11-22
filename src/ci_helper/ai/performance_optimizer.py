@@ -109,7 +109,7 @@ class LogChunker:
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             tasks = []
-            for chunk_content, start_line, end_line in chunks:
+            for chunk_content, _start_line, _end_line in chunks:
                 task = loop.run_in_executor(executor, processor_func, chunk_content)
                 tasks.append(task)
 
@@ -268,7 +268,7 @@ class OptimizedPatternMatcher:
         # コンテキストを抽出（前後50文字）
         start_pos = max(0, regex_match.start() - 50)
         end_pos = min(len(text), regex_match.end() + 50)
-        context = text[start_pos:end_pos]
+        text[start_pos:end_pos]
 
         return Match(
             pattern_id=pattern.id,

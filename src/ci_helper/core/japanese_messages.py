@@ -291,7 +291,7 @@ class JapaneseMessageProvider:
 
         return suggestions.get(error_key)
 
-    def get_recovery_steps(self, error_key: str) -> List[str]:
+    def get_recovery_steps(self, error_key: str) -> list[str]:
         """エラーからの復旧手順を取得
 
         Args:
@@ -389,7 +389,7 @@ def get_error_suggestion(error_key: str) -> str | None:
     return _japanese_messages.get_suggestion_for_error(error_key)
 
 
-def get_recovery_steps(error_key: str) -> List[str]:
+def get_recovery_steps(error_key: str) -> list[str]:
     """復旧手順を取得
 
     Args:

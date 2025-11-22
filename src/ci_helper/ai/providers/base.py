@@ -8,8 +8,8 @@ AIプロバイダーの基底クラス
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
-from typing import ClassVar
+from collections.abc import AsyncIterator, Awaitable
+from typing import Any, ClassVar, cast
 
 from ..exceptions import NetworkError, ProviderError, RateLimitError, TokenLimitError
 from ..models import AnalysisResult, AnalyzeOptions, ProviderConfig, TokenUsage
@@ -26,7 +26,7 @@ class AIProvider(ABC):
         """
         self.config = config
         self.name = config.name
-        self._client = None
+        self._client: Any = None
 
     @abstractmethod
     async def initialize(self) -> None:
@@ -73,6 +73,7 @@ class AIProvider(ABC):
             TokenLimitError: トークン制限を超過した場合
             RateLimitError: レート制限に達した場合
         """
+        yield ""
 
     @abstractmethod
     def estimate_cost(self, input_tokens: int, output_tokens: int, model: str | None = None) -> float:
@@ -154,7 +155,7 @@ class AIProvider(ABC):
         """
         return model in self.config.available_models
 
-    async def health_check(self) -> dict[str, any]:
+    async def health_check(self) -> dict[str, Any]:
         """ヘルスチェックを実行
 
         Returns:
@@ -245,9 +246,14 @@ class AIProvider(ABC):
         """
         if hasattr(self, "_client") and self._client:
             if hasattr(self._client, "close"):
-                await self._client.close()
+                if callable(self._client.close):
+                    if hasattr(self._client.close, "__await__"):
+                        await cast(Awaitable[Any], self._client.close())
+                    else:
+                        self._client.close()
             elif hasattr(self._client, "aclose"):
-                await self._client.aclose()
+                if callable(self._client.aclose):
+                    await cast(Awaitable[Any], self._client.aclose())
 
     def __str__(self) -> str:
         """文字列表現"""

@@ -7,6 +7,7 @@ AIモデル選択とAPIキー検証を含む対話的な初期設定機能を提
 from __future__ import annotations
 
 import os
+from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
@@ -32,7 +33,7 @@ class InteractiveSetup:
         self.selected_models: dict[str, str] = {}
         self.validation_results: dict[str, ValidationResult] = {}
 
-    async def run_interactive_setup(self) -> dict[str, any]:
+    async def run_interactive_setup(self) -> dict[str, Any]:
         """対話的初期設定を実行
 
         Returns:
@@ -231,7 +232,7 @@ class InteractiveSetup:
         selected_model = model_display[selected_choice]
         self.selected_models[provider_name] = selected_model
 
-    def _configure_additional_settings(self) -> dict[str, any]:
+    def _configure_additional_settings(self) -> dict[str, Any]:
         """追加設定を行う"""
         self.console.print("\n[bold blue]⚙️ 追加設定[/bold blue]\n")
 
@@ -264,7 +265,7 @@ class InteractiveSetup:
 
         return config
 
-    def _build_configuration(self, additional_config: dict[str, any]) -> dict[str, any]:
+    def _build_configuration(self, additional_config: dict[str, Any]) -> dict[str, Any]:
         """設定を構築"""
         if not self.selected_providers:
             return {}
@@ -310,7 +311,7 @@ class InteractiveSetup:
 
         return config
 
-    def _show_configuration_summary(self, config: dict[str, any]) -> None:
+    def _show_configuration_summary(self, config: dict[str, Any]) -> None:
         """設定の概要を表示"""
         if not config:
             return
@@ -345,7 +346,7 @@ class InteractiveSetup:
                 available_count = len(provider_config.get("available_models", []))
                 self.console.print(f"  [dim]利用可能: {available_count}個のモデル[/dim]")
 
-    def generate_toml_content(self, config: dict[str, any]) -> str:
+    def generate_toml_content(self, config: dict[str, Any]) -> str:
         """TOML形式の設定内容を生成"""
         if not config:
             return ""

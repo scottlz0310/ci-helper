@@ -50,7 +50,7 @@ class TestLogFileSelection:
     @patch("rich.prompt.Prompt.ask")
     def test_select_log_file_specific_existing_file(self, mock_prompt):
         """特定ログ選択（存在するファイル）のテスト"""
-        temp_dir, log_files = self.create_test_logs()
+        _temp_dir, log_files = self.create_test_logs()
         existing_file = str(log_files[0])
 
         mock_prompt.side_effect = ["specific", existing_file]
@@ -64,7 +64,7 @@ class TestLogFileSelection:
     @patch("rich.prompt.Prompt.ask")
     def test_select_log_file_specific_non_existing_file(self, mock_prompt, mock_confirm):
         """特定ログ選択（存在しないファイル）のテスト"""
-        temp_dir, log_files = self.create_test_logs()
+        temp_dir, _log_files = self.create_test_logs()
         non_existing_file = str(temp_dir / "non_existing.log")
 
         mock_prompt.side_effect = ["specific", non_existing_file]
@@ -97,7 +97,7 @@ class TestLogFileSelection:
 
     def test_input_custom_log_path_existing_file(self):
         """カスタムファイルパス入力（存在するファイル）のテスト"""
-        temp_dir, log_files = self.create_test_logs()
+        _temp_dir, log_files = self.create_test_logs()
         existing_file = str(log_files[0])
 
         with patch("rich.prompt.Prompt.ask", return_value=existing_file):
@@ -147,7 +147,7 @@ class TestLogFileSelection:
         ]
 
         mock_log_manager_instance.list_logs.return_value = test_logs
-        mock_log_manager_instance.log_dir = Path("/tmp/logs")
+        mock_log_manager_instance.log_dir = Path("/mock/logs")
 
         # ファイル存在チェックのモック
         with patch("pathlib.Path.exists", return_value=True):
@@ -155,7 +155,7 @@ class TestLogFileSelection:
 
             result = self.builder._select_from_log_list()
 
-        expected_path = "/tmp/logs/act_20240103_140000.log"
+        expected_path = "/mock/logs/act_20240103_140000.log"
         assert result == expected_path
         mock_log_manager_instance.list_logs.assert_called_once_with(limit=20)
 
@@ -191,7 +191,7 @@ class TestLogFileSelection:
         ]
 
         mock_log_manager_instance.list_logs.return_value = test_logs
-        mock_log_manager_instance.log_dir = Path("/tmp/logs")
+        mock_log_manager_instance.log_dir = Path("/mock/logs")
 
         # ファイルが存在しない場合
         with patch("pathlib.Path.exists", return_value=False):
@@ -211,7 +211,7 @@ class TestLogFileSelection:
                 test_logs = [{"log_file": "act_20240103_140000.log", "timestamp": "2024-01-03T14:00:00"}]
 
                 mock_log_manager_instance.list_logs.return_value = test_logs
-                mock_log_manager_instance.log_dir = Path("/tmp/logs")
+                mock_log_manager_instance.log_dir = Path("/mock/logs")
 
                 # エラーが発生しないことを確認
                 self.builder._show_available_logs_hint()

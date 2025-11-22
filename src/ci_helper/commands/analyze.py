@@ -394,9 +394,11 @@ async def _run_analysis(
     finally:
         # リソースをクリーンアップ
         try:
-            for provider in ai_integration.providers.values():
-                if hasattr(provider, "cleanup"):
-                    await provider.cleanup()
+            # プロバイダーのリソースを解放
+            if ai_integration.providers:
+                for provider in ai_integration.providers.values():
+                    if provider and hasattr(provider, "cleanup"):
+                        await provider.cleanup()
         except Exception:
             pass
 
@@ -1655,7 +1657,7 @@ async def _save_partial_analysis_state(
         operation_id = f"failed_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
         # フォールバックハンドラーを使用して部分的な結果を保存
-        if hasattr(ai_integration, "fallback_handler"):
+        if ai_integration.fallback_handler:
             await ai_integration.fallback_handler._save_partial_result(
                 operation_id,
                 {
@@ -1882,6 +1884,10 @@ async def _recover_from_generic_error(
 
     # 従来のログ表示にフォールバック
     try:
+        if not ai_integration.fallback_handler:
+            console.print("[red]✗ フォールバックハンドラーが利用できません[/red]")
+            return None
+
         console.print("[blue]🔄 従来のログ分析にフォールバック...[/blue]")
         fallback_result = await ai_integration.fallback_handler.handle_analysis_failure(error, log_content, options)
         console.print("[green]✓ 従来のログ分析が成功しました[/green]")

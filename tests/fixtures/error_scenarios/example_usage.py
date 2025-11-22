@@ -16,7 +16,7 @@ class TestErrorHandlingWithFixtures:
         """ネットワークタイムアウトのハンドリングテスト（フィクスチャ使用）"""
         # フィクスチャからシナリオデータを取得
         error_type = network_timeout_scenario["error_type"]
-        error_message = network_timeout_scenario["error_message"]
+        network_timeout_scenario["error_message"]
         context = network_timeout_scenario["context"]
         expected_behavior = network_timeout_scenario["expected_behavior"]
 
@@ -110,8 +110,8 @@ class TestErrorScenarioIntegration:
     def test_ai_integration_error_handling(self):
         """AI統合でのエラーハンドリング統合テスト"""
         # 複数のAI関連エラーシナリオを使用
-        token_limit_scenario = load_error_scenario("ai_processing_errors", "token_limit_exceeded")
-        cost_limit_scenario = load_error_scenario("ai_processing_errors", "cost_limit_exceeded")
+        load_error_scenario("ai_processing_errors", "token_limit_exceeded")
+        load_error_scenario("ai_processing_errors", "cost_limit_exceeded")
 
         # AI統合システムのエラーハンドリングをテスト（例）
         # with patch("src.ci_helper.ai.integration.AIIntegration") as mock_ai:
@@ -126,8 +126,8 @@ class TestErrorScenarioIntegration:
 
     def test_ci_execution_error_recovery(self):
         """CI実行エラーの復旧テスト"""
-        docker_error_scenario = load_error_scenario("ci_execution_errors", "docker_not_running")
-        act_error_scenario = load_error_scenario("ci_execution_errors", "act_not_installed")
+        load_error_scenario("ci_execution_errors", "docker_not_running")
+        load_error_scenario("ci_execution_errors", "act_not_installed")
 
         # CI実行システムのエラー復旧をテスト（例）
         # ci_runner = CIRunner()
@@ -144,7 +144,7 @@ class TestErrorScenarioIntegration:
 
     def test_security_error_prevention(self):
         """セキュリティエラーの予防テスト"""
-        secret_detection_scenario = load_error_scenario("security_errors", "secret_detection_in_logs")
+        load_error_scenario("security_errors", "secret_detection_in_logs")
 
         # セキュリティチェックシステムのテスト（例）
         # security_scanner = SecurityScanner()

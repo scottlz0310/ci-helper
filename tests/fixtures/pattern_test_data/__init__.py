@@ -13,7 +13,7 @@ CI-Helperのパターン認識エンジンをテストするための包括的�
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 # テストデータディレクトリのパス
 TEST_DATA_DIR = Path(__file__).parent
@@ -123,9 +123,9 @@ def get_test_data_statistics() -> dict[str, Any]:
         "total_test_cases": test_cases_data["metadata"]["total_test_cases"],
         "total_edge_cases": edge_cases_data["metadata"]["total_patterns"],
         "total_performance_datasets": perf_data["metadata"]["total_datasets"],
-        "pattern_categories": list(set(pattern["category"] for pattern in patterns_data["patterns"])),
-        "test_case_difficulties": list(set(case["difficulty"] for case in test_cases_data["test_cases"])),
-        "test_case_types": list(set(case["test_type"] for case in test_cases_data["test_cases"])),
+        "pattern_categories": list({pattern["category"] for pattern in patterns_data["patterns"]}),
+        "test_case_difficulties": list({case["difficulty"] for case in test_cases_data["test_cases"]}),
+        "test_case_types": list({case["test_type"] for case in test_cases_data["test_cases"]}),
     }
 
 

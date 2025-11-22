@@ -377,7 +377,7 @@ class TestCompressLogForAiAnalysis:
         """大きなトークン数でのAI分析用圧縮テスト"""
         log_content = "INFO: Simple message"
 
-        compressed, stats = compress_log_for_ai_analysis(log_content, max_tokens=10000)
+        compressed, _stats = compress_log_for_ai_analysis(log_content, max_tokens=10000)
 
         # 小さなログは圧縮されない
         assert len(compressed) <= len(log_content)

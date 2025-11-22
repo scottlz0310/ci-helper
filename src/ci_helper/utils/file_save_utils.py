@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
@@ -327,6 +328,9 @@ class FileSaveManager:
 
     def _validate_enhanced_path_security(self, output_path: Path) -> dict[str, Any]:
         """SecurityValidator統合による拡張セキュリティ検証"""
+        if not self.security_validator:
+            return {"valid": True, "error": None, "recommendations": []}
+
         try:
             # パス文字列をセキュリティ検証
             path_str = str(output_path)

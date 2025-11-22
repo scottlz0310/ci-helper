@@ -190,9 +190,9 @@ def run_linting_and_formatting() -> bool:
     if ruff_format.returncode != 0:
         return False
 
-    # MyPy型チェック
-    mypy_check = run_command(["uv", "run", "mypy", "src/ci_helper"])
-    if mypy_check.returncode != 0:
+    # basedpyright型チェック
+    basedpyright_check = run_command(["uv", "run", "basedpyright", "src/ci_helper"])
+    if basedpyright_check.returncode != 0:
         return False
 
     return True

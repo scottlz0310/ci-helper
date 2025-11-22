@@ -803,6 +803,7 @@ class LearningEngine:
             await self.initialize()
 
         await self._ensure_feedback_collector_initialized()
+        assert self.feedback_collector is not None
         logger.info("フィードバック収集と学習処理を開始")
 
         collected_feedback: list[UserFeedback] = []
@@ -899,6 +900,7 @@ class LearningEngine:
             await self.initialize()
 
         await self._ensure_feedback_collector_initialized()
+        assert self.feedback_collector is not None
 
         # フィードバック収集システムに結果を記録
         await self.feedback_collector.record_fix_application_result(
@@ -999,6 +1001,8 @@ class LearningEngine:
 
         await self._ensure_pattern_improvement_initialized()
         await self._ensure_feedback_collector_initialized()
+        assert self.pattern_improvement is not None
+        assert self.feedback_collector is not None
         logger.info("パターン改善提案を開始")
 
         try:
@@ -1029,6 +1033,7 @@ class LearningEngine:
             await self.initialize()
 
         await self._ensure_pattern_improvement_initialized()
+        assert self.pattern_improvement is not None
 
         try:
             success = await self.pattern_improvement.apply_pattern_improvement(improvement)
@@ -1061,6 +1066,8 @@ class LearningEngine:
 
         await self._ensure_pattern_improvement_initialized()
         await self._ensure_feedback_collector_initialized()
+        assert self.pattern_improvement is not None
+        assert self.feedback_collector is not None
 
         try:
             # フィードバック履歴を取得
@@ -1091,6 +1098,8 @@ class LearningEngine:
 
         await self._ensure_pattern_improvement_initialized()
         await self._ensure_feedback_collector_initialized()
+        assert self.pattern_improvement is not None
+        assert self.feedback_collector is not None
 
         try:
             # フィードバック履歴を取得

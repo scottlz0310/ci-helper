@@ -92,7 +92,7 @@ class HumanReadableFormatter(BaseLogFormatter):
         max_failures = validated_options.get("max_failures", 20)
         color_output = validated_options.get("color_output", True)
         detail_level = validated_options.get("detail_level", "normal")
-        filter_errors = validated_options.get("filter_errors", False)
+        validated_options.get("filter_errors", False)
 
         # 詳細レベルに基づく調整
         if detail_level == "minimal":
@@ -422,7 +422,7 @@ class HumanReadableFormatter(BaseLogFormatter):
         actions = []
 
         # 失敗パターンに基づく推奨アクション
-        failure_types = set(f.type for f in execution_result.all_failures)
+        failure_types = {f.type for f in execution_result.all_failures}
 
         if FailureType.ASSERTION in failure_types:
             actions.append("🔍 アサーション失敗を確認し、期待値と実際の値を比較してください")

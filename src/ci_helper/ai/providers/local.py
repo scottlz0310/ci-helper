@@ -149,6 +149,7 @@ class LocalLLMProvider(AIProvider):
         """
         if not self._session:
             await self.initialize()
+        assert self._session is not None
 
         model = self.get_model(options.model)
         start_time = time.time()
@@ -221,6 +222,7 @@ class LocalLLMProvider(AIProvider):
         """
         if not self._session:
             await self.initialize()
+        assert self._session is not None
 
         model = self.get_model(options.model)
 
@@ -314,6 +316,7 @@ class LocalLLMProvider(AIProvider):
         """
         if not self._session:
             await self.initialize()
+        assert self._session is not None
 
         try:
             async with self._session.get(f"{self.base_url}/api/tags") as response:

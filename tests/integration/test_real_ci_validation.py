@@ -251,7 +251,7 @@ Error: Process completed with exit code 1.
         docker_matches = await pattern_engine.analyze_log(docker_log)
 
         if docker_matches:
-            docker_match = docker_matches[0]
+            docker_matches[0]
 
             # 修正提案を生成（モック）
             with patch("ci_helper.ai.fix_generator.FixSuggestionGenerator") as mock_generator:
@@ -275,7 +275,7 @@ Error: Process completed with exit code 1.
         python_matches = await pattern_engine.analyze_log(python_log)
 
         if python_matches:
-            python_match = python_matches[0]
+            python_matches[0]
 
             # 修正提案の内容を検証
             with patch("ci_helper.ai.fix_generator.FixSuggestionGenerator") as mock_generator:
@@ -433,11 +433,6 @@ Build process terminated unexpectedly
 
         # 大量のログデータを生成（実際のCIログを模擬）
         large_log_content = []
-        base_log = """
-[2024-01-15T10:30:00.000Z] INFO: Starting build process
-[2024-01-15T10:30:01.000Z] INFO: Installing dependencies
-[2024-01-15T10:30:02.000Z] INFO: Running tests
-        """
 
         # 10,000行のログを生成
         for i in range(10000):
@@ -484,7 +479,7 @@ Build process terminated unexpectedly
 
         # 並行タスクを作成
         tasks = []
-        for log_name, log_content in real_github_actions_logs.items():
+        for _log_name, log_content in real_github_actions_logs.items():
             for _ in range(3):  # 各ログを3回並行実行
                 tasks.append(analyze_single_log(log_content))
 

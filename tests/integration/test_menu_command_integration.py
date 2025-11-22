@@ -69,7 +69,7 @@ class TestMenuCommandIntegration:
         ai_formatter1 = manager1.get_formatter("ai")
         ai_formatter2 = manager2.get_formatter("ai")
 
-        assert type(ai_formatter1) == type(ai_formatter2)
+        assert type(ai_formatter1) is type(ai_formatter2)
 
     def test_menu_handler_uses_same_formatter_as_command(self, test_execution_result: ExecutionResult):
         """メニューハンドラーとコマンドが同じフォーマッターを使用することを確認"""

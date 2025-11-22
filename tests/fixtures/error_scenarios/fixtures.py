@@ -310,7 +310,7 @@ def ai_processing_error_scenario(request) -> dict[str, Any]:
 def simulate_network_error(network_timeout_scenario):
     """ネットワークエラーシミュレーション"""
 
-    def _simulate(error_type: str = None):
+    def _simulate(error_type: str | None = None):
         scenario = network_timeout_scenario
         if error_type:
             scenario = load_error_scenario("network_errors", error_type)
@@ -326,7 +326,7 @@ def simulate_network_error(network_timeout_scenario):
 def simulate_configuration_error(missing_api_key_scenario):
     """設定エラーシミュレーション"""
 
-    def _simulate(error_type: str = None):
+    def _simulate(error_type: str | None = None):
         scenario = missing_api_key_scenario
         if error_type:
             scenario = load_error_scenario("configuration_errors", error_type)

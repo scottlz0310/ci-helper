@@ -57,7 +57,7 @@ class TestFileSystemState:
     def test_temp_directory_tracking(self):
         """一時ディレクトリの追跡テスト"""
         state = FileSystemState()
-        temp_dir = Path("/tmp/test")
+        temp_dir = Path("/mock/tmp/test")
 
         state.register_temp_directory(temp_dir)
 
@@ -72,7 +72,7 @@ class TestFileSystemState:
         state.register_file_creation(Path("/test/file.txt"))
         state.register_directory_creation(Path("/test/dir"))
         state.register_file_modification(Path("/test/modified.txt"))
-        state.register_temp_directory(Path("/tmp/test"))
+        state.register_temp_directory(Path("/mock/tmp/test"))
 
         # クリーンアップ実行
         state.cleanup_all()
