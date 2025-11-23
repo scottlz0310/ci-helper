@@ -1,5 +1,4 @@
-"""
-対話的AIデバッグコマンド
+"""対話的AIデバッグコマンド
 
 対話セッション中で使用できる特殊コマンド（/help、/exit等）の実装と
 リアルタイムトークン使用量表示、エラーハンドリングを提供します。
@@ -25,7 +24,10 @@ class InteractiveCommand:
         self.description = description
 
     async def execute(
-        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] | None = None
+        self,
+        session: InteractiveSession,
+        session_manager: InteractiveSessionManager,
+        args: list[str] | None = None,
     ) -> dict[str, Any]:
         """コマンドを実行
 
@@ -36,6 +38,7 @@ class InteractiveCommand:
 
         Returns:
             実行結果
+
         """
         raise NotImplementedError
 
@@ -47,7 +50,10 @@ class HelpCommand(InteractiveCommand):
         super().__init__("help", "利用可能なコマンドを表示")
 
     async def execute(
-        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] | None = None
+        self,
+        session: InteractiveSession,
+        session_manager: InteractiveSessionManager,
+        args: list[str] | None = None,
     ) -> dict[str, Any]:
         """ヘルプを表示"""
         help_text = f"""
@@ -96,7 +102,10 @@ class ExitCommand(InteractiveCommand):
         super().__init__("exit", "セッションを終了")
 
     async def execute(
-        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] | None = None
+        self,
+        session: InteractiveSession,
+        session_manager: InteractiveSessionManager,
+        args: list[str] | None = None,
     ) -> dict[str, Any]:
         """セッションを終了"""
         session_manager.close_session(session.session_id)
@@ -116,12 +125,15 @@ class SummaryCommand(InteractiveCommand):
         super().__init__("summary", "現在の問題の要約を表示")
 
     async def execute(
-        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] | None = None
+        self,
+        session: InteractiveSession,
+        session_manager: InteractiveSessionManager,
+        args: list[str] | None = None,
     ) -> dict[str, Any]:
         """問題の要約を表示"""
         context = session_manager.get_session_context(session.session_id)
 
-        summary_parts = []
+        summary_parts: list[str] = []
 
         # 初期コンテキスト
         if context.get("initial_context"):
@@ -140,7 +152,7 @@ class SummaryCommand(InteractiveCommand):
         # セッション統計
         stats = session_manager.get_session_stats(session.session_id)
         summary_parts.append(
-            f"**セッション統計**: {stats['message_count']}メッセージ, {stats['total_tokens']}トークン, ${stats['total_cost']:.4f}"
+            f"**セッション統計**: {stats['message_count']}メッセージ, {stats['total_tokens']}トークン, ${stats['total_cost']:.4f}",
         )
 
         summary = "\n\n".join(summary_parts) if summary_parts else "要約できる情報がありません。"
@@ -155,7 +167,10 @@ class LogsCommand(InteractiveCommand):
         super().__init__("logs", "初期ログの再表示")
 
     async def execute(
-        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] | None = None
+        self,
+        session: InteractiveSession,
+        session_manager: InteractiveSessionManager,
+        args: list[str] | None = None,
     ) -> dict[str, Any]:
         """初期ログを再表示"""
         context = session_manager.get_session_context(session.session_id)
@@ -181,7 +196,10 @@ class StatsCommand(InteractiveCommand):
         super().__init__("stats", "セッション統計を表示")
 
     async def execute(
-        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] | None = None
+        self,
+        session: InteractiveSession,
+        session_manager: InteractiveSessionManager,
+        args: list[str] | None = None,
     ) -> dict[str, Any]:
         """セッション統計を表示"""
         stats = session_manager.get_session_stats(session.session_id)
@@ -216,7 +234,10 @@ class ContextCommand(InteractiveCommand):
         super().__init__("context", "現在のコンテキストを表示")
 
     async def execute(
-        self, session: InteractiveSession, session_manager: InteractiveSessionManager, args: list[str] | None = None
+        self,
+        session: InteractiveSession,
+        session_manager: InteractiveSessionManager,
+        args: list[str] | None = None,
     ) -> dict[str, Any]:
         """現在のコンテキストを表示"""
         context = session_manager.get_session_context(session.session_id)
@@ -247,6 +268,7 @@ class InteractiveCommandProcessor:
 
         Args:
             session_manager: セッション管理インスタンス
+
         """
         self.session_manager = session_manager
         self.commands = {
@@ -266,6 +288,7 @@ class InteractiveCommandProcessor:
 
         Returns:
             コマンドの場合True
+
         """
         return user_input.strip().startswith("/")
 
@@ -277,6 +300,7 @@ class InteractiveCommandProcessor:
 
         Returns:
             (コマンド名, 引数リスト)
+
         """
         parts = user_input.strip()[1:].split()  # 先頭の / を除去
         command_name = parts[0].lower() if parts else ""
@@ -293,6 +317,7 @@ class InteractiveCommandProcessor:
 
         Returns:
             処理結果
+
         """
         session = self.session_manager.get_session(session_id)
         if not session:
@@ -317,7 +342,11 @@ class InteractiveCommandProcessor:
 
             if result.get("should_display"):
                 self.session_manager.add_message_to_session(
-                    session_id, role="system", content=result["output"], tokens=0, cost=0.0
+                    session_id,
+                    role="system",
+                    content=result["output"],
+                    tokens=0,
+                    cost=0.0,
                 )
 
             logger.info("コマンド実行: %s (セッション: %s)", command_name, session_id[:8])
@@ -332,6 +361,7 @@ class InteractiveCommandProcessor:
 
         Returns:
             コマンド名と説明の辞書
+
         """
         return {name: cmd.description for name, cmd in self.commands.items()}
 
@@ -340,6 +370,7 @@ class InteractiveCommandProcessor:
 
         Args:
             command: 追加するコマンド
+
         """
         self.commands[command.name] = command
         logger.info("カスタムコマンドを追加: %s", command.name)
@@ -363,6 +394,7 @@ class TokenUsageDisplay:
 
         Returns:
             更新すべき場合True
+
         """
         token_diff = current_tokens - self.last_displayed_tokens
         return token_diff >= self.display_threshold
@@ -376,6 +408,7 @@ class TokenUsageDisplay:
 
         Returns:
             フォーマットされた使用量表示
+
         """
         # リアルタイム統計を計算
         avg_tokens_per_message = session.total_tokens_used / session.message_count if session.message_count > 0 else 0
@@ -400,6 +433,7 @@ class TokenUsageDisplay:
 
         Returns:
             更新された表示（更新不要の場合はNone）
+
         """
         if self.should_update_display(session.total_tokens_used):
             self.last_displayed_tokens = session.total_tokens_used
@@ -428,6 +462,7 @@ class InteractiveErrorHandler:
 
         Returns:
             エラー処理結果
+
         """
         self.error_count += 1
 
@@ -441,33 +476,33 @@ class InteractiveErrorHandler:
                 "should_display": True,
                 "retry_after": 60,
             }
-        elif "api key" in error_message.lower():
+        if "api key" in error_message.lower():
             return {
                 "success": False,
                 "output": "🔑 APIキーの問題が発生しました。設定を確認してください。",
                 "should_display": True,
                 "should_exit": True,
             }
-        elif "network" in error_message.lower():
+        if "network" in error_message.lower():
             return {
                 "success": False,
                 "output": "🌐 ネットワークエラーが発生しました。接続を確認してください。",
                 "should_display": True,
                 "retry_suggested": True,
             }
-        else:
-            return {
-                "success": False,
-                "output": f"❌ エラーが発生しました: {error_message}",
-                "should_display": True,
-                "retry_suggested": True,
-            }
+        return {
+            "success": False,
+            "output": f"❌ エラーが発生しました: {error_message}",
+            "should_display": True,
+            "retry_suggested": True,
+        }
 
     def should_terminate_session(self) -> bool:
         """セッションを終了すべきかどうかを判定
 
         Returns:
             終了すべき場合True
+
         """
         return self.error_count >= self.max_consecutive_errors
 
@@ -480,6 +515,7 @@ class InteractiveErrorHandler:
 
         Returns:
             回復提案のリスト
+
         """
         return [
             "セッションを再開してみてください（/exit → 新しいセッション開始）",
