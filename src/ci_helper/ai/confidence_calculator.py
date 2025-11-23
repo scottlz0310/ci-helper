@@ -157,7 +157,7 @@ class ConfidenceCalculator:
             return pattern_matches
 
         # 各パターンマッチの総合スコアを計算
-        scored_matches = []
+        scored_matches: list[tuple[PatternMatch, float]] = []
         for match in pattern_matches:
             confidence = self.calculate_pattern_confidence(match)
 
@@ -174,7 +174,7 @@ class ConfidenceCalculator:
 
         # 上位パターンを選択（信頼度が閾値以上のもの）
         threshold = 0.5
-        selected_matches = []
+        selected_matches: list[PatternMatch] = []
 
         for match, score in scored_matches:
             if score >= threshold:
@@ -438,7 +438,7 @@ class ConfidenceCalculator:
         explanation = f"信頼度: {confidence:.1%} ({level})\n"
 
         # 要因の説明
-        factors = []
+        factors: list[str] = []
 
         if pattern_match.pattern.success_rate > 0.8:
             factors.append("過去の成功率が高い")

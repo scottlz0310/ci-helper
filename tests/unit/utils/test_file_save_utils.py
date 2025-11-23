@@ -7,8 +7,9 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from ci_helper.utils.file_save_utils import FileSaveManager
 from rich.console import Console
+
+from ci_helper.utils.file_save_utils import FileSaveManager
 
 
 class TestFileSaveManager:

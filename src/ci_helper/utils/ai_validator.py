@@ -166,19 +166,41 @@ class AIProviderValidator:
     async def _validate_openai(self, provider_info: ProviderInfo) -> ValidationResult:
         """OpenAI APIを検証"""
         api_key = os.getenv(provider_info.api_key_env)
+        endpoint = provider_info.test_endpoint
+
+        if not endpoint:
+            return ValidationResult(
+                provider=provider_info.name,
+                is_valid=False,
+                api_key_found=bool(api_key),
+                api_key_valid=False,
+                available_models=provider_info.available_models,
+                error_message="OpenAIのテストエンドポイントが設定されていません",
+            )
+
+        if not api_key:
+            return ValidationResult(
+                provider=provider_info.name,
+                is_valid=False,
+                api_key_found=False,
+                api_key_valid=False,
+                available_models=provider_info.available_models,
+                error_message=f"{provider_info.api_key_env} が設定されていません",
+            )
 
         try:
-            headers = {
+            headers: dict[str, str] = {
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             }
+            timeout = aiohttp.ClientTimeout(total=10)
 
             async with (
                 aiohttp.ClientSession() as session,
                 session.get(
-                    provider_info.test_endpoint,
+                    endpoint,
                     headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=10),
+                    timeout=timeout,
                 ) as response,
             ):
                 if response.status == 200:
@@ -242,9 +264,30 @@ class AIProviderValidator:
     async def _validate_anthropic(self, provider_info: ProviderInfo) -> ValidationResult:
         """Anthropic APIを検証"""
         api_key = os.getenv(provider_info.api_key_env)
+        endpoint = provider_info.test_endpoint
+
+        if not endpoint:
+            return ValidationResult(
+                provider=provider_info.name,
+                is_valid=False,
+                api_key_found=bool(api_key),
+                api_key_valid=False,
+                available_models=provider_info.available_models,
+                error_message="Anthropicのテストエンドポイントが設定されていません",
+            )
+
+        if not api_key:
+            return ValidationResult(
+                provider=provider_info.name,
+                is_valid=False,
+                api_key_found=False,
+                api_key_valid=False,
+                available_models=provider_info.available_models,
+                error_message=f"{provider_info.api_key_env} が設定されていません",
+            )
 
         try:
-            headers = {
+            headers: dict[str, str] = {
                 "x-api-key": api_key,
                 "Content-Type": "application/json",
                 "anthropic-version": "2023-06-01",
@@ -260,10 +303,7 @@ class AIProviderValidator:
             async with (
                 aiohttp.ClientSession() as session,
                 session.post(
-                    provider_info.test_endpoint,
-                    headers=headers,
-                    json=test_data,
-                    timeout=aiohttp.ClientTimeout(total=10),
+                    endpoint, headers=headers, json=test_data, timeout=aiohttp.ClientTimeout(total=10)
                 ) as response,
             ):
                 if response.status in [200, 400]:  # 400も有効（リクエスト形式の問題）

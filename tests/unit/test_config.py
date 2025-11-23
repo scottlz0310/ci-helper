@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+
 from ci_helper.core.exceptions import ConfigurationError, SecurityError
 from ci_helper.utils.config import Config
 

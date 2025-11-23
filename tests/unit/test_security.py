@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 import pytest
+
 from ci_helper.core.exceptions import SecurityError
 from ci_helper.core.security import EnvironmentSecretManager, SecretDetector, SecurityValidator
 
@@ -704,8 +705,9 @@ class TestSecretsCommand:
 
     def test_secrets_command_cli_integration(self):
         """secrets コマンドのCLI統合テスト"""
-        from ci_helper.cli import cli
         from click.testing import CliRunner
+
+        from ci_helper.cli import cli
 
         runner = CliRunner()
         with runner.isolated_filesystem():

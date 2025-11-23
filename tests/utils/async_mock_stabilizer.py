@@ -382,12 +382,14 @@ class AsyncMockValidator:
 # 便利な関数エイリアス
 def create_stable_provider_mock(**kwargs):
     return get_async_mock_stabilizer().create_stable_provider_mock(**kwargs)
+
+
 def create_stable_integration_mock(**kwargs):
     return get_async_mock_stabilizer().create_stable_integration_mock(**kwargs)
+
+
 def create_async_stream_mock(chunks, **kwargs):
-    return get_async_mock_stabilizer().create_async_stream_mock(
-    chunks, **kwargs
-)
+    return get_async_mock_stabilizer().create_async_stream_mock(chunks, **kwargs)
 
 
 # 便利な関数エイリアス

@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
+
 from ci_helper.ai.settings_manager import SettingsManager
 from ci_helper.core.exceptions import ConfigurationError
 from ci_helper.utils.config import Config

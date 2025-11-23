@@ -8,6 +8,8 @@ import subprocess
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+from click.testing import CliRunner
+
 from ci_helper.cli import cli
 from ci_helper.commands.doctor import (
     _check_act_command,
@@ -19,7 +21,6 @@ from ci_helper.commands.doctor import (
     _check_workflows_directory,
     _get_act_install_instructions,
 )
-from click.testing import CliRunner
 
 
 class TestActCommandCheck:

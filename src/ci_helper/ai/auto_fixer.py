@@ -806,7 +806,9 @@ class AutoFixer:
             pyproject_path = self.project_root / "pyproject.toml"
             if pyproject_path.exists():
                 if tomllib is None:
-                    checks.append({"success": False, "message": "pyproject.toml を検証できません (tomllib未インストール)"})
+                    checks.append(
+                        {"success": False, "message": "pyproject.toml を検証できません (tomllib未インストール)"}
+                    )
                 else:
                     try:
                         content = pyproject_path.read_text(encoding="utf-8")

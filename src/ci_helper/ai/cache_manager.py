@@ -7,6 +7,7 @@ AIレスポンスキャッシュの高レベル管理機能を提供します。
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -14,7 +15,9 @@ from typing import TYPE_CHECKING, Any
 from .models import AnalysisResult
 
 if TYPE_CHECKING:
-    from .cache import ResponseCache
+    from .cache import CacheEntry, ResponseCache
+
+ComputeFunc = Callable[[], Awaitable[AnalysisResult]]
 
 
 class CacheManager:
@@ -40,7 +43,7 @@ class CacheManager:
         self.max_size_mb = max_size_mb
         self.ttl_hours = ttl_hours
 
-        self._cache = None
+        self._cache: ResponseCache | None = None
         if self.enabled:
             # 遅延インポート：テストのパッチが正しく適用されるようにする
             from .cache import ResponseCache
@@ -214,9 +217,10 @@ class CacheManager:
         try:
             # メタデータから該当するエントリを特定
             removed_count = 0
-            entries_to_remove = []
+            entries_to_remove: list[str] = []
+            metadata_entries: dict[str, CacheEntry] = self._cache.metadata["entries"]
 
-            for cache_key, entry in self._cache.metadata["entries"].items():
+            for cache_key, entry in metadata_entries.items():
                 if entry.get("provider") == provider:
                     entries_to_remove.append(cache_key)
 
@@ -277,7 +281,7 @@ class CacheManager:
 
         try:
             stats = await self._cache.get_stats()
-            recommendations = []
+            recommendations: list[str] = []
 
             # 使用率に基づく推奨
             usage_pct = stats.get("usage_percentage", 0)
@@ -318,7 +322,7 @@ class CacheManager:
         context: str,
         model: str,
         provider: str,
-        compute_func,
+        compute_func: ComputeFunc,
     ) -> AnalysisResult:
         """キャッシュから取得するか、計算して保存
 

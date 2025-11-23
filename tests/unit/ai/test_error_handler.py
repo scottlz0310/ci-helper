@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
+
 from ci_helper.ai.error_handler import AIErrorHandler
 from ci_helper.ai.exceptions import (
     AIError,

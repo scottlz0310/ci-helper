@@ -500,7 +500,9 @@ class FileOperationMockHelper:
         return mock_dir
 
     @staticmethod
-    def setup_consistent_pathlib_mocks(mock_path_class: Mock, files: dict | None = None, directories: set | None = None) -> None:
+    def setup_consistent_pathlib_mocks(
+        mock_path_class: Mock, files: dict | None = None, directories: set | None = None
+    ) -> None:
         """一貫したpathlibモックを設定
 
         Args:

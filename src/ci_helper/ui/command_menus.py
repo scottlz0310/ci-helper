@@ -13,6 +13,8 @@ from rich.prompt import Confirm, Prompt
 
 from .menu_system import Menu, MenuItem
 
+CommandHandler = Callable[..., Any]
+
 
 class CommandMenuBuilder:
     """コマンドメニュービルダー
@@ -20,7 +22,7 @@ class CommandMenuBuilder:
     CI-Helperの各コマンドに対応するメニュー項目とサブメニューを構築します。
     """
 
-    def __init__(self, console: Console, command_handlers: dict[str, Callable]):
+    def __init__(self, console: Console, command_handlers: dict[str, CommandHandler]):
         """コマンドメニュービルダーを初期化
 
         Args:
@@ -29,7 +31,7 @@ class CommandMenuBuilder:
 
         """
         self.console = console
-        self.command_handlers = command_handlers
+        self.command_handlers: dict[str, CommandHandler] = command_handlers
 
     def build_main_menu(self) -> Menu:
         """メインメニューを構築

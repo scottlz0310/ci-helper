@@ -7,9 +7,10 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+from click.testing import CliRunner
+
 from ci_helper.cli import cli
 from ci_helper.core.models import ExecutionResult, JobResult, WorkflowResult
-from click.testing import CliRunner
 
 
 class TestCommandIntegration:

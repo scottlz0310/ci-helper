@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
 import pytest
+
 from ci_helper.ai.exceptions import AIError
 from ci_helper.ai.interactive_session import InteractiveSessionManager
 from ci_helper.ai.models import AnalyzeOptions, InteractiveSession

@@ -13,7 +13,6 @@ from typing import Any, cast
 import yaml
 from rich.console import Console
 
-
 WorkflowData = dict[str, Any]
 
 
