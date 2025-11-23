@@ -11,7 +11,7 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from ..core.cache_manager import CacheManager
+from ..core.cache_manager import CacheManager, CleanupResult
 from ..core.exceptions import ExecutionError
 from ..utils.config import Config
 
@@ -73,8 +73,10 @@ def clean(ctx: click.Context, logs_only: bool, clean_all: bool, dry_run: bool, f
         else:
             result = _clean_default(console, cache_manager, dry_run, force)
 
+        result_dict = cast("dict[str, Any]", result)
+
         # 結果を表示
-        _display_cleanup_result(console, result, dry_run, verbose)
+        _display_cleanup_result(console, result_dict, dry_run, verbose)
 
         # 推奨事項を表示
         if not dry_run and verbose:
@@ -162,7 +164,12 @@ def _clean_all(console: Console, cache_manager: CacheManager, dry_run: bool, for
     return cache_manager.reset_all_cache(confirm=True)
 
 
-def _clean_logs_only(console: Console, cache_manager: CacheManager, dry_run: bool, force: bool) -> dict[str, Any]:
+def _clean_logs_only(
+    console: Console,
+    cache_manager: CacheManager,
+    dry_run: bool,
+    force: bool,
+) -> CleanupResult | dict[str, Any]:
     """ログファイルのみを削除
 
     Args:
@@ -196,7 +203,12 @@ def _clean_logs_only(console: Console, cache_manager: CacheManager, dry_run: boo
     return cache_manager.cleanup_logs_only(dry_run=dry_run, remove_all=True)
 
 
-def _clean_default(console: Console, cache_manager: CacheManager, dry_run: bool, force: bool) -> dict[str, Any]:
+def _clean_default(
+    console: Console,
+    cache_manager: CacheManager,
+    dry_run: bool,
+    force: bool,
+) -> CleanupResult | dict[str, Any]:
     """デフォルトのクリーンアップ
 
     Args:

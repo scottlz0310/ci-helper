@@ -364,7 +364,7 @@ class AIConfig:
 
     def validate_config(self) -> list[str]:
         """設定の検証を行い、エラーメッセージのリストを返す"""
-        errors = []
+        errors: list[str] = []
 
         # 信頼度閾値の検証
         if not 0.0 <= self.pattern_confidence_threshold <= 1.0:

@@ -66,11 +66,11 @@ class TemplateLoader:
             with open(config_path, "rb") as f:
                 config = tomllib.load(f)
 
-            templates = {}
+            templates: dict[str, str] = {}
 
             # [ai.prompt_templates] セクションから読み込み
             if "ai" in config and "prompt_templates" in config["ai"]:
-                template_config = config["ai"]["prompt_templates"]
+                template_config: dict[str, Any] = config["ai"]["prompt_templates"]
 
                 for template_name, template_path in template_config.items():
                     if isinstance(template_path, str):
@@ -123,7 +123,7 @@ class TemplateLoader:
         if not self.template_dir.exists():
             return []
 
-        templates = []
+        templates: list[str] = []
         for template_file in self.template_dir.glob("*.txt"):
             templates.append(template_file.stem)
 
@@ -193,7 +193,7 @@ class TemplateLoader:
         Raises:
             ConfigurationError: 作成に失敗した場合
         """
-        sample_templates = {
+        sample_templates: dict[str, str] = {
             "custom_analysis": """カスタム分析プロンプトのサンプルです。
 
 ## 分析対象

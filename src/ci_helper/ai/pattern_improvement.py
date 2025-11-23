@@ -12,7 +12,7 @@ import re
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Counter as CounterType
 
 from .models import Pattern, UserFeedback
 from .pattern_database import PatternDatabase
@@ -211,7 +211,7 @@ class PatternImprovementSystem:
         Returns:
             特定された問題のリスト
         """
-        issues = []
+        issues: list[str] = []
 
         # 成功率が低い
         if performance["success_rate"] < 0.6:
@@ -231,7 +231,7 @@ class PatternImprovementSystem:
             issues.append("フィードバック不足")
 
         # 評価のばらつきが大きい
-        ratings = [item["rating"] for item in performance["rating_trend"]]
+        ratings: list[float] = [item["rating"] for item in performance["rating_trend"]]
         if len(ratings) > 1:
             rating_variance = sum((r - performance["average_rating"]) ** 2 for r in ratings) / len(ratings)
             if rating_variance > 2.0:
@@ -256,7 +256,7 @@ class PatternImprovementSystem:
         # パターンパフォーマンスを分析
         performance_data = await self.analyze_pattern_performance(feedback_history)
 
-        improvements = []
+        improvements: list[PatternImprovement] = []
 
         for pattern_id, perf in performance_data.items():
             # 改善が必要なパターンを特定
@@ -311,7 +311,7 @@ class PatternImprovementSystem:
         Returns:
             改善提案のリスト
         """
-        improvements = []
+        improvements: list[PatternImprovement] = []
         pattern = self.pattern_database.get_pattern(pattern_id)
 
         if not pattern:
@@ -319,10 +319,10 @@ class PatternImprovementSystem:
             return improvements
 
         # パターン固有のフィードバックを取得
-        pattern_feedback = [fb for fb in feedback_history if fb.pattern_id == pattern_id]
+        pattern_feedback: list[UserFeedback] = [fb for fb in feedback_history if fb.pattern_id == pattern_id]
 
         # 失敗したケースのコメントを分析
-        failed_feedback = [fb for fb in pattern_feedback if not fb.success and fb.comments]
+        failed_feedback: list[UserFeedback] = [fb for fb in pattern_feedback if not fb.success and fb.comments]
 
         try:
             # 1. 正規表現パターンの改善
@@ -370,7 +370,7 @@ class PatternImprovementSystem:
             return None
 
         # 失敗コメントから共通パターンを抽出
-        failed_comments = [fb.comments for fb in failed_feedback if fb.comments]
+        failed_comments: list[str] = [fb.comments for fb in failed_feedback if fb.comments]
 
         if not failed_comments:
             return None
@@ -382,7 +382,7 @@ class PatternImprovementSystem:
             return None
 
         # 新しい正規表現パターンを提案
-        suggested_patterns = []
+        suggested_patterns: list[str] = []
         for failure_pattern in common_failures:
             # 既存パターンを拡張
             for existing_pattern in pattern.regex_patterns:
@@ -419,25 +419,25 @@ class PatternImprovementSystem:
             共通する失敗パターンのリスト
         """
         # エラーメッセージやキーワードを抽出
-        all_words = []
+        all_words: list[str] = []
         for comment in failed_comments:
             # 単語を抽出（英数字のみ）
-            words = re.findall(r"\b\w+\b", comment.lower())
+            words: list[str] = re.findall(r"\b\w+\b", comment.lower())
             all_words.extend(words)
 
         # 頻出単語を特定
-        word_counts = Counter(all_words)
-        common_words = [word for word, count in word_counts.most_common(10) if count >= 2]
+        word_counts: CounterType[str] = Counter(all_words)
+        common_words: list[str] = [word for word, count in word_counts.most_common(10) if count >= 2]
 
         # 共通するフレーズを抽出
-        common_phrases = []
+        common_phrases: list[str] = []
         for comment in failed_comments:
             comment_lower = comment.lower()
             for word in common_words:
                 if word in comment_lower:
                     # 単語の前後のコンテキストを抽出
                     pattern = rf"\b\w*{re.escape(word)}\w*\b"
-                    matches = re.findall(pattern, comment_lower)
+                    matches: list[str] = re.findall(pattern, comment_lower)
                     common_phrases.extend(matches)
 
         # 重複を除去して返す
@@ -489,7 +489,7 @@ class PatternImprovementSystem:
             return None
 
         # 失敗コメントから新しいキーワードを抽出
-        failed_comments = [fb.comments for fb in failed_feedback if fb.comments]
+        failed_comments: list[str] = [fb.comments for fb in failed_feedback if fb.comments]
 
         if not failed_comments:
             return None
@@ -528,14 +528,14 @@ class PatternImprovementSystem:
         Returns:
             抽出されたキーワードのリスト
         """
-        all_words = []
+        all_words: list[str] = []
         for comment in comments:
             # 英数字の単語を抽出
-            words = re.findall(r"\b[a-zA-Z]\w+\b", comment)
+            words: list[str] = re.findall(r"\b[a-zA-Z]\w+\b", comment)
             all_words.extend([word.lower() for word in words])
 
         # 頻出単語を特定
-        word_counts = Counter(all_words)
+        word_counts: CounterType[str] = Counter(all_words)
 
         # ストップワードを除外
         stop_words = {
@@ -579,7 +579,7 @@ class PatternImprovementSystem:
         }
 
         # 意味のあるキーワードを選択
-        keywords = []
+        keywords: list[str] = []
         for word, count in word_counts.most_common(20):
             if word not in stop_words and len(word) > 2 and count >= 2 and not word.isdigit():
                 keywords.append(word)
@@ -684,7 +684,7 @@ class PatternImprovementSystem:
         """
         all_text = " ".join(comments).lower()
 
-        category_keywords = {
+        category_keywords: dict[str, list[str]] = {
             "permission": ["permission", "denied", "access", "forbidden", "unauthorized", "権限"],
             "network": ["timeout", "connection", "network", "ssl", "certificate", "dns", "ネットワーク"],
             "dependency": ["module", "import", "package", "not found", "missing", "依存"],
@@ -695,7 +695,7 @@ class PatternImprovementSystem:
             "runtime": ["runtime", "execution", "null", "undefined", "reference", "実行時"],
         }
 
-        category_scores = {}
+        category_scores: dict[str, int] = {}
         for category, keywords in category_keywords.items():
             score = sum(1 for keyword in keywords if keyword in all_text)
             if score > 0:
@@ -705,7 +705,7 @@ class PatternImprovementSystem:
             return None
 
         # 最もスコアの高いカテゴリを返す
-        return max(category_scores, key=category_scores.get)
+        return max(category_scores, key=lambda key: category_scores[key])
 
     async def apply_pattern_improvement(self, improvement: PatternImprovement) -> bool:
         """パターン改善を適用

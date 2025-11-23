@@ -15,7 +15,7 @@ from collections.abc import Callable
 from dataclasses import replace
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from .models import FixSuggestion, Pattern, PatternMatch, UserFeedback
 from .pattern_database import PatternDatabase
@@ -297,7 +297,7 @@ class LearningEngine:
 
         logger.info("新しいパターンの発見を開始: %d 個のログを分析", len(failed_logs))
 
-        discovered_patterns = []
+        discovered_patterns: list[Pattern] = []
 
         try:
             # エラーメッセージを抽出
@@ -339,7 +339,7 @@ class LearningEngine:
         Returns:
             抽出されたエラーメッセージのリスト
         """
-        error_messages = []
+        error_messages: list[str] = []
 
         # 一般的なエラーパターン
         error_patterns = [
@@ -1127,7 +1127,7 @@ class LearningEngine:
 
         logger.info("パターンデータベースの動的更新を開始")
 
-        update_stats = {
+        update_stats: dict[str, int | list[str]] = {
             "new_patterns_added": 0,
             "patterns_added": 0,
             "patterns_improved": 0,
@@ -1137,7 +1137,7 @@ class LearningEngine:
 
         try:
             # 1. 新しいパターンを発見して追加
-            failed_logs = []  # 実際の実装では失敗ログを収集
+            failed_logs: list[str] = []  # 実際の実装では失敗ログを収集
             new_patterns = await self.discover_new_patterns(failed_logs)
 
             for pattern in new_patterns:
@@ -1601,7 +1601,7 @@ class LearningEngine:
                 with self.unknown_errors_file.open("r", encoding="utf-8") as f:
                     content = f.read().strip()
                     if content:
-                        unknown_errors = json.loads(content)
+                        unknown_errors = cast(list[dict[str, Any]], json.loads(content))
                     else:
                         unknown_errors = []
             except (json.JSONDecodeError, FileNotFoundError):
@@ -1611,7 +1611,7 @@ class LearningEngine:
             cutoff_date = datetime.now() - timedelta(days=max_age_days)
 
             # 古いエラーを除外
-            filtered_errors = []
+            filtered_errors: list[dict[str, Any]] = []
             deleted_count = 0
 
             for error in unknown_errors:

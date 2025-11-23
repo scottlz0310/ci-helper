@@ -11,10 +11,34 @@ import os
 import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any, TypedDict, cast
 
-if TYPE_CHECKING:
-    pass
+
+class DirectoryStats(TypedDict):
+    files: int
+    size_mb: float
+    oldest_file: datetime | None
+    newest_file: datetime | None
+
+
+class CleanupResult(TypedDict):
+    deleted_files: int
+    freed_size_mb: float
+    errors: list[str]
+    files_to_delete: list[str]
+
+
+class FullCleanupSummary(TypedDict):
+    deleted_files: int
+    freed_size_mb: float
+    errors: int
+
+
+class CleanupRecommendation(TypedDict):
+    type: str
+    priority: str
+    message: str
+    action: str
 
 from ..core.exceptions import ExecutionError
 from ..utils.config import Config
@@ -48,29 +72,30 @@ class CacheManager:
         for directory in [self.log_dir, self.cache_dir, self.reports_dir]:
             directory.mkdir(parents=True, exist_ok=True)
 
-    def get_cache_statistics(self) -> dict[str, Any]:
+    def get_cache_statistics(self) -> dict[str, DirectoryStats]:
         """キャッシュ統計情報を取得
 
         Returns:
             キャッシュ統計情報
         """
-        stats = {
+        stats: dict[str, DirectoryStats] = {
             "logs": self._get_directory_stats(self.log_dir),
             "cache": self._get_directory_stats(self.cache_dir),
             "reports": self._get_directory_stats(self.reports_dir),
         }
 
         # 合計統計
-        stats["total"] = {
+        total_stats: DirectoryStats = {
             "files": sum(s["files"] for s in stats.values()),
             "size_mb": sum(s["size_mb"] for s in stats.values()),
             "oldest_file": min((s["oldest_file"] for s in stats.values() if s["oldest_file"]), default=None),
             "newest_file": max((s["newest_file"] for s in stats.values() if s["newest_file"]), default=None),
         }
 
+        stats["total"] = total_stats
         return stats
 
-    def _get_directory_stats(self, directory: Path) -> dict[str, Any]:
+    def _get_directory_stats(self, directory: Path) -> DirectoryStats:
         """ディレクトリの統計情報を取得
 
         Args:
@@ -80,35 +105,25 @@ class CacheManager:
             ディレクトリ統計情報
         """
         if not directory.exists():
-            return {
-                "files": 0,
-                "size_mb": 0.0,
-                "oldest_file": None,
-                "newest_file": None,
-            }
+            return DirectoryStats(files=0, size_mb=0.0, oldest_file=None, newest_file=None)
 
         files = list(directory.rglob("*"))
         files = [f for f in files if f.is_file()]
 
         if not files:
-            return {
-                "files": 0,
-                "size_mb": 0.0,
-                "oldest_file": None,
-                "newest_file": None,
-            }
+            return DirectoryStats(files=0, size_mb=0.0, oldest_file=None, newest_file=None)
 
         total_size = sum(f.stat().st_size for f in files)
         file_times = [f.stat().st_mtime for f in files]
 
-        return {
-            "files": len(files),
-            "size_mb": round(total_size / (1024 * 1024), 2),
-            "oldest_file": datetime.fromtimestamp(min(file_times)),
-            "newest_file": datetime.fromtimestamp(max(file_times)),
-        }
+        return DirectoryStats(
+            files=len(files),
+            size_mb=round(total_size / (1024 * 1024), 2),
+            oldest_file=datetime.fromtimestamp(min(file_times)),
+            newest_file=datetime.fromtimestamp(max(file_times)),
+        )
 
-    def cleanup_logs_only(self, dry_run: bool = False, remove_all: bool = False) -> dict[str, Any]:
+    def cleanup_logs_only(self, dry_run: bool = False, remove_all: bool = False) -> CleanupResult:
         """ログファイルのみをクリーンアップ
 
         Args:
@@ -124,12 +139,12 @@ class CacheManager:
 
             if dry_run:
                 freed_size = sum(f.stat().st_size for f in files)
-                return {
-                    "deleted_files": len(files),
-                    "freed_size_mb": round(freed_size / (1024 * 1024), 2),
-                    "errors": errors,
-                    "files_to_delete": [str(f) for f in files],
-                }
+                return CleanupResult(
+                    deleted_files=len(files),
+                    freed_size_mb=round(freed_size / (1024 * 1024), 2),
+                    errors=errors,
+                    files_to_delete=[str(f) for f in files],
+                )
 
             deleted_files = 0
             for file_path in files:
@@ -141,12 +156,12 @@ class CacheManager:
                 except Exception as e:
                     errors.append(f"ファイル削除エラー {file_path}: {e}")
 
-            return {
-                "deleted_files": deleted_files,
-                "freed_size_mb": round(freed_size / (1024 * 1024), 2),
-                "errors": errors,
-                "files_to_delete": [],
-            }
+            return CleanupResult(
+                deleted_files=deleted_files,
+                freed_size_mb=round(freed_size / (1024 * 1024), 2),
+                errors=errors,
+                files_to_delete=[],
+            )
 
         max_count = self.config.get("max_log_files", 50)
         max_size_mb = self.config.get("max_log_size_mb", 100)
@@ -161,7 +176,7 @@ class CacheManager:
             file_pattern="*.log",
         )
 
-    def cleanup_cache_only(self, dry_run: bool = False) -> dict[str, Any]:
+    def cleanup_cache_only(self, dry_run: bool = False) -> CleanupResult:
         """キャッシュファイルのみをクリーンアップ
 
         Args:
@@ -181,7 +196,7 @@ class CacheManager:
             exclude_files=["cache_index.json"],
         )
 
-    def cleanup_all(self, dry_run: bool = False) -> dict[str, Any]:
+    def cleanup_all(self, dry_run: bool = False) -> dict[str, CleanupResult | FullCleanupSummary]:
         """すべてのキャッシュとログをクリーンアップ
 
         Args:
@@ -190,7 +205,7 @@ class CacheManager:
         Returns:
             クリーンアップ結果
         """
-        results = {
+        results: dict[str, CleanupResult | FullCleanupSummary] = {
             "logs": self.cleanup_logs_only(dry_run=dry_run),
             "cache": self.cleanup_cache_only(dry_run=dry_run),
             "reports": self._cleanup_directory(
@@ -199,12 +214,16 @@ class CacheManager:
         }
 
         # 合計結果
-        cleanup_results = [results["logs"], results["cache"], results["reports"]]
-        results["total"] = {
+        logs_result = cast(CleanupResult, results["logs"])
+        cache_result = cast(CleanupResult, results["cache"])
+        reports_result = cast(CleanupResult, results["reports"])
+        cleanup_results = [logs_result, cache_result, reports_result]
+        total_summary: FullCleanupSummary = {
             "deleted_files": sum(r["deleted_files"] for r in cleanup_results),
             "freed_size_mb": sum(r["freed_size_mb"] for r in cleanup_results),
             "errors": sum(len(r["errors"]) for r in cleanup_results),
         }
+        results["total"] = total_summary
 
         return results
 
@@ -217,7 +236,7 @@ class CacheManager:
         dry_run: bool = False,
         file_pattern: str = "*",
         exclude_files: list[str] | None = None,
-    ) -> dict[str, Any]:
+    ) -> CleanupResult:
         """ディレクトリのクリーンアップを実行
 
         Args:
@@ -233,22 +252,17 @@ class CacheManager:
             クリーンアップ結果
         """
         if not directory.exists():
-            return {
-                "deleted_files": 0,
-                "freed_size_mb": 0.0,
-                "errors": [],
-                "files_to_delete": [],
-            }
+            return CleanupResult(deleted_files=0, freed_size_mb=0.0, errors=[], files_to_delete=[])
 
         exclude_files = exclude_files or []
 
         # ファイル一覧を取得（新しい順）
-        files = list(directory.glob(file_pattern))
+        files: list[Path] = list(directory.glob(file_pattern))
         files = [f for f in files if f.is_file() and f.name not in exclude_files]
         files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
 
-        files_to_delete = []
-        errors = []
+        files_to_delete: list[Path] = []
+        errors: list[str] = []
 
         # 年齢による削除
         if max_age_days is not None:
@@ -260,7 +274,7 @@ class CacheManager:
                     files_to_delete.append(file_path)
 
         # 残りのファイルで件数とサイズをチェック
-        remaining_files = [f for f in files if f not in files_to_delete]
+        remaining_files: list[Path] = [f for f in files if f not in files_to_delete]
 
         # 件数による削除
         if max_count is not None and len(remaining_files) > max_count:
@@ -299,12 +313,12 @@ class CacheManager:
             deleted_files = len(files_to_delete)
             freed_size = sum(f.stat().st_size for f in files_to_delete)
 
-        return {
-            "deleted_files": deleted_files,
-            "freed_size_mb": round(freed_size / (1024 * 1024), 2),
-            "errors": errors,
-            "files_to_delete": [str(f) for f in files_to_delete] if dry_run else [],
-        }
+        return CleanupResult(
+            deleted_files=deleted_files,
+            freed_size_mb=round(freed_size / (1024 * 1024), 2),
+            errors=errors,
+            files_to_delete=[str(f) for f in files_to_delete] if dry_run else [],
+        )
 
     def auto_cleanup(self) -> dict[str, Any]:
         """自動クリーンアップを実行
@@ -334,13 +348,14 @@ class CacheManager:
                 }
 
         # クリーンアップ実行
-        result = self.cleanup_all(dry_run=False)
+        cleanup_result = self.cleanup_all(dry_run=False)
 
         # 最後のクリーンアップ時刻を更新
         self._update_last_cleanup_time()
 
-        result["auto_cleanup"] = True
-        return result
+        result_with_flag: dict[str, Any] = dict(cleanup_result)
+        result_with_flag["auto_cleanup"] = True
+        return result_with_flag
 
     def _get_last_cleanup_time(self) -> datetime | None:
         """最後のクリーンアップ時刻を取得
@@ -390,9 +405,11 @@ class CacheManager:
         if not confirm:
             raise ExecutionError("キャッシュの完全リセットには確認が必要です", "confirm=True を指定してください")
 
+        deleted_directories: list[str] = []
+        reset_errors: list[str] = []
         results: dict[str, Any] = {
-            "deleted_directories": [],
-            "errors": [],
+            "deleted_directories": deleted_directories,
+            "errors": reset_errors,
             "total_freed_mb": 0.0,
         }
 
@@ -413,11 +430,11 @@ class CacheManager:
                     # 再作成
                     directory.mkdir(parents=True, exist_ok=True)
 
-                    results["deleted_directories"].append(dir_name)
+                    deleted_directories.append(dir_name)
                     results["total_freed_mb"] += size_mb
 
             except Exception as e:
-                results["errors"].append(f"{dir_name}ディレクトリのリセットエラー: {e}")
+                reset_errors.append(f"{dir_name}ディレクトリのリセットエラー: {e}")
 
         return results
 
@@ -428,7 +445,7 @@ class CacheManager:
             推奨事項
         """
         stats = self.get_cache_statistics()
-        recommendations = []
+        recommendations: list[CleanupRecommendation] = []
 
         # ログファイルの推奨事項
         log_stats = stats["logs"]
@@ -501,7 +518,7 @@ class CacheManager:
         Returns:
             整合性チェック結果
         """
-        issues = []
+        issues: list[str] = []
 
         # ディレクトリの存在チェック
         for name, directory in [

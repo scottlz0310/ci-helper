@@ -6,6 +6,18 @@
 
 from __future__ import annotations
 
+from typing import Any, TypedDict
+
+
+class ErrorHandlingResult(TypedDict):
+    """日本語エラー処理結果"""
+
+    type: str
+    message: str
+    suggestion: str | None
+    recovery_steps: list[str]
+    context: str | None
+
 
 class JapaneseMessageProvider:
     """日本語メッセージプロバイダー"""
@@ -176,7 +188,7 @@ class JapaneseMessageProvider:
             """,
         }
 
-    def get_error_message(self, error_key: str, **kwargs) -> str:
+    def get_error_message(self, error_key: str, **kwargs: Any) -> str:
         """エラーメッセージを取得
 
         Args:
@@ -192,7 +204,7 @@ class JapaneseMessageProvider:
         except KeyError as e:
             return f"{template} (パラメータエラー: {e})"
 
-    def get_user_message(self, message_key: str, **kwargs) -> str:
+    def get_user_message(self, message_key: str, **kwargs: Any) -> str:
         """ユーザーメッセージを取得
 
         Args:
@@ -208,7 +220,7 @@ class JapaneseMessageProvider:
         except KeyError as e:
             return f"{template} (パラメータエラー: {e})"
 
-    def get_help_message(self, help_key: str, **kwargs) -> str:
+    def get_help_message(self, help_key: str, **kwargs: Any) -> str:
         """ヘルプメッセージを取得
 
         Args:
@@ -343,7 +355,7 @@ class JapaneseMessageProvider:
 _japanese_messages = JapaneseMessageProvider()
 
 
-def get_japanese_message(message_type: str, key: str, **kwargs) -> str:
+def get_japanese_message(message_type: str, key: str, **kwargs: Any) -> str:
     """日本語メッセージを取得
 
     Args:
@@ -407,7 +419,7 @@ class JapaneseErrorHandler:
     def __init__(self):
         self.messages = _japanese_messages
 
-    def handle_error(self, error: Exception, context: str | None = None) -> dict[str, str]:
+    def handle_error(self, error: Exception, context: str | None = None) -> ErrorHandlingResult:
         """エラーを処理して日本語メッセージを生成
 
         Args:

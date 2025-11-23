@@ -218,21 +218,25 @@ class PatternDatabase:
         Returns:
             Patternオブジェクト
         """
+        regex_patterns = [str(item) for item in pattern_data.get("regex_patterns", [])]
+        keywords = [str(item) for item in pattern_data.get("keywords", [])]
+        context_requirements = [str(item) for item in pattern_data.get("context_requirements", [])]
+
         return Pattern(
-            id=pattern_data["id"],
-            name=pattern_data["name"],
-            category=pattern_data["category"],
-            regex_patterns=pattern_data["regex_patterns"],
-            keywords=pattern_data["keywords"],
-            context_requirements=pattern_data["context_requirements"],
-            confidence_base=pattern_data["confidence_base"],
-            success_rate=pattern_data["success_rate"],
+            id=str(pattern_data["id"]),
+            name=str(pattern_data["name"]),
+            category=str(pattern_data["category"]),
+            regex_patterns=regex_patterns,
+            keywords=keywords,
+            context_requirements=context_requirements,
+            confidence_base=float(pattern_data["confidence_base"]),
+            success_rate=float(pattern_data["success_rate"]),
             created_at=self._parse_datetime(pattern_data["created_at"]),
             updated_at=self._parse_datetime(pattern_data["updated_at"]),
             user_defined=pattern_data.get("user_defined", False),
             auto_generated=pattern_data.get("auto_generated", False),
             source=pattern_data.get("source", "manual"),
-            occurrence_count=pattern_data.get("occurrence_count", 0),
+            occurrence_count=int(pattern_data.get("occurrence_count", 0)),
         )
 
     def _convert_legacy_pattern(self, pattern_id: str, pattern_data: dict[str, Any]) -> Pattern:
@@ -246,12 +250,12 @@ class PatternDatabase:
             変換されたPatternオブジェクト
         """
         # 既存データから正規表現パターンを抽出
-        regex_patterns = []
+        regex_patterns: list[str] = []
         if "error_signature" in pattern_data:
             regex_patterns.append(pattern_data["error_signature"])
 
         # キーワードを抽出（例から推測）
-        keywords = []
+        keywords: list[str] = []
         if "examples" in pattern_data:
             for example in pattern_data["examples"]:
                 # 例からキーワードを抽出
@@ -358,7 +362,7 @@ class PatternDatabase:
         """デフォルトのCI失敗パターンを作成"""
         logger.info("デフォルトパターンを作成中...")
 
-        default_patterns = {
+        default_patterns: dict[str, Pattern] = {
             "docker_permission_denied": Pattern(
                 id="docker_permission_denied",
                 name="Docker権限エラー",
@@ -459,9 +463,9 @@ class PatternDatabase:
             (self.data_directory / "custom").mkdir(parents=True, exist_ok=True)
 
             # カテゴリ別にパターンを分類
-            patterns_by_category = {}
-            user_patterns = []
-            learned_patterns = []
+            patterns_by_category: dict[str, list[Pattern]] = {}
+            user_patterns: list[Pattern] = []
+            learned_patterns: list[Pattern] = []
 
             for pattern in self.patterns.values():
                 if pattern.user_defined and pattern.source == "user":
@@ -628,7 +632,7 @@ class PatternDatabase:
             マッチしたパターンのリスト
         """
         query_lower = query.lower()
-        results = []
+        results: list[Pattern] = []
 
         for pattern in self.patterns.values():
             # 名前、カテゴリ、キーワードで検索
@@ -650,7 +654,7 @@ class PatternDatabase:
         if not self.patterns:
             return {"total_patterns": 0, "categories": {}, "user_defined": 0}
 
-        categories = {}
+        categories: dict[str, int] = {}
         user_defined_count = 0
 
         for pattern in self.patterns.values():

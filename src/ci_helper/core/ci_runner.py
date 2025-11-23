@@ -75,9 +75,9 @@ class CIRunner:
                 ".github/workflows/ ディレクトリにワークフローファイルがあることを確認してください",
             )
 
-        workflow_results = []
+        workflow_results: list[WorkflowResult] = []
         overall_success = True
-        all_output = []
+        all_output: list[str] = []
 
         for workflow_file in workflow_files:
             if dry_run:
@@ -111,7 +111,7 @@ class CIRunner:
             from .log_manager import LogManager
 
             log_manager = LogManager(self.config)
-            command_args = {
+            command_args: dict[str, bool | Sequence[str] | None] = {
                 "workflows": workflows,
                 "verbose": verbose,
                 "dry_run": dry_run,
@@ -139,7 +139,7 @@ class CIRunner:
 
         if workflow_names:
             # 指定されたワークフローのみ
-            workflow_files = []
+            workflow_files: list[Path] = []
             for name in workflow_names:
                 # .yml または .yaml 拡張子を試す
                 for ext in [".yml", ".yaml"]:
@@ -296,7 +296,7 @@ class CIRunner:
             ファイルパスと(uid, gid)のマッピング
 
         """
-        ownership_map = {}
+        ownership_map: dict[str, tuple[int, int]] = {}
 
         try:
             # プロジェクトルート配下の重要なファイル・ディレクトリの所有権を記録
@@ -351,7 +351,7 @@ class CIRunner:
         """
         import os
 
-        changed_files = []
+        changed_files: list[str] = []
 
         try:
             for file_path, (original_uid, original_gid) in original_ownership.items():
@@ -433,7 +433,7 @@ class CIRunner:
             依存関係のチェック結果
 
         """
-        checks = {}
+        checks: dict[str, bool] = {}
 
         # actコマンドの存在確認
         try:
