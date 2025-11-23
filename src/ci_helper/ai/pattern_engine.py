@@ -1,5 +1,4 @@
-"""
-パターン認識エンジン
+"""パターン認識エンジン
 
 CI失敗ログからエラーパターンを特定し、分類するメインエンジンです。
 """
@@ -37,6 +36,7 @@ class PatternRecognitionEngine:
             data_directory: パターンデータディレクトリ
             confidence_threshold: 信頼度閾値
             max_patterns_per_analysis: 分析あたりの最大パターン数
+
         """
         self.data_directory = Path(data_directory)
         self.confidence_threshold = confidence_threshold
@@ -96,6 +96,7 @@ class PatternRecognitionEngine:
 
         Returns:
             パターンマッチ結果のリスト
+
         """
         if not self._initialized:
             await self.initialize()
@@ -117,7 +118,9 @@ class PatternRecognitionEngine:
 
             # 最適化されたパターンマッチング
             matches, performance_metrics = await self.performance_optimizer.optimize_pattern_matching(
-                log_content, all_patterns, force_chunking=len(log_content) > 5 * 1024 * 1024
+                log_content,
+                all_patterns,
+                force_chunking=len(log_content) > 5 * 1024 * 1024,
             )
 
             logger.info(
@@ -131,7 +134,7 @@ class PatternRecognitionEngine:
                 return []
 
             # マッチ結果をPatternMatchオブジェクトに変換
-            pattern_matches = []
+            pattern_matches: list[PatternMatch] = []
             for match in matches:
                 pattern = self.pattern_database.get_pattern(match.pattern_id)
                 if pattern:
@@ -170,6 +173,7 @@ class PatternRecognitionEngine:
 
         Returns:
             特定されたパターンのリスト
+
         """
         if not self._initialized:
             await self.initialize()
@@ -191,12 +195,12 @@ class PatternRecognitionEngine:
         keyword_matches = self.pattern_matcher.match_keyword_patterns(log_content, all_patterns)
 
         # マッチしたパターンを収集
-        matched_pattern_ids = set()
+        matched_pattern_ids: set[str] = set()
         for match in regex_matches + keyword_matches:
             matched_pattern_ids.add(match.pattern_id)
 
         # パターンオブジェクトを取得
-        matched_patterns = []
+        matched_patterns: list[Pattern] = []
         for pattern_id in matched_pattern_ids:
             pattern = self.pattern_database.get_pattern(pattern_id)
             if pattern:
@@ -214,6 +218,7 @@ class PatternRecognitionEngine:
 
         Returns:
             信頼度スコア（0.0-1.0）
+
         """
         # PatternMatchオブジェクトを作成
         pattern_match = PatternMatch(
@@ -244,6 +249,7 @@ class PatternRecognitionEngine:
 
         Returns:
             パターンマッチ結果、作成できない場合はNone
+
         """
         try:
             # 正規表現マッチング
@@ -266,7 +272,7 @@ class PatternRecognitionEngine:
             match_positions = [best_match.start_position]
 
             # 裏付け証拠を収集
-            supporting_evidence = []
+            supporting_evidence: list[str] = []
             for match in pattern_specific_matches:
                 if match.matched_text not in supporting_evidence:
                     supporting_evidence.append(match.matched_text)
@@ -311,6 +317,7 @@ class PatternRecognitionEngine:
 
         Returns:
             推測されたエラータイプ
+
         """
         log_lower = log_content.lower()
 
@@ -336,6 +343,7 @@ class PatternRecognitionEngine:
 
         Returns:
             統計情報の辞書
+
         """
         if not self._initialized:
             return {"error": "エンジンが初期化されていません"}
@@ -358,6 +366,7 @@ class PatternRecognitionEngine:
 
         Returns:
             更新成功の場合True
+
         """
         pattern = self.pattern_database.get_pattern(pattern_id)
         if not pattern:
@@ -384,6 +393,7 @@ class PatternRecognitionEngine:
 
         Returns:
             追加成功の場合True
+
         """
         if not self._initialized:
             await self.initialize()
@@ -409,6 +419,7 @@ class PatternRecognitionEngine:
 
         Returns:
             マッチしたパターンのリスト
+
         """
         if not self._initialized:
             return []
@@ -423,6 +434,7 @@ class PatternRecognitionEngine:
 
         Returns:
             パターン、見つからない場合はNone
+
         """
         if not self._initialized:
             return None
@@ -437,6 +449,7 @@ class PatternRecognitionEngine:
 
         Returns:
             パターンのリスト
+
         """
         if not self._initialized:
             return []
@@ -465,6 +478,7 @@ class PatternRecognitionEngine:
 
         Returns:
             分析結果（フォールバック含む）
+
         """
         try:
             # 通常のパターン分析を実行
@@ -474,7 +488,9 @@ class PatternRecognitionEngine:
                 # パターンマッチが全くない場合はフォールバック処理
                 logger.info("パターンマッチなし - フォールバック処理を実行")
                 fallback_result = self.fallback_handler.handle_pattern_recognition_failure(
-                    log_content, [], self.confidence_threshold
+                    log_content,
+                    [],
+                    self.confidence_threshold,
                 )
 
                 # 学習エンジンに未知エラー情報を送信
@@ -493,7 +509,9 @@ class PatternRecognitionEngine:
             if not high_confidence_matches:
                 logger.info("信頼度不足 - 低信頼度パターン処理を実行")
                 return self.fallback_handler.handle_low_confidence_patterns(
-                    pattern_matches, self.confidence_threshold, log_content
+                    pattern_matches,
+                    self.confidence_threshold,
+                    log_content,
                 )
 
             # 通常の成功結果を作成
@@ -528,7 +546,10 @@ class PatternRecognitionEngine:
             logger.error("パターン認識中にエラーが発生: %s", e)
             # エラー時のフォールバック処理
             fallback_result = self.fallback_handler.handle_pattern_recognition_failure(
-                log_content, [], self.confidence_threshold, error=e
+                log_content,
+                [],
+                self.confidence_threshold,
+                error=e,
             )
 
             # 学習エンジンに未知エラー情報を送信
@@ -550,6 +571,7 @@ class PatternRecognitionEngine:
 
         Returns:
             処理結果
+
         """
         logger.warning("不正な形式のログファイルを検出: %s", error)
         return self.fallback_handler.handle_malformed_log(log_content, error)
@@ -559,15 +581,15 @@ class PatternRecognitionEngine:
 
         Returns:
             パターン提案のリスト
+
         """
         if not self._initialized:
             await self.initialize()
 
         if self.learning_engine:
             return await self.learning_engine.get_pattern_suggestions_from_unknown_errors()
-        else:
-            logger.warning("学習エンジンが初期化されていません")
-            return []
+        logger.warning("学習エンジンが初期化されていません")
+        return []
 
     async def promote_potential_pattern(self, pattern_id: str) -> bool:
         """潜在的なパターンを正式なパターンデータベースに昇格
@@ -577,26 +599,26 @@ class PatternRecognitionEngine:
 
         Returns:
             昇格成功の場合True
+
         """
         if not self._initialized:
             await self.initialize()
 
         if self.learning_engine:
             return await self.learning_engine.promote_potential_pattern_to_official(pattern_id)
-        else:
-            logger.warning("学習エンジンが初期化されていません")
-            return False
+        logger.warning("学習エンジンが初期化されていません")
+        return False
 
     def get_unknown_error_statistics(self) -> dict[str, Any]:
         """未知エラーの統計情報を取得
 
         Returns:
             統計情報
+
         """
         if self.learning_engine:
             return self.learning_engine.get_unknown_error_statistics()
-        else:
-            return {"error": "学習エンジンが初期化されていません"}
+        return {"error": "学習エンジンが初期化されていません"}
 
     def __str__(self) -> str:
         """文字列表現"""
