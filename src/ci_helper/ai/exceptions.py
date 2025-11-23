@@ -1,5 +1,4 @@
-"""
-AI統合用の例外クラス
+"""AI統合用の例外クラス
 
 AI機能で発生する様々なエラーを適切に分類し、処理するための例外クラスを定義します。
 """
@@ -163,7 +162,7 @@ class CostLimitError(AIError):
 class FixApplicationError(AIError):
     """修正適用関連のエラー"""
 
-    def __init__(self, message: str, rollback_info: dict | None = None):
+    def __init__(self, message: str, rollback_info: dict[str, str] | None = None):
         super().__init__(
             message,
             f"ロールバック情報: {rollback_info}" if rollback_info else None,

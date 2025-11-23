@@ -147,7 +147,7 @@ class WorkflowDetector:
 
         return WorkflowInfo(file_path=file_path, name=name, description=description, jobs=jobs)
 
-    def _generate_description(self, workflow_data: dict) -> str:
+    def _generate_description(self, workflow_data: dict[str, object]) -> str:
         """ワークフローの説明を生成
 
         Args:
