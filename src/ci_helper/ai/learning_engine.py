@@ -11,11 +11,12 @@ import json
 import logging
 import re
 from collections import Counter, defaultdict
+from collections.abc import Sequence
 from collections.abc import Callable
 from dataclasses import replace
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 from .models import FixSuggestion, Pattern, PatternMatch, UserFeedback
 from .pattern_database import PatternDatabase
@@ -24,6 +25,60 @@ if TYPE_CHECKING:
     from .feedback_collector import FeedbackCollector
 
 logger = logging.getLogger(__name__)
+
+
+class FeedbackCollectorConfig(TypedDict):
+    learning_data_dir: Path
+
+
+class PatternImprovementConfig(TypedDict):
+    pattern_database: PatternDatabase
+    learning_data_dir: Path
+    min_pattern_occurrences: int
+
+
+class UpdateStats(TypedDict):
+    new_patterns_added: int
+    patterns_added: int
+    patterns_improved: int
+    patterns_analyzed: int
+    errors: list[str]
+
+
+class UnknownErrorPayload(TypedDict, total=False):
+    error_category: str
+    context: dict[str, Any]
+    error_features: dict[str, Any]
+    occurrence_count: int
+    occurrences: int
+    timestamp: str
+    last_seen: str
+    pattern_id: str
+    potential_pattern: "PotentialPatternPayload"
+
+
+class PotentialPatternPayload(TypedDict, total=False):
+    id: str
+    name: str
+    category: str
+    description: str
+    keywords: list[str]
+    regex_patterns: list[str]
+    confidence_base: float
+    success_rate: float
+    created_at: str
+    auto_generated: bool
+    source: str
+    occurrence_count: int
+    last_updated: str
+
+
+class UnknownErrorStats(TypedDict):
+    total_unknown_errors: int
+    frequent_unknown_errors: int
+    potential_patterns: int
+    categories: dict[str, int]
+    top_categories: list[tuple[str, int]]
 
 
 class LearningEngine:
@@ -56,14 +111,14 @@ class LearningEngine:
 
         # フィードバック収集システム
         self.feedback_collector = feedback_collector
-        self._feedback_collector_config = {"learning_data_dir": learning_data_dir}
+        self._feedback_collector_config: FeedbackCollectorConfig = {"learning_data_dir": self.learning_data_dir}
 
         # パターン改善システム（遅延初期化）
         self.pattern_improvement = None
-        self._pattern_improvement_config = {
+        self._pattern_improvement_config: PatternImprovementConfig = {
             "pattern_database": pattern_database,
-            "learning_data_dir": learning_data_dir,
-            "min_pattern_occurrences": min_pattern_occurrences,
+            "learning_data_dir": self.learning_data_dir,
+            "min_pattern_occurrences": self.min_pattern_occurrences,
         }
 
         # 学習データファイルのパス
@@ -105,10 +160,11 @@ class LearningEngine:
         if self.pattern_improvement is None:
             from .pattern_improvement import PatternImprovementSystem
 
+            config = self._pattern_improvement_config
             self.pattern_improvement = PatternImprovementSystem(
-                self._pattern_improvement_config["pattern_database"],
-                self._pattern_improvement_config["learning_data_dir"],
-                self._pattern_improvement_config["min_pattern_occurrences"],
+                config["pattern_database"],
+                config["learning_data_dir"],
+                config["min_pattern_occurrences"],
             )
         await self.pattern_improvement.initialize()
 
@@ -131,10 +187,11 @@ class LearningEngine:
         if self.pattern_improvement is None:
             from .pattern_improvement import PatternImprovementSystem
 
+            config = self._pattern_improvement_config
             self.pattern_improvement = PatternImprovementSystem(
-                self._pattern_improvement_config["pattern_database"],
-                self._pattern_improvement_config["learning_data_dir"],
-                self._pattern_improvement_config["min_pattern_occurrences"],
+                config["pattern_database"],
+                config["learning_data_dir"],
+                config["min_pattern_occurrences"],
             )
             await self.pattern_improvement.initialize()
 
@@ -301,7 +358,7 @@ class LearningEngine:
 
         try:
             # エラーメッセージを抽出
-            error_messages = []
+            error_messages: list[str] = []
             for log in failed_logs:
                 extracted_errors = self._extract_error_messages(log)
                 error_messages.extend(extracted_errors)
@@ -873,9 +930,9 @@ class LearningEngine:
         """フィードバック収集の結果をリスト形式に正規化"""
 
         if isinstance(feedback_result, list):
-            return [fb for fb in feedback_result if isinstance(fb, UserFeedback)]
+            return list(feedback_result)
 
-        if isinstance(feedback_result, UserFeedback):
+        if feedback_result is not None:
             return [feedback_result]
 
         return []
@@ -1116,7 +1173,7 @@ class LearningEngine:
             logger.error("パターンパフォーマンス分析中にエラー: %s", e)
             return {}
 
-    async def update_pattern_database_dynamically(self) -> dict[str, Any]:
+    async def update_pattern_database_dynamically(self) -> UpdateStats:
         """パターンデータベースを動的に更新
 
         Returns:
@@ -1127,7 +1184,7 @@ class LearningEngine:
 
         logger.info("パターンデータベースの動的更新を開始")
 
-        update_stats: dict[str, int | list[str]] = {
+        update_stats: UpdateStats = {
             "new_patterns_added": 0,
             "patterns_added": 0,
             "patterns_improved": 0,
@@ -1186,7 +1243,7 @@ class LearningEngine:
         )
 
         try:
-            unknown_errors: list[dict[str, Any]] = []
+            unknown_errors: list[UnknownErrorPayload] = []
             if self.unknown_errors_file.exists():
                 try:
                     with self.unknown_errors_file.open(
@@ -1195,11 +1252,10 @@ class LearningEngine:
                     ) as file_obj:
                         content = file_obj.read().strip()
                         if content:
-                            stored_errors = json.loads(content)
+                            stored_errors_raw = cast(list[dict[str, Any]], json.loads(content))
                             unknown_errors = [
                                 self._normalize_unknown_error_payload(error)
-                                for error in stored_errors
-                                if isinstance(error, dict)
+                                for error in stored_errors_raw
                             ]
                 except (json.JSONDecodeError, FileNotFoundError):
                     logger.warning("未知エラーファイルが破損しています。空のリストで初期化します。")
@@ -1268,8 +1324,8 @@ class LearningEngine:
             }
 
     def _find_similar_unknown_error(
-        self, unknown_error_info: dict[str, Any], existing_errors: list[dict[str, Any]]
-    ) -> dict[str, Any] | None:
+        self, unknown_error_info: UnknownErrorPayload, existing_errors: list[UnknownErrorPayload]
+    ) -> UnknownErrorPayload | None:
         """類似の未知エラーを検索
 
         Args:
@@ -1298,8 +1354,8 @@ class LearningEngine:
         return None
 
     def _get_frequent_unknown_errors(
-        self, unknown_errors: list[dict[str, Any]], min_occurrences: int | None = None
-    ) -> list[dict[str, Any]]:
+        self, unknown_errors: Sequence[UnknownErrorPayload], min_occurrences: int | None = None
+    ) -> list[UnknownErrorPayload]:
         """頻繁に発生する未知エラーを取得
 
         Args:
@@ -1312,37 +1368,40 @@ class LearningEngine:
         if min_occurrences is None:
             min_occurrences = self.min_pattern_occurrences
 
-        frequent_errors = [error for error in unknown_errors if error.get("occurrence_count", 1) >= min_occurrences]
+        frequent_errors: list[UnknownErrorPayload] = [
+            error for error in unknown_errors if error.get("occurrence_count", 1) >= min_occurrences
+        ]
 
         # 発生回数でソート
         frequent_errors.sort(key=lambda x: x.get("occurrence_count", 1), reverse=True)
         return frequent_errors
 
-    def _normalize_unknown_error_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
+    def _normalize_unknown_error_payload(self, payload: dict[str, Any]) -> UnknownErrorPayload:
         """未知エラー情報のフォーマットを正規化"""
 
-        normalized: dict[str, Any] = dict(payload) if payload is not None else {}
+        normalized_payload = cast(UnknownErrorPayload, dict(payload))
 
-        normalized.setdefault("error_category", "unknown")
-        normalized.setdefault("context", {})
-        normalized.setdefault("error_features", {})
+        normalized_payload.setdefault("error_category", "unknown")
+        normalized_payload.setdefault("context", {})
+        normalized_payload.setdefault("error_features", {})
+        normalized_payload.setdefault("potential_pattern", cast(PotentialPatternPayload, {}))
 
-        if "occurrence_count" not in normalized:
-            occurrences = normalized.pop("occurrences", None)
+        if "occurrence_count" not in normalized_payload:
+            occurrences = normalized_payload.pop("occurrences", None)
             if isinstance(occurrences, int):
-                normalized["occurrence_count"] = max(1, occurrences)
+                normalized_payload["occurrence_count"] = max(1, occurrences)
             else:
-                normalized["occurrence_count"] = 1
+                normalized_payload["occurrence_count"] = 1
 
-        timestamp = normalized.get("timestamp")
+        timestamp = normalized_payload.get("timestamp")
         if not timestamp:
             timestamp = datetime.now().isoformat()
-        normalized["timestamp"] = timestamp
-        normalized.setdefault("last_seen", timestamp)
+        normalized_payload["timestamp"] = timestamp
+        normalized_payload.setdefault("last_seen", timestamp)
 
-        return normalized
+        return normalized_payload
 
-    async def _create_potential_pattern(self, unknown_error_info: dict[str, Any]) -> bool:
+    async def _create_potential_pattern(self, unknown_error_info: UnknownErrorPayload) -> bool:
         """未知エラーから潜在的なパターンを作成
 
         Args:
@@ -1353,19 +1412,27 @@ class LearningEngine:
         """
         try:
             # 潜在的なパターン情報を取得
-            potential_pattern_info = unknown_error_info.get("potential_pattern", {})
-
-            if not potential_pattern_info:
+            potential_pattern_raw = unknown_error_info.get("potential_pattern")
+            if potential_pattern_raw is None:
                 logger.warning("潜在的なパターン情報が見つかりません")
+                return False
+            potential_pattern_info: PotentialPatternPayload = potential_pattern_raw
+
+            pattern_id_value = potential_pattern_info.get("id") or unknown_error_info.get("pattern_id")
+            pattern_name = potential_pattern_info.get("name")
+            category = potential_pattern_info.get("category", "unknown")
+
+            if not pattern_id_value or not pattern_name:
+                logger.warning("潜在的なパターン情報に必要なフィールドがありません")
                 return False
 
             # パターンオブジェクトを作成
             pattern = Pattern(
-                id=potential_pattern_info["id"],
-                name=potential_pattern_info["name"],
-                category=potential_pattern_info["category"],
-                regex_patterns=potential_pattern_info.get("regex_patterns", []),
-                keywords=potential_pattern_info.get("keywords", []),
+                id=str(pattern_id_value),
+                name=str(pattern_name),
+                category=str(category),
+                regex_patterns=list(potential_pattern_info.get("regex_patterns", [])),
+                keywords=list(potential_pattern_info.get("keywords", [])),
                 context_requirements=[],
                 confidence_base=potential_pattern_info.get("confidence_base", 0.6),
                 success_rate=0.5,  # 初期成功率
@@ -1378,10 +1445,13 @@ class LearningEngine:
             )
 
             # 潜在的なパターンファイルに保存
-            potential_patterns = []
+            potential_patterns: list[PotentialPatternPayload] = []
             if self.potential_patterns_file.exists():
                 with self.potential_patterns_file.open("r", encoding="utf-8") as f:
-                    potential_patterns = json.load(f)
+                    stored_patterns_raw = cast(list[Any], json.load(f))
+                potential_patterns = [
+                    cast(PotentialPatternPayload, item) for item in stored_patterns_raw if isinstance(item, dict)
+                ]
 
             # 既存の潜在的なパターンと重複チェック
             existing_pattern = next((p for p in potential_patterns if p.get("id") == pattern.id), None)
@@ -1393,7 +1463,7 @@ class LearningEngine:
                 logger.info("既存の潜在的なパターンを更新: %s", pattern.id)
             else:
                 # 新しい潜在的なパターンとして追加
-                pattern_data = {
+                pattern_data: PotentialPatternPayload = {
                     "id": pattern.id,
                     "name": pattern.name,
                     "category": pattern.category,
@@ -1430,21 +1500,31 @@ class LearningEngine:
             await self.initialize()
 
         try:
-            suggestions = []
+            suggestions: list[dict[str, Any]] = []
 
             # 潜在的なパターンを読み込み
             if self.potential_patterns_file.exists():
                 with self.potential_patterns_file.open("r", encoding="utf-8") as f:
-                    potential_patterns = json.load(f)
+                    stored_patterns_raw = cast(list[Any], json.load(f))
+                potential_patterns = [
+                    cast(PotentialPatternPayload, item) for item in stored_patterns_raw if isinstance(item, dict)
+                ]
 
                 # 発生回数が閾値を超えるパターンを提案
                 for pattern_data in potential_patterns:
                     occurrence_count = pattern_data.get("occurrence_count", 0)
-                    if occurrence_count >= self.min_pattern_occurrences:
+                    pattern_id_val = pattern_data.get("id")
+                    pattern_name_val = pattern_data.get("name")
+                    category_val = pattern_data.get("category", "unknown")
+                    if (
+                        occurrence_count >= self.min_pattern_occurrences
+                        and pattern_id_val
+                        and pattern_name_val
+                    ):
                         suggestion = {
-                            "pattern_id": pattern_data["id"],
-                            "pattern_name": pattern_data["name"],
-                            "category": pattern_data["category"],
+                            "pattern_id": pattern_id_val,
+                            "pattern_name": pattern_name_val,
+                            "category": category_val,
                             "occurrence_count": occurrence_count,
                             "confidence": min(0.8, 0.5 + (occurrence_count * 0.1)),
                             "keywords": pattern_data.get("keywords", []),
@@ -1483,24 +1563,40 @@ class LearningEngine:
                 return False
 
             with self.potential_patterns_file.open("r", encoding="utf-8") as f:
-                potential_patterns = json.load(f)
+                stored_patterns_raw = cast(list[Any], json.load(f))
+            potential_patterns: list[PotentialPatternPayload] = [
+                cast(PotentialPatternPayload, p) for p in stored_patterns_raw if isinstance(p, dict)
+            ]
 
-            pattern_data = next((p for p in potential_patterns if p["id"] == pattern_id), None)
+            pattern_data = next((p for p in potential_patterns if p.get("id") == pattern_id), None)
             if not pattern_data:
                 logger.warning("潜在的なパターンが見つかりません: %s", pattern_id)
                 return False
 
             # 正式なパターンオブジェクトを作成
+            pattern_name = pattern_data.get("name")
+            if not pattern_name:
+                logger.warning("潜在的なパターン情報に名前がありません: %s", pattern_id)
+                return False
+
+            category = pattern_data.get("category", "unknown")
+            regex_patterns = list(pattern_data.get("regex_patterns", []))
+            keywords = list(pattern_data.get("keywords", []))
+            created_at_str = pattern_data.get("created_at")
+            created_at = (
+                datetime.fromisoformat(created_at_str) if isinstance(created_at_str, str) else datetime.now()
+            )
+
             pattern = Pattern(
-                id=pattern_data["id"],
-                name=pattern_data["name"],
-                category=pattern_data["category"],
-                regex_patterns=pattern_data.get("regex_patterns", []),
-                keywords=pattern_data.get("keywords", []),
+                id=str(pattern_id),
+                name=str(pattern_name),
+                category=str(category),
+                regex_patterns=regex_patterns,
+                keywords=keywords,
                 context_requirements=[],
-                confidence_base=pattern_data.get("confidence_base", 0.7),
-                success_rate=pattern_data.get("success_rate", 0.6),
-                created_at=datetime.fromisoformat(pattern_data["created_at"]),
+                confidence_base=float(pattern_data.get("confidence_base", 0.7)),
+                success_rate=float(pattern_data.get("success_rate", 0.6)),
+                created_at=created_at,
                 updated_at=datetime.now(),
                 user_defined=False,
                 auto_generated=True,
@@ -1514,7 +1610,7 @@ class LearningEngine:
                 await self.pattern_database.save_patterns()
 
                 # 潜在的なパターンリストから削除
-                potential_patterns = [p for p in potential_patterns if p["id"] != pattern_id]
+                potential_patterns = [p for p in potential_patterns if p.get("id") != pattern_id]
                 with self.potential_patterns_file.open("w", encoding="utf-8") as f:
                     json.dump(potential_patterns, f, ensure_ascii=False, indent=2)
 
@@ -1528,14 +1624,14 @@ class LearningEngine:
             logger.error("パターン昇格中にエラー: %s", e)
             return False
 
-    def get_unknown_error_statistics(self) -> dict[str, Any]:
+    def get_unknown_error_statistics(self) -> UnknownErrorStats | dict[str, str]:
         """未知エラーの統計情報を取得
 
         Returns:
             統計情報
         """
         try:
-            stats = {
+            stats: UnknownErrorStats = {
                 "total_unknown_errors": 0,
                 "frequent_unknown_errors": 0,
                 "potential_patterns": 0,
@@ -1549,7 +1645,7 @@ class LearningEngine:
                     with self.unknown_errors_file.open("r", encoding="utf-8") as f:
                         content = f.read().strip()
                         if content:
-                            unknown_errors = json.loads(content)
+                            unknown_errors = cast(list[UnknownErrorPayload], json.loads(content))
                         else:
                             unknown_errors = []
                 except (json.JSONDecodeError, FileNotFoundError):
@@ -1559,7 +1655,7 @@ class LearningEngine:
                 stats["total_unknown_errors"] = len(unknown_errors)
 
                 # カテゴリ別統計
-                category_counts = Counter()
+                category_counts: Counter[str] = Counter()
                 for error in unknown_errors:
                     category = error.get("error_category", "unknown")
                     occurrence_count = error.get("occurrence_count", 1)
@@ -1575,8 +1671,8 @@ class LearningEngine:
             # 潜在的なパターン統計
             if self.potential_patterns_file.exists():
                 with self.potential_patterns_file.open("r", encoding="utf-8") as f:
-                    potential_patterns = json.load(f)
-                stats["potential_patterns"] = len(potential_patterns)
+                    stored_patterns = cast(list[dict[str, Any]], json.load(f))
+                stats["potential_patterns"] = len(stored_patterns)
 
             return stats
 

@@ -33,7 +33,7 @@ from .exceptions import (
     TokenLimitError,
 )
 from .fallback_handler import FallbackHandler
-from .fix_applier import FixApplier
+from .fix_applier import FixApplier, FixSuggestionsSummary, RollbackResult
 from .fix_generator import FixSuggestionGenerator
 from .interactive_session import InteractiveSessionManager
 from .models import AIConfig, AnalysisResult, AnalysisStatus, AnalyzeOptions, InteractiveSession, ProviderConfig
@@ -591,7 +591,7 @@ class AIIntegration:
         fix_suggestions: list[FixSuggestion],
         auto_approve: bool = False,
         interactive: bool = True,
-    ) -> dict[str, Any]:
+    ) -> FixSuggestionsSummary:
         """修正提案を適用
 
         Args:
@@ -707,7 +707,7 @@ class AIIntegration:
                 raise AIError(f"ログ分析と修正処理に失敗しました: {error_info['message']}") from e
             raise AIError(f"ログ分析と修正処理に失敗しました: {e}") from e
 
-    def rollback_fixes(self, backup_paths: list[str]) -> dict[str, Any]:
+    def rollback_fixes(self, backup_paths: list[str]) -> RollbackResult:
         """修正をロールバック
 
         Args:

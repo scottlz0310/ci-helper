@@ -617,7 +617,9 @@ class PatternRecognitionEngine:
 
         """
         if self.learning_engine:
-            return self.learning_engine.get_unknown_error_statistics()
+            stats = self.learning_engine.get_unknown_error_statistics()
+            # TypedDictをdict[str, Any]に変換
+            return dict(stats)
         return {"error": "学習エンジンが初期化されていません"}
 
     def __str__(self) -> str:

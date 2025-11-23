@@ -1718,11 +1718,12 @@ async def _save_partial_analysis_state(
 
         # フォールバックハンドラーを使用して部分的な結果を保存
         if ai_integration.fallback_handler:
-            partial_data: dict[str, Any] = {
+            from ..ai.fallback_handler import PartialResultData
+
+            partial_data: PartialResultData = {
                 "error_type": type(error).__name__,
                 "error_message": str(error),
                 "log_content": log_content[:1000],  # 最初の1000文字のみ保存
-                "retry_available": True,
             }
 
             if options:

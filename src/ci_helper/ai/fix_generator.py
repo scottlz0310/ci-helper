@@ -12,7 +12,15 @@ from typing import Any
 
 from .exceptions import AIError
 from .fix_templates import FixTemplateManager
-from .models import AnalysisResult, CodeChange, FixSuggestion, PatternMatch, Priority, Severity
+from .models import (
+    AnalysisResult,
+    CodeChange,
+    FixSuggestion,
+    Pattern,
+    PatternMatch,
+    Priority,
+    Severity,
+)
 from .prompts import PromptManager
 from .risk_calculator import RiskCalculator, TimeEstimator
 
@@ -73,7 +81,7 @@ class FixSuggestionGenerator:
 
         try:
             # 根本原因から修正提案を生成
-            suggestions = []
+            suggestions: list[FixSuggestion] = []
 
             for root_cause in analysis_result.root_causes:
                 suggestion = self._create_fix_suggestion_from_cause(root_cause, log_content, project_context)
@@ -164,7 +172,7 @@ class FixSuggestionGenerator:
             ]
         else:
             fix_description = "依存関係を確認し、必要なパッケージをインストールしてください"
-            code_changes = []
+            code_changes: list[CodeChange] = []
 
         priority = self._severity_to_priority(severity)
         effort = self._estimate_dependency_effort(description)
@@ -203,7 +211,7 @@ class FixSuggestionGenerator:
             old_code = "# 構文エラー"
             new_code = "# 修正されたコード"
 
-        code_changes = []
+        code_changes: list[CodeChange] = []
         if file_path and line_number:
             code_changes.append(
                 CodeChange(
@@ -283,7 +291,7 @@ class FixSuggestionGenerator:
             old_code = "# テストエラー"
             new_code = "# 修正されたテスト"
 
-        code_changes = []
+        code_changes: list[CodeChange] = []
         if file_path and line_number:
             code_changes.append(
                 CodeChange(
@@ -350,7 +358,7 @@ class FixSuggestionGenerator:
         title = "一般的な修正"
         fix_description = f"以下の問題を確認してください: {description}"
 
-        code_changes = []
+        code_changes: list[CodeChange] = []
         if file_path:
             code_changes.append(
                 CodeChange(
@@ -380,7 +388,7 @@ class FixSuggestionGenerator:
         self, analysis_result: AnalysisResult, log_content: str, project_context: dict[str, Any] | None = None
     ) -> list[FixSuggestion]:
         """一般的な修正提案を生成"""
-        suggestions = []
+        suggestions: list[FixSuggestion] = []
 
         # ログ内容から一般的な問題を検出
         log_lower = log_content.lower()
@@ -464,14 +472,14 @@ class FixSuggestionGenerator:
         Returns:
             CodeChangeオブジェクトのリスト
         """
-        changes = []
+        changes: list[CodeChange] = []
 
         try:
             # 簡単な差分パーサー（実際にはより堅牢な実装が必要）
             lines = diff_text.split("\n")
             current_file = None
-            old_code_lines = []
-            new_code_lines = []
+            old_code_lines: list[str] = []
+            new_code_lines: list[str] = []
             line_start = 1
 
             for line in lines:
@@ -539,8 +547,8 @@ class FixSuggestionGenerator:
         """
         logger.info("パターンベースの修正提案を生成中...")
 
-        suggestions = []
-        context = project_context or {}
+        suggestions: list[FixSuggestion] = []
+        context: dict[str, Any] = dict(project_context or {})
 
         # ログ内容からコンテキスト情報を抽出
         extracted_context = self._extract_context_from_log(log_content)
@@ -625,7 +633,7 @@ class FixSuggestionGenerator:
         Returns:
             抽出されたコンテキスト情報
         """
-        context = {}
+        context: dict[str, Any] = {}
 
         # ファイルパスを抽出
         file_patterns = [
@@ -691,7 +699,7 @@ class FixSuggestionGenerator:
         Returns:
             抽出されたコンテキスト情報
         """
-        context = {}
+        context: dict[str, Any] = {}
 
         # 抽出されたコンテキストから情報を取得
         extracted_context = pattern_match.extracted_context
@@ -737,7 +745,7 @@ class FixSuggestionGenerator:
         Returns:
             コード変更のリスト
         """
-        code_changes = []
+        code_changes: list[CodeChange] = []
 
         for step in template.fix_steps:
             if step.type == "file_modification" and step.file_path and step.content:
@@ -872,15 +880,55 @@ class FixSuggestionGenerator:
         Returns:
             重要度レベル（"low", "medium", "high", "critical"）
         """
-        # RiskCalculatorの機能を使用
-        if self.risk_calculator._is_critical_file(file_path):
-            return "critical"
-        elif self.risk_calculator._is_important_directory(file_path):
-            return "high"
-        elif self.risk_calculator._is_system_file(file_path):
-            return "critical"
-        else:
-            return "medium"
+        # システムファイルパターン
+        system_patterns = [
+            r"^/etc/",
+            r"^/usr/",
+            r"^/var/",
+            r"^/opt/",
+            r"^C:\\Windows\\",
+            r"^C:\\Program Files\\",
+        ]
+        for pattern in system_patterns:
+            if re.search(pattern, file_path, re.IGNORECASE):
+                return "critical"
+
+        # クリティカルファイルパターン
+        critical_patterns = [
+            r"package\.json$",
+            r"requirements\.txt$",
+            r"pyproject\.toml$",
+            r"Dockerfile$",
+            r"docker-compose\.ya?ml$",
+            r"\.github/workflows/.*\.ya?ml$",
+            r"tsconfig\.json$",
+            r"webpack\.config\.",
+            r"babel\.config\.",
+            r"\.env$",
+            r"\.env\..*$",
+            r"config/.*\.ya?ml$",
+            r"src/main\.",
+            r"index\.(js|ts|py)$",
+        ]
+        for pattern in critical_patterns:
+            if re.search(pattern, file_path, re.IGNORECASE):
+                return "critical"
+
+        # 重要ディレクトリパターン
+        important_patterns = [
+            r"^src/",
+            r"^lib/",
+            r"^app/",
+            r"^config/",
+            r"^\.github/",
+            r"^docker/",
+            r"^scripts/",
+        ]
+        for pattern in important_patterns:
+            if re.search(pattern, file_path, re.IGNORECASE):
+                return "high"
+
+        return "medium"
 
     def calculate_change_impact(self, fix_suggestion: FixSuggestion) -> dict[str, Any]:
         """コード変更の影響範囲を計算
@@ -891,37 +939,40 @@ class FixSuggestionGenerator:
         Returns:
             影響範囲の情報
         """
-        impact = {
-            "file_count": len(fix_suggestion.code_changes),
-            "affected_files": [],
-            "critical_files": [],
-            "total_lines_changed": 0,
-            "risk_assessment": "low",
-        }
+        affected_files: list[str] = []
+        critical_files: list[str] = []
+        total_lines_changed: int = 0
 
         for code_change in fix_suggestion.code_changes:
             file_path = code_change.file_path
-            impact["affected_files"].append(file_path)
+            affected_files.append(file_path)
 
             # ファイルの重要度を評価
             importance = self.assess_file_importance(file_path)
             if importance in ["critical", "high"]:
-                impact["critical_files"].append(file_path)
+                critical_files.append(file_path)
 
             # 変更行数を計算
             old_lines = len(code_change.old_code.split("\n")) if code_change.old_code else 0
             new_lines = len(code_change.new_code.split("\n")) if code_change.new_code else 0
-            impact["total_lines_changed"] += max(old_lines, new_lines)
+            total_lines_changed += max(old_lines, new_lines)
 
         # 全体的なリスク評価
-        if impact["critical_files"]:
-            impact["risk_assessment"] = "high"
-        elif impact["file_count"] > 3 or impact["total_lines_changed"] > 50:
-            impact["risk_assessment"] = "medium"
+        risk_assessment: str
+        if critical_files:
+            risk_assessment = "high"
+        elif len(fix_suggestion.code_changes) > 3 or total_lines_changed > 50:
+            risk_assessment = "medium"
         else:
-            impact["risk_assessment"] = "low"
+            risk_assessment = "low"
 
-        return impact
+        return {
+            "file_count": len(fix_suggestion.code_changes),
+            "affected_files": affected_files,
+            "critical_files": critical_files,
+            "total_lines_changed": total_lines_changed,
+            "risk_assessment": risk_assessment,
+        }
 
     def estimate_fix_effort(self, fix_suggestion: FixSuggestion) -> str:
         """修正提案の工数を推定
@@ -1043,7 +1094,7 @@ class FixSuggestionGenerator:
         title = f"{pattern.name}の修正"
         description = "権限エラーを解決するための修正提案"
 
-        code_changes = []
+        code_changes: list[CodeChange] = []
         if "docker" in pattern_match.extracted_context.lower():
             code_changes.append(
                 CodeChange(
@@ -1073,7 +1124,7 @@ class FixSuggestionGenerator:
         title = f"{pattern.name}の修正"
         description = "依存関係エラーを解決するための修正提案"
 
-        code_changes = []
+        code_changes: list[CodeChange] = []
         extracted_context = pattern_match.extracted_context.lower()
 
         if "package.json" in extracted_context or "npm" in extracted_context:
@@ -1116,7 +1167,7 @@ class FixSuggestionGenerator:
         title = f"{pattern.name}の修正"
         description = "設定エラーを解決するための修正提案"
 
-        code_changes = []
+        code_changes: list[CodeChange] = []
         if "env" in pattern_match.extracted_context.lower():
             code_changes.append(
                 CodeChange(

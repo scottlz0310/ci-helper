@@ -37,7 +37,6 @@ class InteractiveSessionManager:
         self.prompt_manager = prompt_manager
         self.session_timeout = session_timeout
         self.active_sessions: dict[str, InteractiveSession] = {}
-        self.active_sessions: dict[str, InteractiveSession] = {}
         self.session_contexts: dict[str, dict[str, Any]] = {}
         self.command_processor: Any = None
 

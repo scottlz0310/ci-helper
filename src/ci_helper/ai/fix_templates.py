@@ -58,7 +58,7 @@ class FixTemplateManager:
     def _parse_template_data(self, template_data: dict[str, Any]) -> FixTemplate:
         """テンプレートデータをFixTemplateオブジェクトに変換"""
         # 修正ステップを解析
-        fix_steps = []
+        fix_steps: list[FixStep] = []
         for step_data in template_data.get("fix_steps", []):
             fix_step = FixStep(
                 type=step_data["type"],
@@ -115,15 +115,16 @@ class FixTemplateManager:
     def customize_template(self, template: FixTemplate, context: dict[str, Any]) -> FixSuggestion:
         """テンプレートをコンテキストに応じてカスタマイズしてFixSuggestionを生成"""
         # コンテキスト変数を使用してテンプレートをカスタマイズ
-        customized_steps = []
+        customized_steps: list[FixStep] = []
         for step in template.fix_steps:
             customized_step = self._customize_fix_step(step, context)
             customized_steps.append(customized_step)
 
         # FixSuggestionを作成
+        description = self._substitute_variables(template.description, context)
         return FixSuggestion(
             title=template.name,
-            description=self._substitute_variables(template.description, context),
+            description=description if description is not None else template.description,
             # code_changesは後で実装
             code_changes=[],
             # priorityはrisk_levelから推定
@@ -135,9 +136,10 @@ class FixTemplateManager:
 
     def _customize_fix_step(self, step: FixStep, context: dict[str, Any]) -> FixStep:
         """修正ステップをコンテキストに応じてカスタマイズ"""
+        description = self._substitute_variables(step.description, context)
         return FixStep(
             type=step.type,
-            description=self._substitute_variables(step.description, context),
+            description=description if description is not None else step.description,
             file_path=self._substitute_variables(step.file_path, context) if step.file_path else None,
             action=step.action,
             content=self._substitute_variables(step.content, context) if step.content else None,

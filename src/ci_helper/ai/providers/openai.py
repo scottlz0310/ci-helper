@@ -98,12 +98,12 @@ class OpenAIProvider(AIProvider):
 
         try:
             # 簡単なテストリクエストを送信
-            response = await self._client.chat.completions.create(
+            await self._client.chat.completions.create(
                 model=self.config.default_model,
                 messages=[{"role": "user", "content": "Hello"}],
                 max_tokens=1,
             )
-            return response is not None
+            return True
 
         except openai.AuthenticationError as e:
             raise APIKeyError("openai", f"OpenAI APIキーが無効です: {e}") from e

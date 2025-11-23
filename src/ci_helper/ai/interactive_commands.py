@@ -271,7 +271,7 @@ class InteractiveCommandProcessor:
 
         """
         self.session_manager = session_manager
-        self.commands = {
+        self.commands: dict[str, InteractiveCommand] = {
             "help": HelpCommand(),
             "exit": ExitCommand(),
             "summary": SummaryCommand(),
