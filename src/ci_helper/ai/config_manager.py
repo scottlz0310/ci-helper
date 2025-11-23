@@ -5,11 +5,22 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TypedDict, cast
 
 from ..core.exceptions import ConfigurationError
 from ..utils.config import Config
 from .models import AIConfig, ProviderConfig
+
+
+class ProviderSettings(TypedDict, total=False):
+    base_url: str | None
+    default_model: str
+    available_models: list[str]
+    timeout_seconds: int
+    max_retries: int
+    rate_limit_per_minute: int | None
+    cost_per_input_token: float
+    cost_per_output_token: float
 
 
 class PatternRecognitionConfigManager:
@@ -81,7 +92,7 @@ class PatternRecognitionConfigManager:
             ConfigurationError: カテゴリが無効な場合
 
         """
-        if not isinstance(category, str) or not category.strip():
+        if not category.strip():
             raise ConfigurationError(
                 "パターンカテゴリが無効です",
                 "空でない文字列を指定してください",
@@ -98,7 +109,7 @@ class PatternRecognitionConfigManager:
 
         return self.config.is_pattern_category_enabled(category)
 
-    def validate_confidence_threshold(self, threshold: float, threshold_type: str = "pattern") -> None:
+    def validate_confidence_threshold(self, threshold: float | int, threshold_type: str = "pattern") -> None:
         """信頼度閾値の有効性を検証
 
         Args:
@@ -109,13 +120,7 @@ class PatternRecognitionConfigManager:
             ConfigurationError: 閾値が無効な場合
 
         """
-        if not isinstance(threshold, int | float):
-            raise ConfigurationError(
-                f"{threshold_type}信頼度閾値が無効です: {threshold}",
-                "数値を指定してください",
-            )
-
-        if not (0.0 <= threshold <= 1.0):
+        if not (0.0 <= float(threshold) <= 1.0):
             raise ConfigurationError(
                 f"{threshold_type}信頼度閾値が範囲外です: {threshold}",
                 "0.0から1.0の間の値を指定してください",
@@ -154,22 +159,28 @@ class PatternRecognitionConfigManager:
             AIConfigオブジェクト
 
         """
-        ai_config_dict = self.config.get_ai_config()
+        ai_config_dict: dict[str, Any] = self.config.get_ai_config()
 
         # プロバイダー設定を変換
-        providers = {}
-        for provider_name, provider_data in ai_config_dict.get("providers", {}).items():
+        provider_settings_raw = ai_config_dict.get("providers", {})
+        providers: dict[str, ProviderConfig] = {}
+        if isinstance(provider_settings_raw, dict):
+            typed_provider_settings = cast(dict[str, ProviderSettings], provider_settings_raw)
+        else:
+            typed_provider_settings = {}
+
+        for provider_name, provider_config in typed_provider_settings.items():
             providers[provider_name] = ProviderConfig(
                 name=provider_name,
                 api_key=self.config.get_ai_provider_api_key(provider_name) or "",
-                base_url=provider_data.get("base_url"),
-                default_model=provider_data.get("default_model", ""),
-                available_models=provider_data.get("available_models", []),
-                timeout_seconds=provider_data.get("timeout_seconds", 30),
-                max_retries=provider_data.get("max_retries", 3),
-                rate_limit_per_minute=provider_data.get("rate_limit_per_minute"),
-                cost_per_input_token=provider_data.get("cost_per_input_token", 0.0),
-                cost_per_output_token=provider_data.get("cost_per_output_token", 0.0),
+                base_url=provider_config.get("base_url"),
+                default_model=provider_config.get("default_model", ""),
+                available_models=provider_config.get("available_models", []),
+                timeout_seconds=provider_config.get("timeout_seconds", 30),
+                max_retries=provider_config.get("max_retries", 3),
+                rate_limit_per_minute=provider_config.get("rate_limit_per_minute"),
+                cost_per_input_token=provider_config.get("cost_per_input_token", 0.0),
+                cost_per_output_token=provider_config.get("cost_per_output_token", 0.0),
             )
 
         return AIConfig(
@@ -223,11 +234,6 @@ class PatternRecognitionConfigManager:
 
         # 設定ファイルに保存する実装は、実際のファイル更新が必要
         # ここでは検証のみ実行
-        if not isinstance(categories, list):
-            raise ConfigurationError(
-                "パターンカテゴリは配列で指定してください",
-                "例: ['permission', 'network', 'config']",
-            )
 
     def get_pattern_database_info(self) -> dict[str, Any]:
         """パターンデータベース情報を取得

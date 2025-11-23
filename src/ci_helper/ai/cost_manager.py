@@ -9,11 +9,11 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from .cost_tracker import CostTracker
 from .exceptions import ConfigurationError
-from .models import LimitStatus
+from .models import LimitStatus, WarningLevel
 
 if TYPE_CHECKING:
     from .models import CostEstimate
@@ -111,7 +111,7 @@ class CostManager:
             "limit": limit_status.limit,
             "usage_after_request": estimated_usage_after,
             "remaining_budget": limit_status.remaining - estimated_cost,
-            "warning_level": warning_level,
+            "warning_level": warning_level.value,
             "can_proceed": estimated_usage_after <= limit_status.limit,
         }
 
@@ -133,7 +133,7 @@ class CostManager:
             "limit": limit_status.limit,
             "remaining": limit_status.remaining,
             "usage_percentage": limit_status.usage_percentage,
-            "warning_level": warning_level,
+            "warning_level": warning_level.value,
             "is_near_limit": limit_status.is_near_limit,
             "is_over_limit": limit_status.is_over_limit,
             "reset_time": limit_status.reset_time.isoformat() if limit_status.reset_time else None,
@@ -188,7 +188,7 @@ class CostManager:
         stats = self.tracker.get_monthly_usage(year, month)
 
         # 月間制限との比較
-        monthly_limits = {}
+        monthly_limits: dict[str, dict[str, float]] = {}
         for provider in stats.provider_breakdown.keys():
             limit_status = self.tracker.check_limits(provider)
             monthly_limits[provider] = {
@@ -219,22 +219,30 @@ class CostManager:
         Returns:
             警告のリスト
         """
-        warnings = []
+        warnings: list[dict[str, Any]] = []
 
         # 各プロバイダーの制限をチェック
-        providers = set()
-        for record in self.tracker.usage_data["records"]:
-            providers.add(record["provider"])
+        providers: set[str] = set()
+        records_raw = self.tracker.usage_data.get("records", [])
+        if isinstance(records_raw, list):
+            records_iter = cast(list[Any], records_raw)
+            for raw_record in records_iter:
+                if not isinstance(raw_record, dict):
+                    continue
+                record = cast(dict[str, Any], raw_record)
+                provider_name = record.get("provider")
+                if isinstance(provider_name, str):
+                    providers.add(provider_name)
 
         for provider in providers:
             limit_status = self.tracker.check_limits(provider)
             warning_level = self._get_warning_level(limit_status.current_usage, limit_status.limit)
 
-            if warning_level in ["warning", "critical"]:
+            if warning_level in {WarningLevel.WARNING, WarningLevel.CRITICAL}:
                 warnings.append(
                     {
                         "provider": provider,
-                        "level": warning_level,
+                        "level": warning_level.value,
                         "current_usage": limit_status.current_usage,
                         "limit": limit_status.limit,
                         "usage_percentage": limit_status.usage_percentage,
@@ -250,7 +258,7 @@ class CostManager:
         Returns:
             推奨事項のリスト
         """
-        recommendations = []
+        recommendations: list[str] = []
 
         # 最近30日の使用統計を取得
         stats = self.tracker.get_usage_stats(30)
@@ -263,9 +271,17 @@ class CostManager:
             )
 
         # 高コストなモデルの使用
-        model_costs = cost_breakdown.get("model_breakdown", {})
+        model_breakdown_data = cost_breakdown.get("model_breakdown", {})
+        model_costs: dict[str, float] = {}
+        if isinstance(model_breakdown_data, dict):
+            breakdown_items = cast(dict[Any, Any], model_breakdown_data)
+            for key, value in breakdown_items.items():
+                if isinstance(key, str) and isinstance(value, (int, float)):
+                    key_str: str = key
+                    value_float: float = float(value)
+                    model_costs[key_str] = value_float
         if model_costs:
-            most_expensive_model = max(model_costs.keys(), key=lambda m: model_costs[m])
+            most_expensive_model = max(model_costs, key=lambda model_name: model_costs[model_name])
             if model_costs[most_expensive_model] > stats.total_cost * 0.5:
                 recommendations.append(
                     f"モデル '{most_expensive_model}' が総コストの50%以上を占めています。"
@@ -273,8 +289,8 @@ class CostManager:
                 )
 
         # 使用量の急増
-        trends = self.tracker.get_usage_trends(30)
-        if trends.get("cost_trend") == "増加" and trends.get("cost_change_per_day", 0) > 1.0:
+        trends: dict[str, Any] = self.tracker.get_usage_trends(30)
+        if trends.get("cost_trend") == "増加" and float(trends.get("cost_change_per_day", 0) or 0) > 1.0:
             recommendations.append("使用コストが急増しています。使用パターンを見直すことをお勧めします")
 
         # キャッシュの活用
@@ -293,27 +309,26 @@ class CostManager:
 
         return recommendations
 
-    def _get_warning_level(self, current_usage: float, limit: float) -> str:
+    def _get_warning_level(self, current_usage: float, limit: float) -> WarningLevel:
         """警告レベルを取得"""
         if limit == float("inf"):
-            return "none"
+            return WarningLevel.NONE
 
         usage_ratio = current_usage / limit
 
         if usage_ratio >= 1.0:
-            return "critical"
-        elif usage_ratio >= self.warning_threshold:
-            return "warning"
-        elif usage_ratio >= 0.5:
-            return "info"
-        else:
-            return "none"
+            return WarningLevel.CRITICAL
+        if usage_ratio >= self.warning_threshold:
+            return WarningLevel.WARNING
+        if usage_ratio >= 0.5:
+            return WarningLevel.INFO
+        return WarningLevel.NONE
 
-    def _get_warning_message(self, provider: str, level: str, limit_status: LimitStatus) -> str:
+    def _get_warning_message(self, provider: str, level: WarningLevel, limit_status: LimitStatus) -> str:
         """警告メッセージを生成"""
-        if level == "critical":
+        if level == WarningLevel.CRITICAL:
             return f"{provider}の月間制限（${limit_status.limit:.2f}）を超過しています"
-        elif level == "warning":
+        if level == WarningLevel.WARNING:
             return f"{provider}の月間制限の{limit_status.usage_percentage:.0f}%を使用しています"
         else:
             return f"{provider}の使用量が増加しています"
@@ -449,29 +464,3 @@ class CostManager:
                 raise CostLimitError(
                     current_cost=current_usage + estimate.estimated_cost, limit=limit, provider=estimate.provider
                 )
-
-    def _calculate_warning_level(self, current_usage: float, limit: float) -> str:
-        """警告レベルを計算
-
-        Args:
-            current_usage: 現在の使用量
-            limit: 制限値
-
-        Returns:
-            警告レベル
-        """
-        from .models import WarningLevel
-
-        if limit == float("inf") or limit <= 0:
-            return WarningLevel.NONE
-
-        usage_ratio = current_usage / limit
-
-        if usage_ratio >= 1.0:
-            return WarningLevel.CRITICAL
-        elif usage_ratio >= 0.9:
-            return WarningLevel.CRITICAL
-        elif usage_ratio >= self.warning_threshold:
-            return WarningLevel.WARNING
-        else:
-            return WarningLevel.NONE

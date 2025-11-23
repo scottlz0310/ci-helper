@@ -6,9 +6,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
 if TYPE_CHECKING:
     from ..core.models import ExecutionResult
@@ -16,8 +16,25 @@ if TYPE_CHECKING:
 from ..utils.performance_optimizer import PerformanceOptimizer
 from .base_formatter import BaseLogFormatter
 
+TChunkResult = TypeVar("TChunkResult", covariant=True)
+TLineResult = TypeVar("TLineResult", covariant=True)
 
-class StreamingFormatterMixin:
+
+class ChunkProcessor(Protocol[TChunkResult]):
+    """ログチャンク処理関数のプロトコル"""
+
+    def __call__(self, chunk: str, **processor_options: Any) -> TChunkResult | None:
+        ...
+
+
+class LineProcessor(Protocol[TLineResult]):
+    """ログ行処理関数のプロトコル"""
+
+    def __call__(self, lines: list[str], **processor_options: Any) -> TLineResult | None:
+        ...
+
+
+class StreamingFormatterMixin(BaseLogFormatter):
     """ストリーミング処理機能を提供するミックスイン
 
     既存のフォーマッターにストリーミング処理機能を追加します。
@@ -193,7 +210,12 @@ class ChunkedLogProcessor:
         """
         self.performance_optimizer = performance_optimizer or PerformanceOptimizer()
 
-    def process_log_chunks(self, log_path: Path, processor_func: Callable, **processor_options: Any) -> Iterator[str]:
+    def process_log_chunks(
+        self,
+        log_path: Path,
+        processor_func: ChunkProcessor[TChunkResult],
+        **processor_options: Any,
+    ) -> Iterator[TChunkResult]:
         """ログをチャンク単位で処理
 
         Args:
@@ -210,7 +232,7 @@ class ChunkedLogProcessor:
         for chunk in streamer.stream_file_chunks(log_path):
             try:
                 processed_chunk = processor_func(chunk, **processor_options)
-                if processed_chunk:
+                if processed_chunk is not None:
                     yield processed_chunk
             except Exception:
                 # チャンク処理エラーは無視して続行
@@ -219,10 +241,10 @@ class ChunkedLogProcessor:
     def process_log_lines(
         self,
         log_path: Path,
-        line_processor_func: Callable,
+        line_processor_func: LineProcessor[TLineResult],
         batch_size: int = 1000,
         **processor_options: Any,
-    ) -> Iterator[str]:
+    ) -> Iterator[TLineResult]:
         """ログを行単位でバッチ処理
 
         Args:
@@ -244,19 +266,19 @@ class ChunkedLogProcessor:
             if len(batch_lines) >= batch_size:
                 try:
                     processed_batch = line_processor_func(batch_lines, **processor_options)
-                    if processed_batch:
+                    if processed_batch is not None:
                         yield processed_batch
                 except Exception:
                     # バッチ処理エラーは無視して続行
                     pass
                 finally:
-                    batch_lines: list[str] = []
+                    batch_lines = []
 
         # 残りのバッチを処理
         if batch_lines:
             try:
                 processed_batch = line_processor_func(batch_lines, **processor_options)
-                if processed_batch:
+                if processed_batch is not None:
                     yield processed_batch
             except Exception:
                 pass
@@ -272,7 +294,7 @@ class ChunkedLogProcessor:
 
         """
 
-        def extract_failures_from_lines(lines: list[str]) -> list[dict[str, Any]]:
+        def extract_failures_from_lines(lines: list[str], **_: Any) -> list[dict[str, Any]]:
             """行のバッチから失敗情報を抽出"""
             failures: list[dict[str, Any]] = []
 
@@ -335,7 +357,8 @@ class ProgressTrackingFormatter:
         from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
         # ログファイル情報を取得
-        log_path = None
+        log_path: Path | None = None
+        file_size: int | None = None
         if hasattr(execution_result, "log_path") and execution_result.log_path:
             log_path = Path(execution_result.log_path)
 
@@ -350,6 +373,7 @@ class ProgressTrackingFormatter:
             return formatter.format(execution_result, **options)
 
         # 進行状況表示付きで処理
+        assert file_size is not None
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
