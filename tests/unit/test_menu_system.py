@@ -13,10 +13,10 @@ from unittest.mock import Mock, patch
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from rich.console import Console
+from rich.console import Console  # noqa: E402
 
-from ci_helper.ui.menu_system import Menu, MenuItem, MenuSystem
-from tests.utils.mock_helpers import setup_stable_prompt_mock
+from ci_helper.ui.menu_system import Menu, MenuItem, MenuSystem  # noqa: E402
+from tests.utils.mock_helpers import setup_stable_prompt_mock  # noqa: E402
 
 
 class TestMenuItem:

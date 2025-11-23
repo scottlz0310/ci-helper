@@ -147,7 +147,7 @@ class TestLogFileSelection:
         ]
 
         mock_log_manager_instance.list_logs.return_value = test_logs
-        mock_log_manager_instance.log_dir = Path("/tmp/logs")
+        mock_log_manager_instance.log_dir = Path("/tmp/logs")  # noqa: S108
 
         # ファイル存在チェックのモック
         with patch("pathlib.Path.exists", return_value=True):
@@ -155,7 +155,7 @@ class TestLogFileSelection:
 
             result = self.builder._select_from_log_list()
 
-        expected_path = "/tmp/logs/act_20240103_140000.log"
+        expected_path = "/tmp/logs/act_20240103_140000.log"  # noqa: S108
         assert result == expected_path
         mock_log_manager_instance.list_logs.assert_called_once_with(limit=20)
 
@@ -191,7 +191,7 @@ class TestLogFileSelection:
         ]
 
         mock_log_manager_instance.list_logs.return_value = test_logs
-        mock_log_manager_instance.log_dir = Path("/tmp/logs")
+        mock_log_manager_instance.log_dir = Path("/tmp/logs")  # noqa: S108
 
         # ファイルが存在しない場合
         with patch("pathlib.Path.exists", return_value=False):
@@ -211,7 +211,7 @@ class TestLogFileSelection:
                 test_logs = [{"log_file": "act_20240103_140000.log", "timestamp": "2024-01-03T14:00:00"}]
 
                 mock_log_manager_instance.list_logs.return_value = test_logs
-                mock_log_manager_instance.log_dir = Path("/tmp/logs")
+                mock_log_manager_instance.log_dir = Path("/tmp/logs")  # noqa: S108
 
                 # エラーが発生しないことを確認
                 self.builder._show_available_logs_hint()
