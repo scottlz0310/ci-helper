@@ -93,7 +93,7 @@ class AutoFixer:
             backup_info = self.create_backup(fix_suggestion)
 
             # 修正ステップを適用
-            applied_steps = []
+            applied_steps: list[FixStep] = []
             for step in fix_suggestion.code_changes:
                 # FixSuggestionのcode_changesをFixStepに変換
                 fix_step = self._convert_code_change_to_fix_step(step)
@@ -333,7 +333,7 @@ class AutoFixer:
         """
         logger.info("修正適用後の検証を開始: %s", fix_suggestion.title)
 
-        verification_result = {
+        verification_result: dict[str, Any] = {
             "success": True,
             "checks_passed": [],
             "checks_failed": [],
