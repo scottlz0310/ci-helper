@@ -13,7 +13,7 @@ CI-Helperのパターン認識エンジンをテストするための包括的�
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
 # テストデータディレクトリのパス
 TEST_DATA_DIR = Path(__file__).parent

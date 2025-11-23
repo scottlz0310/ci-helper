@@ -1,4 +1,5 @@
-"""テスト用のモックヘルパー関数
+"""
+テスト用のモックヘルパー関数
 
 Rich Promptモッキングなどの共通的なモック設定を提供します。
 非同期モックの安定化機能も含みます。
@@ -11,9 +12,13 @@ from unittest.mock import AsyncMock, Mock, patch
 
 # 新しい非同期モック安定化システムをインポート
 try:
+    from .async_mock_stabilizer import AsyncMockStabilizer as NewAsyncMockStabilizer
     from .async_mock_stabilizer import (
         create_stable_async_mock_with_error_handling,
+        ensure_async_mock_cleanup,
         get_async_mock_stabilizer,
+        patch_with_stable_async_mock,
+        stable_async_test_context,
     )
 
     ASYNC_STABILIZER_AVAILABLE = True
@@ -54,7 +59,6 @@ class InfiniteIterator:
         Args:
             values: 返す値のリスト
             fallback: リストが終わった後に返すフォールバック値
-
         """
         self.values = values
         self.fallback = fallback
@@ -68,7 +72,8 @@ class InfiniteIterator:
             value = self.values[self.index]
             self.index += 1
             return value
-        return self.fallback
+        else:
+            return self.fallback
 
 
 def create_prompt_side_effect(values: list[Any], fallback: Any = "q") -> InfiniteIterator:
@@ -80,7 +85,6 @@ def create_prompt_side_effect(values: list[Any], fallback: Any = "q") -> Infinit
 
     Returns:
         StopIterationを発生させない無限イテレータ
-
     """
     return InfiniteIterator(values, fallback)
 
@@ -92,7 +96,6 @@ def setup_stable_prompt_mock(mock_prompt: Mock, values: list[Any], fallback: Any
         mock_prompt: モックオブジェクト
         values: 返す値のリスト
         fallback: リストが終わった後に返すフォールバック値
-
     """
     mock_prompt.side_effect = create_prompt_side_effect(values, fallback)
 
@@ -106,7 +109,6 @@ def create_stable_mock_with_values(values: list[Any], fallback: Any = "q") -> Mo
 
     Returns:
         設定済みのモックオブジェクト
-
     """
     mock = Mock()
     setup_stable_prompt_mock(mock, values, fallback)
@@ -128,7 +130,6 @@ class AsyncMockManager:
 
         Returns:
             設定済みのAsyncMock
-
         """
         async_mock = AsyncMock()
         async_mock.return_value = return_value
@@ -143,7 +144,6 @@ class AsyncMockManager:
 
         Returns:
             設定済みのAsyncMock
-
         """
         async_mock = AsyncMock()
         if isinstance(side_effect, Exception):
@@ -166,7 +166,6 @@ class AsyncMockManager:
 
         Returns:
             非同期イテレータとして動作するAsyncMock
-
         """
 
         async def async_generator():
@@ -187,7 +186,6 @@ class AsyncMockManager:
 
         Returns:
             設定済みのAsyncMock
-
         """
         mock_obj.__aenter__ = AsyncMock(return_value=return_value or mock_obj)
         mock_obj.__aexit__ = AsyncMock(return_value=None)
@@ -202,7 +200,6 @@ class AsyncMockManager:
 
         Returns:
             コルーチンを返すMock
-
         """
 
         async def mock_coroutine():
@@ -225,7 +222,6 @@ class AsyncMockStabilizer:
         Args:
             mock_obj: 修正するAsyncMockオブジェクト
             values: 返すべき値のリスト
-
         """
         if not values:
             values = [None]
@@ -254,7 +250,6 @@ class AsyncMockStabilizer:
 
         Args:
             mock_obj: クリーンアップするAsyncMockオブジェクト
-
         """
         # 未完了のコルーチンがあれば適切にクリーンアップ
         if hasattr(mock_obj, "_mock_return_value"):
@@ -274,7 +269,6 @@ class AsyncMockStabilizer:
 
         Returns:
             安定した非同期ストリームモック
-
         """
 
         async def mock_stream():
@@ -295,7 +289,6 @@ class AsyncMockStabilizer:
 
         Returns:
             エラーを発生させるAsyncMock
-
         """
         mock = AsyncMock()
 
@@ -316,7 +309,6 @@ def setup_stable_async_mock(mock_obj: AsyncMock, return_value: Any = None, side_
 
     Returns:
         設定済みのAsyncMock
-
     """
     if return_value is not None:
         mock_obj.return_value = return_value
@@ -331,9 +323,7 @@ def setup_stable_async_mock(mock_obj: AsyncMock, return_value: Any = None, side_
 
 
 def create_async_mock_with_stable_behavior(
-    return_value: Any = None,
-    side_effect: Any = None,
-    is_context_manager: bool = False,
+    return_value: Any = None, side_effect: Any = None, is_context_manager: bool = False
 ) -> AsyncMock:
     """安定した動作を持つAsyncMockを作成
 
@@ -344,7 +334,6 @@ def create_async_mock_with_stable_behavior(
 
     Returns:
         設定済みのAsyncMock
-
     """
     mock = AsyncMock()
     setup_stable_async_mock(mock, return_value, side_effect)
@@ -365,7 +354,6 @@ def patch_async_method_with_stable_mock(target_object: Any, method_name: str, **
 
     Returns:
         作成されたAsyncMock
-
     """
     mock = create_async_mock_with_stable_behavior(**mock_kwargs)
     setattr(target_object, method_name, mock)
@@ -380,7 +368,6 @@ def setup_provider_mock_with_async_cleanup(provider_mock: Mock) -> Mock:
 
     Returns:
         非同期クリーンアップメソッドが追加されたモック
-
     """
     # cleanup メソッドを AsyncMock として設定
     provider_mock.cleanup = AsyncMock(return_value=None)
@@ -401,7 +388,6 @@ def create_stable_provider_mock(**kwargs) -> Mock:
 
     Returns:
         設定済みのプロバイダーモック
-
     """
     provider_mock = Mock()
     setup_provider_mock_with_async_cleanup(provider_mock)
@@ -421,7 +407,6 @@ def fix_integration_mock_for_async_cleanup(integration_mock: Mock) -> Mock:
 
     Returns:
         修正されたモック
-
     """
     # providersが辞書として動作するように設定
     if not hasattr(integration_mock, "providers"):
@@ -458,7 +443,6 @@ class FileOperationMockHelper:
 
         Returns:
             Mock: 設定済みのファイルモック
-
         """
         mock_file = Mock()
 
@@ -493,7 +477,6 @@ class FileOperationMockHelper:
 
         Returns:
             Mock: 設定済みのディレクトリモック
-
         """
         mock_dir = Mock()
         files = files or []
@@ -517,18 +500,13 @@ class FileOperationMockHelper:
         return mock_dir
 
     @staticmethod
-    def setup_consistent_pathlib_mocks(
-        mock_path_class: Mock,
-        files: dict | None = None,
-        directories: set | None = None,
-    ) -> None:
+    def setup_consistent_pathlib_mocks(mock_path_class: Mock, files: dict | None = None, directories: set | None = None) -> None:
         """一貫したpathlibモックを設定
 
         Args:
             mock_path_class: モック化するPathクラス
             files: ファイルパスと内容の辞書
             directories: 存在するディレクトリのセット
-
         """
         files = files or {}
         directories = directories or set()
@@ -577,7 +555,6 @@ class FileOperationMockHelper:
 
         Returns:
             Mock: 設定済みのopen関数モック
-
         """
         files = files or {}
 
@@ -595,7 +572,7 @@ class FileOperationMockHelper:
                 mock_file.__exit__.return_value = None
                 return mock_file
 
-            if "w" in mode or "a" in mode:
+            elif "w" in mode or "a" in mode:
                 mock_file = Mock()
                 written_content = []
 
@@ -609,7 +586,8 @@ class FileOperationMockHelper:
                 mock_file.__exit__.return_value = None
                 return mock_file
 
-            raise ValueError(f"Unsupported file mode: {mode}")
+            else:
+                raise ValueError(f"Unsupported file mode: {mode}")
 
         return Mock(side_effect=mock_open_func)
 
@@ -619,7 +597,6 @@ class FileOperationMockHelper:
 
         Returns:
             dict: tempfileモック関数の辞書
-
         """
         temp_counter = 0
 
@@ -669,7 +646,6 @@ def setup_stable_file_operation_mocks(files: dict | None = None, directories: se
 
     Returns:
         dict: 設定されたモックオブジェクトの辞書
-
     """
     files = files or {}
     directories = directories or set()
@@ -696,7 +672,6 @@ def ensure_file_operation_consistency(test_func):
 
     Returns:
         ラップされたテスト関数
-
     """
 
     def wrapper(*args, **kwargs):
@@ -719,7 +694,6 @@ def stabilize_test_mocks(test_instance, mock_attributes: list | None = None):
     Args:
         test_instance: テストクラスのインスタンス
         mock_attributes: 安定化するモック属性のリスト（Noneの場合は自動検出）
-
     """
     stabilizer = MockCallStabilizer()
 
@@ -729,7 +703,7 @@ def stabilize_test_mocks(test_instance, mock_attributes: list | None = None):
         for attr_name in dir(test_instance):
             if not attr_name.startswith("_"):
                 attr = getattr(test_instance, attr_name, None)
-                if isinstance(attr, Mock | AsyncMock):
+                if isinstance(attr, (Mock, AsyncMock)):
                     mock_attributes.append(attr_name)
 
     # 各モック属性を安定化
@@ -750,7 +724,6 @@ def apply_mock_call_fixes(mock_obj: Mock, expected_pattern: str = "once"):
     Args:
         mock_obj: 修正対象のモックオブジェクト
         expected_pattern: 期待されるパターン ("once", "any", "never")
-
     """
     stabilizer = MockCallStabilizer()
 
@@ -773,7 +746,6 @@ def create_stable_integration_mocks(**mock_configs):
 
     Returns:
         dict: 設定済みのモック辞書
-
     """
     mocks = {}
     stabilizer = MockCallStabilizer()
@@ -809,7 +781,6 @@ def fix_integration_test_mock_expectations(test_class):
 
     Args:
         test_class: 修正対象のテストクラス
-
     """
     # テストクラスの全メソッドを検索
     for method_name in dir(test_class):
@@ -826,10 +797,7 @@ def fix_integration_test_mock_expectations(test_class):
 
 
 def create_enhanced_async_mock_with_error_handling(
-    return_value: Any = None,
-    side_effect: Any = None,
-    exception_on_call: Exception | None = None,
-    **mock_kwargs,
+    return_value: Any = None, side_effect: Any = None, exception_on_call: Exception | None = None, **mock_kwargs
 ) -> AsyncMock:
     """エラーハンドリング機能を強化したAsyncMockを作成
 
@@ -841,14 +809,10 @@ def create_enhanced_async_mock_with_error_handling(
 
     Returns:
         設定済みのAsyncMock
-
     """
     if ASYNC_STABILIZER_AVAILABLE and exception_on_call:
         return create_stable_async_mock_with_error_handling(
-            return_value=return_value,
-            side_effect=side_effect,
-            exception_on_call=exception_on_call,
-            **mock_kwargs,
+            return_value=return_value, side_effect=side_effect, exception_on_call=exception_on_call, **mock_kwargs
         )
 
     # フォールバック実装
@@ -880,7 +844,6 @@ def create_enhanced_provider_mock_with_async_cleanup(provider_name: str = "test_
 
     Returns:
         設定済みのプロバイダーモック
-
     """
     if ASYNC_STABILIZER_AVAILABLE:
         return get_async_mock_stabilizer().create_stable_provider_mock(provider_name=provider_name, **provider_methods)
@@ -890,8 +853,7 @@ def create_enhanced_provider_mock_with_async_cleanup(provider_name: str = "test_
 
 
 def create_enhanced_integration_mock_with_async_cleanup(
-    integration_name: str = "test_integration",
-    providers: dict | None = None,
+    integration_name: str = "test_integration", providers: dict | None = None
 ) -> Mock:
     """非同期クリーンアップ機能を強化した統合モックを作成
 
@@ -901,12 +863,10 @@ def create_enhanced_integration_mock_with_async_cleanup(
 
     Returns:
         設定済みの統合モック
-
     """
     if ASYNC_STABILIZER_AVAILABLE:
         return get_async_mock_stabilizer().create_stable_integration_mock(
-            integration_name=integration_name,
-            providers=providers,
+            integration_name=integration_name, providers=providers
         )
 
     # フォールバック実装
@@ -915,10 +875,7 @@ def create_enhanced_integration_mock_with_async_cleanup(
 
 
 def patch_async_method_with_enhanced_error_handling(
-    target: str,
-    exception_type: type,
-    error_message: str = "Test error",
-    **patch_kwargs,
+    target: str, exception_type: type, error_message: str = "Test error", **patch_kwargs
 ):
     """エラーハンドリングを強化した非同期メソッドパッチ
 
@@ -930,14 +887,10 @@ def patch_async_method_with_enhanced_error_handling(
 
     Returns:
         パッチオブジェクト
-
     """
     if ASYNC_STABILIZER_AVAILABLE:
         return get_async_mock_stabilizer().patch_async_method_with_error_handling(
-            target,
-            exception_type,
-            error_message,
-            **patch_kwargs,
+            target, exception_type, error_message, **patch_kwargs
         )
 
     # フォールバック実装

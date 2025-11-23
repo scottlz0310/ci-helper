@@ -278,7 +278,7 @@ class PatternRecognitionEngine:
                     supporting_evidence.append(match.matched_text)
 
             # マッチデータを作成
-            match_data = {
+            match_data: dict[str, Any] = {
                 "match_positions": match_positions,
                 "extracted_context": best_match.context_before + " " + best_match.context_after,
                 "match_strength": best_match.confidence,
@@ -322,7 +322,7 @@ class PatternRecognitionEngine:
         log_lower = log_content.lower()
 
         # エラータイプのパターンマッチング
-        error_patterns = {
+        error_patterns: dict[str, list[str]] = {
             "syntax_error": ["syntax", "syntaxerror", "invalid syntax"],
             "import_error": ["import", "modulenotfounderror", "importerror"],
             "permission_error": ["permission", "denied", "access denied"],

@@ -96,7 +96,7 @@ class TestAsyncMockErrorHandler:
         mock = handler.create_network_error_mock("Network failure")
 
         # aiohttp.ClientConnectorErrorが発生することを確認
-        with pytest.raises(Exception):  # noqa: B017 aiohttp依存を避けるため汎用的にテスト
+        with pytest.raises(Exception):  # aiohttp依存を避けるため汎用的にテスト
             await mock()
 
 

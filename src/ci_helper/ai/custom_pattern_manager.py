@@ -342,7 +342,7 @@ class CustomPatternManager:
             検証結果の辞書
 
         """
-        validation_result = {
+        validation_result: dict[str, Any] = {
             "valid": True,
             "warnings": [],
             "errors": [],

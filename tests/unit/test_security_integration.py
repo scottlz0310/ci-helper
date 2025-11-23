@@ -10,9 +10,10 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+from rich.console import Console
+
 from ci_helper.formatters.base_formatter import BaseLogFormatter
 from ci_helper.utils.file_save_utils import FileSaveManager
-from rich.console import Console
 
 
 class MockFormatter(BaseLogFormatter):
@@ -223,6 +224,16 @@ class TestSecurityIntegration:
             safe_path = Path(temp_dir) / "test.txt"
             result = manager.validate_output_path_security(safe_path)
             assert result["security_level"] == "basic"
+
+
+class MockFormatter(BaseLogFormatter):
+    """テスト用のモックフォーマッター"""
+
+    def format(self, execution_result, **options):
+        return "formatted content"
+
+    def get_format_name(self):
+        return "mock"
 
 
 class TestFormatterSecurityIntegration:

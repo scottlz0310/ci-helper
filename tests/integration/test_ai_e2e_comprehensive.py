@@ -290,8 +290,8 @@ class TestAIE2EComprehensive:
         mock_ai_integration.analyze_log = AsyncMock(return_value=mock_result)
 
         # Mock the AIIntegration class constructor at the module level where it's imported
-        with patch("tests.integration.test_ai_e2e_comprehensive.AIIntegration") as mock_ai_integration_class:
-            mock_ai_integration_class.return_value = mock_ai_integration
+        with patch("tests.integration.test_ai_e2e_comprehensive.AIIntegration") as MockAIIntegration:
+            MockAIIntegration.return_value = mock_ai_integration
 
             # Now create the instance - it will return our mock
             ai_integration = AIIntegration(mock_ai_config)
@@ -868,8 +868,8 @@ default_model = "gpt-4o"
         mock_ai_integration.analyze_log = AsyncMock(return_value=mock_result)
 
         # Mock the AIIntegration class constructor at the module level where it's imported
-        with patch("tests.integration.test_ai_e2e_comprehensive.AIIntegration") as mock_ai_integration_class:
-            mock_ai_integration_class.return_value = mock_ai_integration
+        with patch("tests.integration.test_ai_e2e_comprehensive.AIIntegration") as MockAIIntegration:
+            MockAIIntegration.return_value = mock_ai_integration
 
             # Now create the instance - it will return our mock
             ai_integration = AIIntegration(mock_ai_config)

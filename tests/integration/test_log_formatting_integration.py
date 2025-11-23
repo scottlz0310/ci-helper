@@ -16,13 +16,14 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+from click.testing import CliRunner
+from rich.console import Console
+
 from ci_helper.cli import cli
 from ci_helper.core.models import ExecutionResult, Failure, FailureType, JobResult, WorkflowResult
 from ci_helper.formatters import get_formatter_manager
 from ci_helper.ui.command_menus import CommandMenuBuilder
 from ci_helper.ui.menu_system import MenuSystem
-from click.testing import CliRunner
-from rich.console import Console
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from tests.utils.mock_helpers import setup_stable_prompt_mock
@@ -115,9 +116,9 @@ class TestLogFormattingIntegration:
         json_formatter_2 = formatter_manager.get_formatter("json")
 
         # 同じフォーマッタークラスのインスタンスであることを確認
-        assert type(ai_formatter_1) is type(ai_formatter_2)
-        assert type(human_formatter_1) is type(human_formatter_2)
-        assert type(json_formatter_1) is type(json_formatter_2)
+        assert type(ai_formatter_1) == type(ai_formatter_2)
+        assert type(human_formatter_1) == type(human_formatter_2)
+        assert type(json_formatter_1) == type(json_formatter_2)
 
         # フォーマッターが正しく登録されていることを確認
         available_formats = formatter_manager.list_available_formats()
