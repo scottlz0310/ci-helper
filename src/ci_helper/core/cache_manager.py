@@ -13,6 +13,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, TypedDict, cast
 
+from ..core.exceptions import ExecutionError
+from ..utils.config import Config
+
 
 class DirectoryStats(TypedDict):
     files: int
@@ -39,9 +42,6 @@ class CleanupRecommendation(TypedDict):
     priority: str
     message: str
     action: str
-
-from ..core.exceptions import ExecutionError
-from ..utils.config import Config
 
 
 class CacheManager:

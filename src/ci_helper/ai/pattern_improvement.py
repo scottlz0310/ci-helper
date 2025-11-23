@@ -10,9 +10,10 @@ import json
 import logging
 import re
 from collections import Counter, defaultdict
+from collections import Counter as CounterType
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Counter as CounterType
+from typing import Any
 
 from .models import Pattern, UserFeedback
 from .pattern_database import PatternDatabase

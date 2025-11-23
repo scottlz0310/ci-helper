@@ -11,8 +11,7 @@ import json
 import logging
 import re
 from collections import Counter, defaultdict
-from collections.abc import Sequence
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import replace
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -54,7 +53,7 @@ class UnknownErrorPayload(TypedDict, total=False):
     timestamp: str
     last_seen: str
     pattern_id: str
-    potential_pattern: "PotentialPatternPayload"
+    potential_pattern: PotentialPatternPayload
 
 
 class PotentialPatternPayload(TypedDict, total=False):
@@ -1254,8 +1253,7 @@ class LearningEngine:
                         if content:
                             stored_errors_raw = cast(list[dict[str, Any]], json.loads(content))
                             unknown_errors = [
-                                self._normalize_unknown_error_payload(error)
-                                for error in stored_errors_raw
+                                self._normalize_unknown_error_payload(error) for error in stored_errors_raw
                             ]
                 except (json.JSONDecodeError, FileNotFoundError):
                     logger.warning("未知エラーファイルが破損しています。空のリストで初期化します。")
@@ -1516,11 +1514,7 @@ class LearningEngine:
                     pattern_id_val = pattern_data.get("id")
                     pattern_name_val = pattern_data.get("name")
                     category_val = pattern_data.get("category", "unknown")
-                    if (
-                        occurrence_count >= self.min_pattern_occurrences
-                        and pattern_id_val
-                        and pattern_name_val
-                    ):
+                    if occurrence_count >= self.min_pattern_occurrences and pattern_id_val and pattern_name_val:
                         suggestion = {
                             "pattern_id": pattern_id_val,
                             "pattern_name": pattern_name_val,
@@ -1583,9 +1577,7 @@ class LearningEngine:
             regex_patterns = list(pattern_data.get("regex_patterns", []))
             keywords = list(pattern_data.get("keywords", []))
             created_at_str = pattern_data.get("created_at")
-            created_at = (
-                datetime.fromisoformat(created_at_str) if isinstance(created_at_str, str) else datetime.now()
-            )
+            created_at = datetime.fromisoformat(created_at_str) if isinstance(created_at_str, str) else datetime.now()
 
             pattern = Pattern(
                 id=str(pattern_id),
