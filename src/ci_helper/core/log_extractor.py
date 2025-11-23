@@ -1,5 +1,4 @@
-"""
-ログ解析と失敗抽出システム
+"""ログ解析と失敗抽出システム
 
 actの実行ログから失敗情報を抽出し、構造化されたデータとして提供します。
 """
@@ -7,10 +6,6 @@ actの実行ログから失敗情報を抽出し、構造化されたデータ�
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
 
 from ..core.exceptions import LogParsingError
 from ..core.models import Failure, FailureType
@@ -24,6 +19,7 @@ class LogExtractor:
 
         Args:
             context_lines: エラー前後に取得するコンテキスト行数
+
         """
         self.context_lines = context_lines
         self._compile_patterns()
@@ -124,12 +120,13 @@ class LogExtractor:
 
         Raises:
             LogParsingError: ログ解析に失敗した場合
+
         """
         if not log_content or not log_content.strip():
             return []
 
         try:
-            failures = []
+            failures: list[Failure] = []
             log_lines = log_content.splitlines()
 
             # 各失敗タイプのパターンをチェック（より具体的なものから先に）
@@ -179,6 +176,7 @@ class LogExtractor:
 
         Returns:
             失敗オブジェクト（作成できない場合はNone）
+
         """
         try:
             # マッチした行番号を取得
@@ -220,6 +218,7 @@ class LogExtractor:
 
         Returns:
             (ファイルパス, 行番号) のタプル
+
         """
         for pattern in self.file_line_patterns:
             match = pattern.search(message)
@@ -234,7 +233,10 @@ class LogExtractor:
         return None, None
 
     def _get_context_lines(
-        self, log_lines: list[str], center_line: int, context_count: int
+        self,
+        log_lines: list[str],
+        center_line: int,
+        context_count: int,
     ) -> tuple[list[str], list[str]]:
         """指定した行の前後のコンテキスト行を取得
 
@@ -245,6 +247,7 @@ class LogExtractor:
 
         Returns:
             (前のコンテキスト行, 後のコンテキスト行) のタプル
+
         """
         if not log_lines or center_line < 0 or center_line >= len(log_lines):
             return [], []
@@ -269,6 +272,7 @@ class LogExtractor:
 
         Returns:
             スタックトレース（見つからない場合はNone）
+
         """
         # エラー位置から前後の範囲でスタックトレースを検索
         search_start = max(0, error_position - 2000)  # 2KB前から
@@ -283,7 +287,7 @@ class LogExtractor:
                 stack_start = match.start()
                 lines = search_content[stack_start:].split("\n")
 
-                stack_lines = []
+                stack_lines: list[str] = []
                 for line in lines:
                     # スタックトレースの行かどうかを判定
                     stripped = line.strip()
@@ -315,9 +319,10 @@ class LogExtractor:
 
         Returns:
             重複を除去した失敗のリスト
+
         """
-        seen = set()
-        unique_failures = []
+        seen: set[tuple[str, str | None, int | None]] = set()
+        unique_failures: list[Failure] = []
 
         for failure in failures:
             # メッセージ、ファイルパス、行番号の組み合わせで重複判定
@@ -329,7 +334,9 @@ class LogExtractor:
         return unique_failures
 
     def parse_error_patterns(
-        self, content: str, custom_patterns: dict[str, list[str]] | None = None
+        self,
+        content: str,
+        custom_patterns: dict[str, list[str]] | None = None,
     ) -> list[tuple[FailureType, str]]:
         """カスタムパターンを含むエラーパターンの解析
 
@@ -339,8 +346,9 @@ class LogExtractor:
 
         Returns:
             (失敗タイプ, マッチしたテキスト) のタプルのリスト
+
         """
-        matches = []
+        matches: list[tuple[FailureType, str]] = []
 
         # デフォルトパターンをチェック
         for failure_type, patterns in self.error_patterns.items():
@@ -377,6 +385,7 @@ class LogExtractor:
 
         Returns:
             コンテキストを含む文字列
+
         """
         lines = content.splitlines()
         if line_number < 1 or line_number > len(lines):
@@ -387,7 +396,7 @@ class LogExtractor:
         context_before, context_after = self._get_context_lines(lines, center_line, context)
 
         # 結果を組み立て
-        result_lines = []
+        result_lines: list[str] = []
 
         # 前のコンテキスト
         start_line = max(1, line_number - len(context_before))

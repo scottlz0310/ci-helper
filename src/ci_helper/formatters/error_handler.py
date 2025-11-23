@@ -1,5 +1,4 @@
-"""
-ログ整形エラーハンドラー
+"""ログ整形エラーハンドラー
 
 ログ整形機能専用のエラーハンドリングとユーザーフレンドリーなエラーメッセージを提供します。
 """
@@ -25,6 +24,7 @@ class LogFormattingErrorHandler:
 
         Args:
             console: Rich Console インスタンス
+
         """
         self.console = console or Console()
 
@@ -40,6 +40,7 @@ class LogFormattingErrorHandler:
             error: 発生したエラー
             context: エラーコンテキスト情報
             verbose: 詳細情報を表示するかどうか
+
         """
         context = context or {}
 
@@ -50,11 +51,11 @@ class LogFormattingErrorHandler:
             self._handle_file_operation_error(error, context, verbose)
         elif isinstance(error, UserInputError):
             self._handle_user_input_error(error, context, verbose)
-        elif isinstance(error, (PermissionError, OSError)):
+        elif isinstance(error, PermissionError | OSError):
             self._handle_system_error(error, context, verbose)
         elif isinstance(error, json.JSONDecodeError):
             self._handle_json_error(error, context, verbose)
-        elif isinstance(error, (ValueError, TypeError)):
+        elif isinstance(error, ValueError | TypeError):
             self._handle_validation_error(error, context, verbose)
         elif isinstance(error, MemoryError):
             self._handle_memory_error(error, context, verbose)
@@ -86,7 +87,7 @@ class LogFormattingErrorHandler:
         message = "\n".join(message_parts)
 
         # 修正提案を追加
-        suggestions = []
+        suggestions: list[str] = []
         if error.suggestion:
             suggestions.append(error.suggestion)
 
@@ -115,7 +116,7 @@ class LogFormattingErrorHandler:
         message = "\n".join(message_parts)
 
         # 修正提案を生成
-        suggestions = []
+        suggestions: list[str] = []
         if error.suggestion:
             suggestions.append(error.suggestion)
 
@@ -143,7 +144,7 @@ class LogFormattingErrorHandler:
         message = "\n".join(message_parts)
 
         # 修正提案を生成
-        suggestions = []
+        suggestions: list[str] = []
         if error.suggestion:
             suggestions.append(error.suggestion)
 
@@ -285,9 +286,9 @@ class LogFormattingErrorHandler:
 
         # コンテキスト情報を追加
         if context:
-            context_info = []
+            context_info: list[str] = []
             for key, value in context.items():
-                if isinstance(value, (str, int, float, bool)):
+                if isinstance(value, str | int | float | bool):
                     context_info.append(f"{key}: {value}")
 
             if context_info:
@@ -306,7 +307,7 @@ class LogFormattingErrorHandler:
         context: dict[str, Any],
     ) -> list[str]:
         """フォーマット関連の追加修正提案を生成"""
-        suggestions = []
+        suggestions: list[str] = []
 
         # フォーマッター固有の提案
         if error.formatter_name == "ai":
@@ -314,14 +315,14 @@ class LogFormattingErrorHandler:
                 [
                     "AI フォーマッターは大きなログファイルに時間がかかる場合があります",
                     "human フォーマッターを試してみてください",
-                ]
+                ],
             )
         elif error.formatter_name == "json":
             suggestions.extend(
                 [
                     "JSON フォーマッターは構造化データが必要です",
                     "ログファイルが有効な形式か確認してください",
-                ]
+                ],
             )
 
         # ファイルサイズに応じた提案
@@ -336,7 +337,7 @@ class LogFormattingErrorHandler:
         context: dict[str, Any],
     ) -> list[str]:
         """ファイル操作関連の追加修正提案を生成"""
-        suggestions = []
+        suggestions: list[str] = []
 
         # 操作種別に応じた提案
         if error.operation == "読み込み":
@@ -344,14 +345,14 @@ class LogFormattingErrorHandler:
                 [
                     "ファイルが存在するか確認してください",
                     "ファイルが他のプロセスで使用されていないか確認してください",
-                ]
+                ],
             )
         elif error.operation == "書き込み":
             suggestions.extend(
                 [
                     "出力ディレクトリに書き込み権限があるか確認してください",
                     "ディスク容量が十分にあるか確認してください",
-                ]
+                ],
             )
 
         # パス関連の提案
@@ -371,7 +372,7 @@ class LogFormattingErrorHandler:
         context: dict[str, Any],
     ) -> list[str]:
         """入力関連の追加修正提案を生成"""
-        suggestions = []
+        suggestions: list[str] = []
 
         # 入力種別に応じた提案
         if error.input_type == "format_type":
@@ -379,7 +380,7 @@ class LogFormattingErrorHandler:
                 [
                     "'ci-run format-logs --help' でサポートされているフォーマットを確認してください",
                     "ai、human、json のいずれかを指定してください",
-                ]
+                ],
             )
         elif error.input_type == "file_extension":
             suggestions.append("ログファイルは通常 .log または .txt 拡張子を持ちます")
@@ -400,6 +401,7 @@ class LogFormattingErrorHandler:
             message: エラーメッセージ
             suggestions: 修正提案リスト
             verbose: 詳細表示フラグ
+
         """
         # パネル内容を構築
         content_parts = [message]
@@ -443,8 +445,9 @@ class LogFormattingErrorHandler:
 
         Returns:
             エラーコンテキスト辞書
+
         """
-        context = {}
+        context: dict[str, Any] = {}
 
         if formatter_name:
             context["formatter_name"] = formatter_name
@@ -470,8 +473,9 @@ class LogFormattingErrorHandler:
 
         Returns:
             復旧提案のリスト
+
         """
-        suggestions = []
+        suggestions: list[str] = []
 
         # エラー種別に応じた基本的な復旧提案
         if isinstance(error, LogFormattingError):
@@ -480,7 +484,7 @@ class LogFormattingErrorHandler:
                     "別のフォーマッターを試してください",
                     "ログファイルの形式を確認してください",
                     "ストリーミング処理を有効にしてください",
-                ]
+                ],
             )
         elif isinstance(error, FileOperationError):
             suggestions.extend(
@@ -488,7 +492,7 @@ class LogFormattingErrorHandler:
                     "ファイルパスを確認してください",
                     "権限を確認してください",
                     "ディスク容量を確認してください",
-                ]
+                ],
             )
         elif isinstance(error, UserInputError):
             suggestions.extend(
@@ -496,14 +500,14 @@ class LogFormattingErrorHandler:
                     "入力値を確認してください",
                     "ヘルプを参照してください",
                     "デフォルト値を使用してください",
-                ]
+                ],
             )
         else:
             suggestions.extend(
                 [
                     "一時的な問題の可能性があります。再試行してください",
                     "詳細情報を得るには --verbose オプションを使用してください",
-                ]
+                ],
             )
 
         return suggestions
@@ -517,6 +521,7 @@ class LogFormattingErrorHandler:
 
         Returns:
             エラー要約文字列
+
         """
         context = context or {}
 

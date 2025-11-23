@@ -1,5 +1,4 @@
-"""
-設定フィクスチャのテスト
+"""設定フィクスチャのテスト
 
 設定例データが正しく読み込まれることを確認するテスト
 """
@@ -132,7 +131,7 @@ class TestConfigValidation:
         configs = list_available_configs()
 
         for toml_file in configs["toml"]:
-            if toml_file == "invalid_ci_helper.toml":
+            if toml_file == "invalid_ci_helper.toml.invalid":
                 # 無効な設定ファイルはスキップ
                 continue
 

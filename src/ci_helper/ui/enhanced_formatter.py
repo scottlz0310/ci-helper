@@ -1,5 +1,4 @@
-"""
-拡張フォーマッター
+"""拡張フォーマッター
 
 分析結果の表示形式を改善し、修正提案の説明をより分かりやすくし、
 エラーメッセージの日本語化を提供します。
@@ -22,10 +21,10 @@ class EnhancedAnalysisFormatter:
     """拡張分析結果フォーマッター"""
 
     def __init__(self, console: Console, language: str = "ja"):
-        """
-        Args:
-            console: Richコンソール
-            language: 表示言語（ja/en）
+        """Args:
+        console: Richコンソール
+        language: 表示言語（ja/en）
+
         """
         self.console = console
         self.language = language
@@ -82,55 +81,55 @@ class EnhancedAnalysisFormatter:
                 "operation_id": "操作ID",
                 "retry_command": "リトライコマンド",
             }
-        else:  # English
-            return {
-                "analysis_result": "🔍 AI Analysis Result",
-                "pattern_recognition": "🎯 Detected Patterns",
-                "summary": "Summary",
-                "root_causes": "Root Causes",
-                "fix_suggestions": "Fix Suggestions",
-                "related_errors": "Related Errors",
-                "statistics": "Statistics",
-                "confidence": "Confidence",
-                "analysis_time": "Analysis Time",
-                "provider": "Provider",
-                "model": "Model",
-                "tokens_used": "Tokens Used",
-                "estimated_cost": "Estimated Cost",
-                "cache_hit": "Cache Hit",
-                "pattern_name": "Pattern Name",
-                "category": "Category",
-                "match_reason": "Match Reason",
-                "fix_title": "Fix",
-                "description": "Description",
-                "priority": "Priority",
-                "estimated_effort": "Estimated Effort",
-                "risk_level": "Risk Level",
-                "auto_applicable": "Auto Applicable",
-                "affected_files": "Affected Files",
-                "prerequisites": "Prerequisites",
-                "validation_steps": "Validation Steps",
-                "background_reason": "Background Reason",
-                "impact_assessment": "Impact Assessment",
-                "effectiveness": "Effectiveness",
-                "safety": "Safety",
-                "overall_rating": "Overall Rating",
-                "recommended_fix": "Recommended Fix",
-                "high": "High",
-                "medium": "Medium",
-                "low": "Low",
-                "urgent": "Urgent",
-                "yes": "Yes",
-                "no": "No",
-                "seconds": "sec",
-                "minutes": "min",
-                "hours": "hr",
-                "fallback_reason": "Fallback Reason",
-                "retry_available": "Retry Available",
-                "alternative_providers": "Alternative Providers",
-                "operation_id": "Operation ID",
-                "retry_command": "Retry Command",
-            }
+        # English
+        return {
+            "analysis_result": "🔍 AI Analysis Result",
+            "pattern_recognition": "🎯 Detected Patterns",
+            "summary": "Summary",
+            "root_causes": "Root Causes",
+            "fix_suggestions": "Fix Suggestions",
+            "related_errors": "Related Errors",
+            "statistics": "Statistics",
+            "confidence": "Confidence",
+            "analysis_time": "Analysis Time",
+            "provider": "Provider",
+            "model": "Model",
+            "tokens_used": "Tokens Used",
+            "estimated_cost": "Estimated Cost",
+            "cache_hit": "Cache Hit",
+            "pattern_name": "Pattern Name",
+            "category": "Category",
+            "match_reason": "Match Reason",
+            "fix_title": "Fix",
+            "description": "Description",
+            "priority": "Priority",
+            "estimated_effort": "Estimated Effort",
+            "risk_level": "Risk Level",
+            "auto_applicable": "Auto Applicable",
+            "affected_files": "Affected Files",
+            "prerequisites": "Prerequisites",
+            "validation_steps": "Validation Steps",
+            "background_reason": "Background Reason",
+            "impact_assessment": "Impact Assessment",
+            "effectiveness": "Effectiveness",
+            "safety": "Safety",
+            "overall_rating": "Overall Rating",
+            "recommended_fix": "Recommended Fix",
+            "high": "High",
+            "medium": "Medium",
+            "low": "Low",
+            "urgent": "Urgent",
+            "yes": "Yes",
+            "no": "No",
+            "seconds": "sec",
+            "minutes": "min",
+            "hours": "hr",
+            "fallback_reason": "Fallback Reason",
+            "retry_available": "Retry Available",
+            "alternative_providers": "Alternative Providers",
+            "operation_id": "Operation ID",
+            "retry_command": "Retry Command",
+        }
 
     def format_analysis_result(self, result: AnalysisResult, output_format: str = "enhanced") -> None:
         """分析結果を拡張フォーマットで表示
@@ -138,6 +137,7 @@ class EnhancedAnalysisFormatter:
         Args:
             result: 分析結果
             output_format: 出力形式（enhanced/markdown/json/table）
+
         """
         if output_format == "json":
             self._format_as_json(result)
@@ -202,7 +202,7 @@ class EnhancedAnalysisFormatter:
             confidence_text = f"[{confidence_color}]{match.confidence:.1%}[/{confidence_color}]"
 
             # マッチ理由の構築
-            reasons = []
+            reasons: list[str] = []
             if hasattr(match, "supporting_evidence") and match.supporting_evidence:
                 reasons.extend(match.supporting_evidence[:2])
             if not reasons:
@@ -384,7 +384,7 @@ class EnhancedAnalysisFormatter:
         if hasattr(fix, "confidence") and fix.confidence > 0:
             confidence_color = "green" if fix.confidence >= 0.8 else "yellow" if fix.confidence >= 0.6 else "red"
             self.console.print(
-                f"  {self.messages['confidence']}: [{confidence_color}]{fix.confidence:.1%}[/{confidence_color}]"
+                f"  {self.messages['confidence']}: [{confidence_color}]{fix.confidence:.1%}[/{confidence_color}]",
             )
 
         # 背景理由（新機能）
@@ -470,7 +470,8 @@ class EnhancedAnalysisFormatter:
             if effectiveness_score > 0:
                 eff_color = "green" if effectiveness_score >= 0.8 else "yellow" if effectiveness_score >= 0.6 else "red"
                 score_table.add_row(
-                    self.messages["effectiveness"], f"[{eff_color}]{effectiveness_score:.1%}[/{eff_color}]"
+                    self.messages["effectiveness"],
+                    f"[{eff_color}]{effectiveness_score:.1%}[/{eff_color}]",
                 )
 
             if safety_score > 0:
@@ -495,7 +496,7 @@ class EnhancedAnalysisFormatter:
         self.console.print(f"[bold green]🎯 {recommended_label}: {best_fix.title}[/bold green]")
 
         # 推奨理由
-        reasons = []
+        reasons: list[str] = []
         effectiveness, safety, risk_score, _overall = scored_fixes[0][1:]
 
         if effectiveness >= 0.8:
@@ -553,7 +554,8 @@ class EnhancedAnalysisFormatter:
             "green" if result.confidence_score >= 0.8 else "yellow" if result.confidence_score >= 0.6 else "red"
         )
         stats_table.add_row(
-            self.messages["confidence"], f"[{confidence_color}]{result.confidence_score:.1%}[/{confidence_color}]"
+            self.messages["confidence"],
+            f"[{confidence_color}]{result.confidence_score:.1%}[/{confidence_color}]",
         )
 
         # 分析時間
@@ -594,7 +596,7 @@ class EnhancedAnalysisFormatter:
 
     def _build_fallback_content(self, result: AnalysisResult) -> str:
         """フォールバック情報の内容を構築"""
-        content_lines = []
+        content_lines: list[str] = []
 
         if hasattr(result, "fallback_reason") and result.fallback_reason:
             reason_label = "理由" if self.language == "ja" else "Reason"
@@ -654,15 +656,16 @@ class EnhancedAnalysisFormatter:
     def _format_as_markdown(self, result: AnalysisResult) -> None:
         """Markdown形式で表示（従来の実装を使用）"""
         # 既存のMarkdown表示機能を呼び出し
-        from ..commands.analyze import _display_result_as_markdown
+        from ..commands.analyze import display_result_as_markdown
 
-        _display_result_as_markdown(result, self.console)
+        display_result_as_markdown(result, self.console)
 
     def _score_fix_suggestions(
-        self, fix_suggestions: list[FixSuggestion]
+        self,
+        fix_suggestions: list[FixSuggestion],
     ) -> list[tuple[FixSuggestion, float, float, float, float]]:
         """修正提案をスコア付けしてソート"""
-        scored_fixes = []
+        scored_fixes: list[tuple[FixSuggestion, float, float, float, float]] = []
 
         for fix in fix_suggestions:
             effectiveness = getattr(fix, "effectiveness_score", getattr(fix, "confidence", 0.5))
@@ -739,13 +742,11 @@ class EnhancedAnalysisFormatter:
         """時間を適切な単位でフォーマット"""
         if minutes < 60:
             return f"{minutes} {self.messages['minutes']}"
-        else:
-            hours = minutes // 60
-            remaining_minutes = minutes % 60
-            if remaining_minutes > 0:
-                return f"{hours} {self.messages['hours']} {remaining_minutes} {self.messages['minutes']}"
-            else:
-                return f"{hours} {self.messages['hours']}"
+        hours = minutes // 60
+        remaining_minutes = minutes % 60
+        if remaining_minutes > 0:
+            return f"{hours} {self.messages['hours']} {remaining_minutes} {self.messages['minutes']}"
+        return f"{hours} {self.messages['hours']}"
 
 
 class ProgressReporter:
@@ -766,15 +767,14 @@ class ProgressReporter:
                 TimeElapsedColumn(),
                 console=self.console,
             )
-        else:
-            return Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-                TimeElapsedColumn(),
-                console=self.console,
-            )
+        return Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TimeElapsedColumn(),
+            console=self.console,
+        )
 
     def show_step_progress(self, step_name: str, current: int, total: int) -> None:
         """ステップ進捗を表示"""
@@ -795,5 +795,6 @@ def create_enhanced_formatter(console: Console, language: str = "ja") -> Enhance
 
     Returns:
         拡張フォーマッター
+
     """
     return EnhancedAnalysisFormatter(console, language)

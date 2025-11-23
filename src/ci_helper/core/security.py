@@ -1,5 +1,4 @@
-"""
-セキュリティとシークレット管理
+"""セキュリティとシークレット管理
 
 ログ内のシークレット検出、フィルタリング、および安全な環境変数管理を提供します。
 """
@@ -8,10 +7,7 @@ from __future__ import annotations
 
 import os
 import re
-from typing import TYPE_CHECKING, Any, TypedDict
-
-if TYPE_CHECKING:
-    pass
+from typing import Any, TypedDict
 
 from ..core.exceptions import SecurityError
 
@@ -95,7 +91,8 @@ class SecretDetector:
                 # AWS認証情報
                 re.compile(r"AKIA[0-9A-Z]{16}", re.MULTILINE),
                 re.compile(
-                    r"(?i)aws[_-]?access[_-]?key[_-]?id['\"]?\s*[:=]\s*['\"]?([A-Z0-9]{20})['\"]?", re.MULTILINE
+                    r"(?i)aws[_-]?access[_-]?key[_-]?id['\"]?\s*[:=]\s*['\"]?([A-Z0-9]{20})['\"]?",
+                    re.MULTILINE,
                 ),
                 re.compile(
                     r"(?i)aws[_-]?secret[_-]?access[_-]?key['\"]?\s*[:=]\s*['\"]?([a-zA-Z0-9/+=]{40})['\"]?",
@@ -148,8 +145,9 @@ class SecretDetector:
 
         Returns:
             検出されたシークレット情報のリスト
+
         """
-        detected_secrets = []
+        detected_secrets: list[dict[str, Any]] = []
 
         for secret_type, patterns in self.secret_patterns.items():
             for pattern in patterns:
@@ -180,6 +178,7 @@ class SecretDetector:
 
         Returns:
             除外対象の場合True
+
         """
         for pattern in self.exclude_patterns:
             if pattern.search(text):
@@ -196,6 +195,7 @@ class SecretDetector:
 
         Returns:
             コンテキスト文字列
+
         """
         lines = content.splitlines()
         match_line = content[: match.start()].count("\n")
@@ -203,7 +203,7 @@ class SecretDetector:
         start_line = max(0, match_line - context_lines)
         end_line = min(len(lines), match_line + context_lines + 1)
 
-        context_lines_list = []
+        context_lines_list: list[str] = []
         for i in range(start_line, end_line):
             prefix = ">" if i == match_line else " "
             context_lines_list.append(f"{prefix} {i + 1:3d}: {lines[i]}")
@@ -219,6 +219,7 @@ class SecretDetector:
 
         Returns:
             サニタイズされたコンテンツ
+
         """
         sanitized_content = content
 
@@ -259,8 +260,9 @@ class SecretDetector:
 
         Raises:
             SecurityError: 重大なセキュリティ問題が検出された場合
+
         """
-        issues = []
+        issues: list[dict[str, Any]] = []
 
         # シークレットの直接記載をチェック
         detected_secrets = self.detect_secrets(config_content)
@@ -274,7 +276,7 @@ class SecretDetector:
                     "line_number": secret["line_number"],
                     "context": secret["context"],
                     "recommendation": "環境変数を使用してシークレットを管理してください",
-                }
+                },
             )
 
         # 環境変数名の不適切な使用をチェック
@@ -294,7 +296,7 @@ class SecretDetector:
                             "line_number": line_number,
                             "context": self._get_match_context(config_content, match),
                             "recommendation": "環境変数参照の形式（${VAR_NAME}）を使用してください",
-                        }
+                        },
                     )
 
         # 重大な問題がある場合は例外を発生
@@ -342,6 +344,7 @@ class EnvironmentSecretManager:
 
         Raises:
             SecurityError: 必須のシークレットが見つからない場合
+
         """
         value = os.getenv(key)
 
@@ -361,6 +364,7 @@ class EnvironmentSecretManager:
 
         Returns:
             検証結果の辞書
+
         """
         if required_keys is None:
             required_keys = list(self.required_secrets.keys())
@@ -376,11 +380,11 @@ class EnvironmentSecretManager:
             value = os.getenv(key)
             if value:
                 validation_result["available_secrets"].append(
-                    {"key": key, "description": self.required_secrets.get(key, "不明"), "configured": True}
+                    {"key": key, "description": self.required_secrets.get(key, "不明"), "configured": True},
                 )
             else:
                 validation_result["missing_secrets"].append(
-                    {"key": key, "description": self.required_secrets.get(key, "不明"), "configured": False}
+                    {"key": key, "description": self.required_secrets.get(key, "不明"), "configured": False},
                 )
                 validation_result["valid"] = False
 
@@ -393,7 +397,7 @@ class EnvironmentSecretManager:
                     "",
                     "または .env ファイルを作成してください:",
                     *[f"  {secret['key']}=your_value" for secret in validation_result["missing_secrets"]],
-                ]
+                ],
             )
 
         return validation_result
@@ -406,6 +410,7 @@ class EnvironmentSecretManager:
 
         Returns:
             act実行用の環境変数辞書
+
         """
         env_vars: dict[str, str] = {}
 
@@ -447,6 +452,7 @@ class EnvironmentSecretManager:
 
         Returns:
             安全な場合True
+
         """
         # 一般的なシステム環境変数は安全
         safe_prefixes = [
@@ -492,6 +498,7 @@ class EnvironmentSecretManager:
 
         Returns:
             シークレット設定状況の辞書
+
         """
         summary: SecretSummary = {
             "required_secrets": {},
@@ -539,6 +546,7 @@ class SecurityValidator:
 
         Returns:
             検証結果の辞書
+
         """
         detected_secrets = self.secret_detector.detect_secrets(log_content)
         sanitized_content = self.secret_detector.sanitize_content(log_content)
@@ -560,6 +568,7 @@ class SecurityValidator:
 
         Returns:
             検証結果の辞書
+
         """
         all_issues = []
         file_results = {}
@@ -601,6 +610,7 @@ class SecurityValidator:
 
         Returns:
             推奨事項のリスト
+
         """
         if not detected_secrets:
             return ["ログにシークレットは検出されませんでした。"]
@@ -630,7 +640,7 @@ class SecurityValidator:
                     "GitHub Token の対処:",
                     "   - 該当するトークンを GitHub で無効化してください",
                     "   - 新しい Personal Access Token を生成してください",
-                ]
+                ],
             )
 
         if "aws_key" in secret_types:
@@ -640,7 +650,7 @@ class SecurityValidator:
                     "AWS 認証情報の対処:",
                     "   - AWS IAM でアクセスキーを無効化してください",
                     "   - 新しいアクセスキーを生成してください",
-                ]
+                ],
             )
 
         return recommendations
@@ -653,6 +663,7 @@ class SecurityValidator:
 
         Returns:
             推奨事項のリスト
+
         """
         if not issues:
             return ["設定ファイルにセキュリティ問題は検出されませんでした。"]

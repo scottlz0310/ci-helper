@@ -1,5 +1,4 @@
-"""
-キャッシュ管理ユーティリティ
+"""キャッシュ管理ユーティリティ
 
 フォーマット結果キャッシュの管理機能を提供します。
 """
@@ -26,6 +25,7 @@ class CacheManager:
 
         Args:
             console: Rich Console インスタンス
+
         """
         self.console = console or Console()
         self.optimizer = PerformanceOptimizer()
@@ -69,13 +69,14 @@ class CacheManager:
 
         Returns:
             削除されたエントリ数
+
         """
         if confirm:
             from rich.prompt import Confirm
 
             stats = self.optimizer.cache.get_cache_statistics()
             self.console.print(
-                f"[yellow]現在のキャッシュ: {stats['total_entries']}件 ({stats['total_size_mb']:.2f} MB)[/yellow]"
+                f"[yellow]現在のキャッシュ: {stats['total_entries']}件 ({stats['total_size_mb']:.2f} MB)[/yellow]",
             )
 
             if not Confirm.ask("キャッシュをクリアしますか？", console=self.console):
@@ -99,6 +100,7 @@ class CacheManager:
 
         Returns:
             削除されたエントリ数
+
         """
         # 現在の実装では期限切れチェックは FormatResultCache 内で自動実行
         # ここでは手動でクリーンアップを実行
@@ -143,6 +145,7 @@ class CacheManager:
 
         Returns:
             クリーンアップされたロック数
+
         """
         cleaned_count = self.optimizer.duplicate_preventer.cleanup_expired_locks()
 
@@ -161,12 +164,13 @@ class CacheManager:
 
         Returns:
             最適化結果
+
         """
         stats_before = self.optimizer.cache.get_cache_statistics()
 
         if stats_before["total_size_mb"] <= target_size_mb:
             self.console.print(
-                f"[dim]キャッシュサイズは既に目標値以下です ({stats_before['total_size_mb']:.2f} MB)[/dim]"
+                f"[dim]キャッシュサイズは既に目標値以下です ({stats_before['total_size_mb']:.2f} MB)[/dim]",
             )
             return {
                 "optimized": False,
@@ -207,9 +211,10 @@ class CacheManager:
 
         Returns:
             推奨事項のリスト
+
         """
         stats = self.optimizer.cache.get_cache_statistics()
-        recommendations = []
+        recommendations: list[str] = []
 
         # サイズベースの推奨事項
         if stats["total_size_mb"] > 100:
@@ -218,7 +223,7 @@ class CacheManager:
         # ヒット率ベースの推奨事項
         if stats["hit_rate"] < 30:
             recommendations.append(
-                "キャッシュヒット率が低いです。同じファイルを繰り返し処理することでヒット率が向上します。"
+                "キャッシュヒット率が低いです。同じファイルを繰り返し処理することでヒット率が向上します。",
             )
         elif stats["hit_rate"] > 80:
             recommendations.append("キャッシュが効果的に機能しています。")
@@ -226,7 +231,7 @@ class CacheManager:
         # エントリ数ベースの推奨事項
         if stats["total_entries"] > 1000:
             recommendations.append(
-                "キャッシュエントリ数が多くなっています。古いエントリのクリーンアップを検討してください。"
+                "キャッシュエントリ数が多くなっています。古いエントリのクリーンアップを検討してください。",
             )
 
         # 処理状況ベースの推奨事項
@@ -256,5 +261,6 @@ def get_cache_manager(console: Console | None = None) -> CacheManager:
 
     Returns:
         キャッシュマネージャーインスタンス
+
     """
     return CacheManager(console)

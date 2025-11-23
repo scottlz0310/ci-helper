@@ -1,5 +1,4 @@
-"""
-ログ整形機能コア統合テスト
+"""ログ整形機能コア統合テスト
 
 要件11.1-11.5の基本的な統合テストを実装します。
 複雑なモッキングを避けて、実際の機能の統合を検証します。
@@ -11,12 +10,11 @@ import json
 from unittest.mock import Mock
 
 import pytest
-from rich.console import Console
-
 from ci_helper.core.models import ExecutionResult, Failure, FailureType, JobResult, WorkflowResult
 from ci_helper.formatters import get_formatter_manager
 from ci_helper.ui.command_menus import CommandMenuBuilder
 from ci_helper.ui.menu_system import MenuSystem
+from rich.console import Console
 
 
 class TestLogFormattingCoreIntegration:
@@ -142,10 +140,12 @@ class TestLogFormattingCoreIntegration:
         # データ型の確認
         assert isinstance(exec_summary["success"], bool)
         assert isinstance(data["workflows"], list)
-        assert isinstance(exec_summary["total_duration"], (int, float))
+        assert isinstance(exec_summary["total_duration"], int | float)
 
     def test_success_and_failure_result_handling(
-        self, simple_execution_result: ExecutionResult, success_execution_result: ExecutionResult
+        self,
+        simple_execution_result: ExecutionResult,
+        success_execution_result: ExecutionResult,
     ):
         """要件11.3: 成功・失敗結果の適切な処理テスト"""
         formatter_manager = get_formatter_manager()
@@ -304,7 +304,7 @@ class TestLogFormattingCoreIntegration:
                     success=False,
                     jobs=[JobResult(name="test", success=False, failures=[], duration=0.0)],
                     duration=0.0,
-                )
+                ),
             ],
             total_duration=0.0,
         )

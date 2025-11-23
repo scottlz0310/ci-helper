@@ -7,9 +7,8 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from rich.console import Console
-
 from ci_helper.utils.progress_display import ProgressDisplayManager, get_progress_manager
+from rich.console import Console
 
 
 class TestProgressDisplayManager:

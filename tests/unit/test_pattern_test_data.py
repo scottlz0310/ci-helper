@@ -1,5 +1,4 @@
-"""
-パターンテストデータの検証テスト
+"""パターンテストデータの検証テスト
 
 作成したパターンテストデータが正しく読み込まれ、
 期待される構造を持っていることを確認するテスト。
@@ -78,8 +77,8 @@ class TestPatternTestData:
             assert isinstance(pattern["regex_patterns"], list)
             assert isinstance(pattern["keywords"], list)
             assert isinstance(pattern["context_requirements"], list)
-            assert isinstance(pattern["confidence_base"], (int, float))
-            assert isinstance(pattern["success_rate"], (int, float))
+            assert isinstance(pattern["confidence_base"], int | float)
+            assert isinstance(pattern["success_rate"], int | float)
             assert 0.0 <= pattern["confidence_base"] <= 1.0
             assert 0.0 <= pattern["success_rate"] <= 1.0
 
@@ -109,7 +108,7 @@ class TestPatternTestData:
             # データ型の確認
             assert isinstance(sample["expected_pattern_ids"], list)
             assert isinstance(sample["log_content"], str)
-            assert isinstance(sample["expected_confidence"], (int, float))
+            assert isinstance(sample["expected_confidence"], int | float)
             assert 0.0 <= sample["expected_confidence"] <= 1.0
             assert len(sample["log_content"]) > 0
 

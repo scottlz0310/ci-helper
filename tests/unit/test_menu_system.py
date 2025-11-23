@@ -7,9 +7,9 @@ MenuSystem、MenuItem、Menu クラスの機能をテストします。
 from io import StringIO
 from unittest.mock import Mock, patch
 
+from ci_helper.ui.menu_system import Menu, MenuItem, MenuSystem
 from rich.console import Console
 
-from ci_helper.ui.menu_system import Menu, MenuItem, MenuSystem
 from tests.utils.mock_helpers import setup_stable_prompt_mock
 
 

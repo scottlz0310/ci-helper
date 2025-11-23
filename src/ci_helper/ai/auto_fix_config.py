@@ -1,5 +1,4 @@
-"""
-自動修正設定システム
+"""自動修正設定システム
 
 自動修正の動作設定、リスク許容度、バックアップポリシーの管理を提供します。
 """
@@ -18,8 +17,6 @@ from ..utils.config import Config
 class ValidationError(Exception):
     """検証エラー"""
 
-    pass
-
 
 class AutoFixConfigManager:
     """自動修正設定管理クラス"""
@@ -29,6 +26,7 @@ class AutoFixConfigManager:
 
         Args:
             config: メイン設定オブジェクト
+
         """
         self.config = config
         self.auto_fix_config_dir = self.config.project_root / ".ci-helper" / "auto_fix"
@@ -39,6 +37,7 @@ class AutoFixConfigManager:
 
         Returns:
             自動修正設定の辞書
+
         """
         return {
             "enabled": self.config.is_auto_fix_enabled(),
@@ -54,6 +53,7 @@ class AutoFixConfigManager:
 
         Returns:
             バックアップポリシーの辞書
+
         """
         return {
             "enabled": self.config.is_backup_before_fix_enabled(),
@@ -68,6 +68,7 @@ class AutoFixConfigManager:
 
         Returns:
             承認設定の辞書
+
         """
         risk_tolerance = self.config.get_auto_fix_risk_tolerance()
 
@@ -87,6 +88,7 @@ class AutoFixConfigManager:
 
         Returns:
             安全性チェック設定の辞書
+
         """
         return {
             "verify_before_apply": True,
@@ -102,6 +104,7 @@ class AutoFixConfigManager:
 
         Returns:
             保護されたファイルパターンのリスト
+
         """
         return [
             ".git/*",
@@ -121,6 +124,7 @@ class AutoFixConfigManager:
 
         Returns:
             検証結果の辞書
+
         """
         validation_result = {
             "valid": True,
@@ -145,7 +149,7 @@ class AutoFixConfigManager:
 
             # 信頼度の検証
             confidence = fix_request["confidence"]
-            if not isinstance(confidence, (int, float)) or not (0.0 <= confidence <= 1.0):
+            if not isinstance(confidence, int | float) or not (0.0 <= confidence <= 1.0):
                 validation_result["errors"].append(f"信頼度が無効です: {confidence}")
                 validation_result["valid"] = False
                 return validation_result
@@ -171,11 +175,11 @@ class AutoFixConfigManager:
 
             # 承認要否の判定
             approval_settings = self.get_approval_settings()
-            if risk_level == "high" and approval_settings["require_approval_for_high_risk"]:
-                validation_result["requires_approval"] = True
-            elif risk_level == "medium" and approval_settings["require_approval_for_medium_risk"]:
-                validation_result["requires_approval"] = True
-            elif risk_level == "low" and approval_settings["require_approval_for_low_risk"]:
+            if (
+                (risk_level == "high" and approval_settings["require_approval_for_high_risk"])
+                or (risk_level == "medium" and approval_settings["require_approval_for_medium_risk"])
+                or (risk_level == "low" and approval_settings["require_approval_for_low_risk"])
+            ):
                 validation_result["requires_approval"] = True
 
             # ファイル保護チェック
@@ -201,6 +205,7 @@ class AutoFixConfigManager:
 
         Returns:
             実行計画の辞書
+
         """
         validation_result = self.validate_fix_request(fix_request)
 
@@ -239,6 +244,7 @@ class AutoFixConfigManager:
 
         Raises:
             ConfigurationError: 保存に失敗した場合
+
         """
         # 設定の検証
         self._validate_auto_fix_settings(settings)
@@ -268,6 +274,7 @@ class AutoFixConfigManager:
 
         Returns:
             自動修正設定の辞書
+
         """
         if not self.auto_fix_config_file.exists():
             return self.get_auto_fix_settings()  # デフォルト設定を返す
@@ -289,6 +296,7 @@ class AutoFixConfigManager:
 
         Returns:
             バックアップディレクトリのパス
+
         """
         return self.config.project_root / ".ci-helper" / "backups"
 
@@ -297,6 +305,7 @@ class AutoFixConfigManager:
 
         Returns:
             クリーンアップ結果の辞書
+
         """
         backup_dir = self.get_backup_directory()
         retention_days = self.config.get_backup_retention_days()
@@ -336,6 +345,7 @@ class AutoFixConfigManager:
 
         Raises:
             ValidationError: 設定が無効な場合
+
         """
         # 必須フィールドの確認
         required_fields = ["enabled", "confidence_threshold", "risk_tolerance"]
@@ -345,7 +355,7 @@ class AutoFixConfigManager:
 
         # 信頼度閾値の検証
         confidence_threshold = settings["confidence_threshold"]
-        if not isinstance(confidence_threshold, (int, float)) or not (0.0 <= confidence_threshold <= 1.0):
+        if not isinstance(confidence_threshold, int | float) or not (0.0 <= confidence_threshold <= 1.0):
             raise ValidationError(f"信頼度閾値が無効です: {confidence_threshold}")
 
         # リスク許容度の検証
@@ -363,6 +373,7 @@ class AutoFixConfigManager:
 
         Returns:
             ファイルが保護されているかどうか
+
         """
         import fnmatch
 
@@ -379,6 +390,7 @@ class AutoFixConfigManager:
 
         Returns:
             バックアップ計画の辞書
+
         """
         files_to_backup = fix_request.get("files_to_modify", [])
         backup_id = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -399,6 +411,7 @@ class AutoFixConfigManager:
 
         Returns:
             実行ステップのリスト
+
         """
         steps = []
 
@@ -412,7 +425,7 @@ class AutoFixConfigManager:
                     "権限チェック",
                     "Gitステータス確認",
                 ],
-            }
+            },
         )
 
         # 2. バックアップ作成
@@ -426,7 +439,7 @@ class AutoFixConfigManager:
                         "ファイルコピー",
                         "バックアップ検証",
                     ],
-                }
+                },
             )
 
         # 3. 修正適用
@@ -435,7 +448,7 @@ class AutoFixConfigManager:
                 "step": "apply_fix",
                 "description": "修正を適用",
                 "actions": fix_request.get("fix_steps", []),
-            }
+            },
         )
 
         # 4. 検証
@@ -448,7 +461,7 @@ class AutoFixConfigManager:
                     "構文チェック",
                     "機能テスト",
                 ],
-            }
+            },
         )
 
         return steps
@@ -461,6 +474,7 @@ class AutoFixConfigManager:
 
         Returns:
             ロールバック計画の辞書
+
         """
         return {
             "enabled": True,
@@ -486,6 +500,7 @@ class AutoFixConfigManager:
 
         Returns:
             リスク評価基準の辞書
+
         """
         return {
             "low_risk": {

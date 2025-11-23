@@ -4,8 +4,6 @@ CLI コマンドの基本的なユニットテスト
 各コマンドのヘルプ表示とオプション処理の基本的なテストを提供します。
 """
 
-from click.testing import CliRunner
-
 from ci_helper.cli import cli
 from ci_helper.commands.clean import clean
 from ci_helper.commands.doctor import doctor
@@ -13,6 +11,7 @@ from ci_helper.commands.init import init, setup
 from ci_helper.commands.logs import logs
 from ci_helper.commands.secrets import secrets
 from ci_helper.commands.test import test
+from click.testing import CliRunner
 
 
 class TestCLIBasicFunctionality:

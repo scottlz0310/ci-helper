@@ -1,5 +1,4 @@
-"""
-ci-helperのデータモデル定義
+"""ci-helperのデータモデル定義
 
 実行結果、失敗情報、設定などのデータ構造を定義します。
 """
@@ -94,7 +93,7 @@ class ExecutionResult:
     @property
     def failed_jobs(self) -> Sequence[JobResult]:
         """失敗したジョブのリストを取得"""
-        failed_jobs = []
+        failed_jobs: list[JobResult] = []
         for workflow in self.workflows:
             failed_jobs.extend([job for job in workflow.jobs if not job.success])
         return failed_jobs

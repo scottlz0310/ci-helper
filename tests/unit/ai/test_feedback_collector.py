@@ -9,7 +9,6 @@ from datetime import datetime
 from unittest.mock import mock_open, patch
 
 import pytest
-
 from ci_helper.ai.feedback_collector import FeedbackCollector
 from ci_helper.ai.models import FixSuggestion, Pattern, PatternMatch, UserFeedback
 

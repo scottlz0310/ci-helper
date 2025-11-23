@@ -1,5 +1,4 @@
-"""
-AI消費用コンテキスト強化フォーマッター
+"""AI消費用コンテキスト強化フォーマッター
 
 AI分析に最適化されたMarkdown形式でCI実行結果をフォーマットします。
 失敗の優先度付け、詳細なコンテキスト情報、修正提案を含む高品質な出力を提供します。
@@ -8,6 +7,7 @@ AI分析に最適化されたMarkdown形式でCI実行結果をフォーマッ�
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -34,6 +34,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
 
         Args:
             sanitize_secrets: シークレットのサニタイズを有効にするかどうか
+
         """
         super().__init__(sanitize_secrets)
 
@@ -63,6 +64,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
 
         Returns:
             AI消費用に最適化されたMarkdown文字列
+
         """
         # verbose_level を detail_level にマッピング（後方互換性のため）
         if "verbose_level" in options and "detail_level" not in options:
@@ -96,7 +98,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
             include_suggestions = True
             include_related_files = True
 
-        sections = []
+        sections: list[str] = []
 
         # クイックサマリー（最重要情報を最初に）
         sections.append(self._format_quick_summary(execution_result))
@@ -105,8 +107,10 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
         if not execution_result.success:
             sections.append(
                 self._format_critical_failures(
-                    execution_result, max_failures=max_failures, include_context=include_context
-                )
+                    execution_result,
+                    max_failures=max_failures,
+                    include_context=include_context,
+                ),
             )
 
         # 修正提案セクション
@@ -188,7 +192,10 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
 **実行時刻**: {execution_result.timestamp.strftime("%Y-%m-%d %H:%M:%S")}"""
 
     def _format_critical_failures(
-        self, execution_result: ExecutionResult, max_failures: int = 10, include_context: bool = True
+        self,
+        execution_result: ExecutionResult,
+        max_failures: int = 10,
+        include_context: bool = True,
     ) -> str:
         """クリティカルな失敗を優先度順に詳細整形"""
         if execution_result.success:
@@ -211,7 +218,12 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
         return "\n\n".join(sections)
 
     def _format_single_failure_detailed(
-        self, failure: Failure, failure_num: int, workflow_name: str, job_name: str, include_context: bool = True
+        self,
+        failure: Failure,
+        failure_num: int,
+        workflow_name: str,
+        job_name: str,
+        include_context: bool = True,
     ) -> str:
         """単一の失敗を詳細に整形"""
         config = self.failure_type_config.get(failure.type, self.failure_type_config[FailureType.UNKNOWN])
@@ -291,7 +303,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
         # 失敗を分析して修正提案を生成
         prioritized_failures = self._prioritize_failures(execution_result.all_failures)[:5]
 
-        suggestions = []
+        suggestions: list[dict[str, Any]] = []
         for failure in prioritized_failures:
             suggestion = self._generate_fix_suggestion(failure)
             if suggestion:
@@ -318,7 +330,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
             return ""
 
         # 失敗に関連するファイルを収集
-        related_files = set()
+        related_files: set[str] = set()
         for failure in execution_result.all_failures:
             if failure.file_path:
                 related_files.add(failure.file_path)
@@ -329,7 +341,12 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
         sections = ["## 📁 関連ファイル情報"]
 
         # ファイルタイプ別に分類
-        file_categories = {"テストファイル": [], "設定ファイル": [], "ソースコード": [], "その他": []}
+        file_categories: dict[str, list[str]] = {
+            "テストファイル": [],
+            "設定ファイル": [],
+            "ソースコード": [],
+            "その他": [],
+        }
 
         for file_path in sorted(related_files):
             category = self._categorize_file(file_path)
@@ -385,7 +402,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
 
         return "\n".join(sections)
 
-    def _prioritize_failures(self, failures: list[Failure]) -> list[Failure]:
+    def _prioritize_failures(self, failures: Sequence[Failure]) -> list[Failure]:
         """失敗を優先度順にソート"""
 
         def calculate_priority_score(failure: Failure) -> int:
@@ -500,12 +517,11 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
 
         if any(pattern in file_path_lower for pattern in ["test", "spec", "__test__"]):
             return "テストファイル"
-        elif any(pattern in file_path_lower for pattern in [".yml", ".yaml", ".json", ".toml", ".ini", "config"]):
+        if any(pattern in file_path_lower for pattern in [".yml", ".yaml", ".json", ".toml", ".ini", "config"]):
             return "設定ファイル"
-        elif any(file_path_lower.endswith(ext) for ext in [".py", ".js", ".ts", ".java", ".cpp", ".c", ".go"]):
+        if any(file_path_lower.endswith(ext) for ext in [".py", ".js", ".ts", ".java", ".cpp", ".c", ".go"]):
             return "ソースコード"
-        else:
-            return "その他"
+        return "その他"
 
     def _analyze_failure_patterns(self, failures: list[Failure]) -> dict[str, int]:
         """失敗パターンを分析"""
@@ -549,6 +565,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
 
         Returns:
             フォーマット結果
+
         """
         from .streaming_formatter import ChunkedLogProcessor
 
@@ -571,7 +588,9 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
         return self.format(enhanced_result, **options)
 
     def _enhance_execution_result_with_streaming_data(
-        self, execution_result: ExecutionResult, streaming_failures: list[dict[str, Any]]
+        self,
+        execution_result: ExecutionResult,
+        streaming_failures: list[dict[str, Any]],
     ) -> ExecutionResult:
         """ストリーミングデータでExecutionResultを強化
 
@@ -581,6 +600,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
 
         Returns:
             強化されたExecutionResult
+
         """
         # 新しい失敗情報を既存のものと統合
         # 実装は簡略化版（実際にはより詳細な統合処理が必要）

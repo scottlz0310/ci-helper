@@ -6,10 +6,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from click.testing import CliRunner
-
 from ci_helper.cli import cli
 from ci_helper.core.exceptions import CIHelperError
+from click.testing import CliRunner
 
 
 class TestErrorScenarios:

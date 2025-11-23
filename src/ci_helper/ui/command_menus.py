@@ -1,5 +1,4 @@
-"""
-コマンドメニュー定義
+"""コマンドメニュー定義
 
 各コマンドの説明付きメニュー項目とサブメニューを定義します。
 """
@@ -27,6 +26,7 @@ class CommandMenuBuilder:
         Args:
             console: Rich Console インスタンス
             command_handlers: コマンド名とハンドラー関数のマッピング
+
         """
         self.console = console
         self.command_handlers = command_handlers
@@ -36,6 +36,7 @@ class CommandMenuBuilder:
 
         Returns:
             メインメニュー
+
         """
         return Menu(
             title="CI-Helper メインメニュー",
@@ -274,13 +275,13 @@ class CommandMenuBuilder:
 
         Returns:
             コマンド実行関数
+
         """
 
         def action():
             if command in self.command_handlers:
                 return self.command_handlers[command]()
-            else:
-                self.console.print(f"[red]コマンド '{command}' が見つかりません[/red]")
+            self.console.print(f"[red]コマンド '{command}' が見つかりません[/red]")
 
         return action
 
@@ -290,8 +291,7 @@ class CommandMenuBuilder:
         def action():
             if "test" in self.command_handlers:
                 return self.command_handlers["test"]()
-            else:
-                self.console.print("[red]testコマンドが見つかりません[/red]")
+            self.console.print("[red]testコマンドが見つかりません[/red]")
 
         return action
 
@@ -331,13 +331,12 @@ class CommandMenuBuilder:
 
                 if "test_workflow" in self.command_handlers:
                     return self.command_handlers["test_workflow"](workflow_filename)
-                else:
-                    message = (
-                        f"[yellow]ワークフロー '{selected_workflow.name}' "
-                        f"({workflow_filename}) でテストを実行します[/yellow]"
-                    )
-                    self.console.print(message)
-                    # 実際の実装では適切なコマンドハンドラーを呼び出す
+                message = (
+                    f"[yellow]ワークフロー '{selected_workflow.name}' "
+                    f"({workflow_filename}) でテストを実行します[/yellow]"
+                )
+                self.console.print(message)
+                # 実際の実装では適切なコマンドハンドラーを呼び出す
             else:
                 self.console.print("[red]無効な選択です[/red]")
                 return False
@@ -358,7 +357,7 @@ class CommandMenuBuilder:
                 return False
 
             # 全ワークフローからジョブを収集
-            all_jobs = {}
+            all_jobs: dict[str, list[Any]] = {}
             for workflow in workflows:
                 for job in workflow.jobs:
                     if job not in all_jobs:
@@ -371,7 +370,7 @@ class CommandMenuBuilder:
 
             self.console.print("[bold green]実行するジョブを選択してください:[/bold green]\n")
 
-            job_choices = {}
+            job_choices: dict[str, str] = {}
             for i, (job_name, job_workflows) in enumerate(all_jobs.items(), 1):
                 key = str(i)
                 job_choices[key] = job_name
@@ -397,11 +396,10 @@ class CommandMenuBuilder:
 
                 if "test_job" in self.command_handlers:
                     return self.command_handlers["test_job"](selected_job)
-                else:
-                    msg = f"[yellow]ジョブ '{selected_job}' でテストを実行します[/yellow]"
-                    message = msg
-                    self.console.print(message)
-                    # 実際の実装では適切なコマンドハンドラーを呼び出す
+                msg = f"[yellow]ジョブ '{selected_job}' でテストを実行します[/yellow]"
+                message = msg
+                self.console.print(message)
+                # 実際の実装では適切なコマンドハンドラーを呼び出す
             else:
                 self.console.print("[red]無効な選択です[/red]")
                 return False
@@ -414,8 +412,7 @@ class CommandMenuBuilder:
         def action():
             if "analyze" in self.command_handlers:
                 return self.command_handlers["analyze"]()
-            else:
-                self.console.print("[red]analyzeコマンドが見つかりません[/red]")
+            self.console.print("[red]analyzeコマンドが見つかりません[/red]")
 
         return action
 
@@ -425,9 +422,8 @@ class CommandMenuBuilder:
         def action():
             if "analyze_interactive" in self.command_handlers:
                 return self.command_handlers["analyze_interactive"]()
-            else:
-                self.console.print("[yellow]対話的分析モードを開始します[/yellow]")
-                # 実際の実装では適切なコマンドハンドラーを呼び出す
+            self.console.print("[yellow]対話的分析モードを開始します[/yellow]")
+            # 実際の実装では適切なコマンドハンドラーを呼び出す
 
         return action
 
@@ -442,7 +438,7 @@ class CommandMenuBuilder:
 
             if log_file and "analyze_file" in self.command_handlers:
                 return self.command_handlers["analyze_file"](log_file)
-            elif log_file:
+            if log_file:
                 message = f"[yellow]ログファイル '{log_file}' を分析します[/yellow]"
                 self.console.print(message)
                 # 実際の実装では適切なコマンドハンドラーを呼び出す
@@ -458,9 +454,8 @@ class CommandMenuBuilder:
         def action():
             if "logs_latest" in self.command_handlers:
                 return self.command_handlers["logs_latest"]()
-            else:
-                self.console.print("[yellow]最新のログを表示します[/yellow]")
-                # 実際の実装では適切なコマンドハンドラーを呼び出す
+            self.console.print("[yellow]最新のログを表示します[/yellow]")
+            # 実際の実装では適切なコマンドハンドラーを呼び出す
 
         return action
 
@@ -479,7 +474,7 @@ class CommandMenuBuilder:
 
             if log1 and log2 and "logs_compare" in self.command_handlers:
                 return self.command_handlers["logs_compare"](log1, log2)
-            elif log1 and log2:
+            if log1 and log2:
                 message = f"[yellow]'{log1}' と '{log2}' を比較します[/yellow]"
                 self.console.print(message)
                 # 実際の実装では適切なコマンドハンドラーを呼び出す
@@ -495,9 +490,8 @@ class CommandMenuBuilder:
         def action():
             if "secrets_list" in self.command_handlers:
                 return self.command_handlers["secrets_list"]()
-            else:
-                self.console.print("[yellow]利用可能なシークレットを一覧表示します[/yellow]")
-                # 実際の実装では適切なコマンドハンドラーを呼び出す
+            self.console.print("[yellow]利用可能なシークレットを一覧表示します[/yellow]")
+            # 実際の実装では適切なコマンドハンドラーを呼び出す
 
         return action
 
@@ -535,7 +529,7 @@ class CommandMenuBuilder:
                 console=self.console,
             )
 
-            images = []
+            images: list[str] = []
             if image_choice == "default":
                 images = [
                     "ghcr.io/catthehacker/ubuntu:act-latest",
@@ -561,7 +555,7 @@ class CommandMenuBuilder:
 
             if images and "cache_pull" in self.command_handlers:
                 return self.command_handlers["cache_pull"](images, timeout)
-            elif images:
+            if images:
                 timeout_min = timeout // 60
                 text = f"[yellow]Dockerイメージをプルします（タイムアウト: {timeout_min}分）[/yellow]"
                 msg = text
@@ -590,9 +584,8 @@ class CommandMenuBuilder:
 
             if "cache_pull" in self.command_handlers:
                 return self.command_handlers["cache_pull"](images, timeout)
-            else:
-                self.console.print("[yellow]Dockerイメージをプルします[/yellow]")
-                # 実際の実装では適切なコマンドハンドラーを呼び出す
+            self.console.print("[yellow]Dockerイメージをプルします[/yellow]")
+            # 実際の実装では適切なコマンドハンドラーを呼び出す
 
         return action
 
@@ -602,10 +595,9 @@ class CommandMenuBuilder:
         def action():
             if "init_interactive" in self.command_handlers:
                 return self.command_handlers["init_interactive"]()
-            else:
-                self.console.print("[green]対話的初期設定を開始します...[/green]")
-                self.console.print("[dim]AIプロバイダーとモデルを選択できます[/dim]")
-                # 実際の実装では適切なコマンドハンドラーを呼び出す
+            self.console.print("[green]対話的初期設定を開始します...[/green]")
+            self.console.print("[dim]AIプロバイダーとモデルを選択できます[/dim]")
+            # 実際の実装では適切なコマンドハンドラーを呼び出す
 
         return action
 
@@ -701,6 +693,7 @@ class CommandMenuBuilder:
 
         Returns:
             ログ整形実行関数
+
         """
 
         def action():
@@ -752,59 +745,58 @@ class CommandMenuBuilder:
                     output_file=output_file,
                     return_to_menu_func=return_to_menu,
                 )
-            else:
-                # 実装予定の処理を表示
-                from ..utils.progress_display import get_progress_manager
+            # 実装予定の処理を表示
+            from ..utils.progress_display import get_progress_manager
 
-                progress_manager = get_progress_manager(self.console)
+            progress_manager = get_progress_manager(self.console)
 
-                # 処理開始メッセージ
-                progress_manager.show_processing_start_message(
-                    format_type=format_type,
+            # 処理開始メッセージ
+            progress_manager.show_processing_start_message(
+                format_type=format_type,
+                input_file=log_file,
+                output_file=output_file,
+            )
+
+            # 模擬処理
+            def mock_format_task():
+                import time
+
+                time.sleep(1)  # 処理時間をシミュレート
+                return f"模擬整形結果: {format_type}形式"
+
+            try:
+                progress_manager.execute_with_progress(
+                    task_func=mock_format_task,
+                    task_description="ログを整形中...",
+                    completion_description="整形完了",
                     input_file=log_file,
-                    output_file=output_file,
                 )
 
-                # 模擬処理
-                def mock_format_task():
-                    import time
+                # 成功メッセージ
+                progress_manager.show_success_message(
+                    format_type=format_type,
+                    output_file=output_file,
+                    processing_time=1.0,
+                )
 
-                    time.sleep(1)  # 処理時間をシミュレート
-                    return f"模擬整形結果: {format_type}形式"
+                # メニューに戻るオプション
+                progress_manager.show_menu_return_option(return_to_menu)
 
-                try:
-                    progress_manager.execute_with_progress(
-                        task_func=mock_format_task,
-                        task_description="ログを整形中...",
-                        completion_description="整形完了",
-                        input_file=log_file,
-                    )
+            except Exception as e:
+                # ログ整形専用エラーハンドラーを使用
+                from ..formatters.error_handler import LogFormattingErrorHandler
 
-                    # 成功メッセージ
-                    progress_manager.show_success_message(
-                        format_type=format_type,
-                        output_file=output_file,
-                        processing_time=1.0,
-                    )
+                error_handler = LogFormattingErrorHandler(self.console)
 
-                    # メニューに戻るオプション
-                    progress_manager.show_menu_return_option(return_to_menu)
+                error_context = error_handler.create_error_context(
+                    format_type=format_type,
+                    input_file=log_file,
+                )
 
-                except Exception as e:
-                    # ログ整形専用エラーハンドラーを使用
-                    from ..formatters.error_handler import LogFormattingErrorHandler
+                error_handler.handle_formatting_error(e, error_context, verbose=False)
 
-                    error_handler = LogFormattingErrorHandler(self.console)
-
-                    error_context = error_handler.create_error_context(
-                        format_type=format_type,
-                        input_file=log_file,
-                    )
-
-                    error_handler.handle_formatting_error(e, error_context, verbose=False)
-
-                    # メニューに戻るオプション（エラー時も）
-                    progress_manager.show_menu_return_option(return_to_menu)
+                # メニューに戻るオプション（エラー時も）
+                progress_manager.show_menu_return_option(return_to_menu)
 
         return action
 
@@ -813,6 +805,7 @@ class CommandMenuBuilder:
 
         Returns:
             カスタム整形実行関数
+
         """
 
         def action():
@@ -887,9 +880,8 @@ class CommandMenuBuilder:
                     return_to_menu_func=return_to_menu,
                     **custom_options["advanced_options"],
                 )
-            else:
-                # 実装予定の処理を表示
-                self._show_custom_format_execution_preview(custom_options, log_file, output_file, return_to_menu)
+            # 実装予定の処理を表示
+            self._show_custom_format_execution_preview(custom_options, log_file, output_file, return_to_menu)
 
         return action
 
@@ -901,9 +893,8 @@ class CommandMenuBuilder:
             if Confirm.ask(prompt_text, console=self.console):
                 if "cache_clear" in self.command_handlers:
                     return self.command_handlers["cache_clear"]()
-                else:
-                    self.console.print("[yellow]キャッシュをクリアします[/yellow]")
-                    # 実際の実装では適切なコマンドハンドラーを呼び出す
+                self.console.print("[yellow]キャッシュをクリアします[/yellow]")
+                # 実際の実装では適切なコマンドハンドラーを呼び出す
             else:
                 self.console.print("[dim]キャッシュクリアがキャンセルされました[/dim]")
 
@@ -917,6 +908,7 @@ class CommandMenuBuilder:
 
         Returns:
             最新ログ整形実行関数
+
         """
 
         def action():
@@ -962,59 +954,58 @@ class CommandMenuBuilder:
                     output_file=output_file,
                     return_to_menu_func=return_to_menu,
                 )
-            else:
-                # 実装予定の処理を表示
-                from ..utils.progress_display import get_progress_manager
+            # 実装予定の処理を表示
+            from ..utils.progress_display import get_progress_manager
 
-                progress_manager = get_progress_manager(self.console)
+            progress_manager = get_progress_manager(self.console)
 
-                # 処理開始メッセージ
-                progress_manager.show_processing_start_message(
-                    format_type=format_type,
-                    input_file=None,  # 最新ログ
-                    output_file=output_file,
+            # 処理開始メッセージ
+            progress_manager.show_processing_start_message(
+                format_type=format_type,
+                input_file=None,  # 最新ログ
+                output_file=output_file,
+            )
+
+            # 模擬処理
+            def mock_format_task():
+                import time
+
+                time.sleep(0.8)  # 処理時間をシミュレート
+                return f"模擬整形結果: 最新ログの{format_type}形式"
+
+            try:
+                progress_manager.execute_with_progress(
+                    task_func=mock_format_task,
+                    task_description="最新ログを整形中...",
+                    completion_description="整形完了",
+                    input_file=None,
                 )
 
-                # 模擬処理
-                def mock_format_task():
-                    import time
+                # 成功メッセージ
+                progress_manager.show_success_message(
+                    format_type=format_type,
+                    output_file=output_file,
+                    processing_time=0.8,
+                )
 
-                    time.sleep(0.8)  # 処理時間をシミュレート
-                    return f"模擬整形結果: 最新ログの{format_type}形式"
+                # メニューに戻るオプション
+                progress_manager.show_menu_return_option(return_to_menu)
 
-                try:
-                    progress_manager.execute_with_progress(
-                        task_func=mock_format_task,
-                        task_description="最新ログを整形中...",
-                        completion_description="整形完了",
-                        input_file=None,
-                    )
+            except Exception as e:
+                # ログ整形専用エラーハンドラーを使用
+                from ..formatters.error_handler import LogFormattingErrorHandler
 
-                    # 成功メッセージ
-                    progress_manager.show_success_message(
-                        format_type=format_type,
-                        output_file=output_file,
-                        processing_time=0.8,
-                    )
+                error_handler = LogFormattingErrorHandler(self.console)
 
-                    # メニューに戻るオプション
-                    progress_manager.show_menu_return_option(return_to_menu)
+                error_context = error_handler.create_error_context(
+                    format_type=format_type,
+                    input_file=None,  # 最新ログ
+                )
 
-                except Exception as e:
-                    # ログ整形専用エラーハンドラーを使用
-                    from ..formatters.error_handler import LogFormattingErrorHandler
+                error_handler.handle_formatting_error(e, error_context, verbose=False)
 
-                    error_handler = LogFormattingErrorHandler(self.console)
-
-                    error_context = error_handler.create_error_context(
-                        format_type=format_type,
-                        input_file=None,  # 最新ログ
-                    )
-
-                    error_handler.handle_formatting_error(e, error_context, verbose=False)
-
-                    # メニューに戻るオプション（エラー時も）
-                    progress_manager.show_menu_return_option(return_to_menu)
+                # メニューに戻るオプション（エラー時も）
+                progress_manager.show_menu_return_option(return_to_menu)
 
         return action
 
@@ -1023,6 +1014,7 @@ class CommandMenuBuilder:
 
         Returns:
             選択されたログファイルのパス（最新ログの場合はNone、キャンセル時は"CANCELLED"）
+
         """
         # ログ選択方式を選択
         log_choice = Prompt.ask(
@@ -1035,10 +1027,10 @@ class CommandMenuBuilder:
         if log_choice == "latest":
             # 最新ログを使用
             return None
-        elif log_choice == "specific":
+        if log_choice == "specific":
             # カスタムファイルパス入力
             return self._input_custom_log_path()
-        elif log_choice == "list":
+        if log_choice == "list":
             # 利用可能なログファイル一覧から選択
             return self._select_from_log_list()
 
@@ -1049,6 +1041,7 @@ class CommandMenuBuilder:
 
         Returns:
             入力されたファイルパス（キャンセル時はNone）
+
         """
         log_file = Prompt.ask(
             "[bold green]ログファイルのパスを入力してください[/bold green]",
@@ -1076,8 +1069,7 @@ class CommandMenuBuilder:
             )
             if retry:
                 return self._input_custom_log_path()
-            else:
-                return None
+            return None
 
         if not log_path.is_file():
             self.console.print(f"[red]エラー: 指定されたパスはファイルではありません: {log_file}[/red]")
@@ -1090,6 +1082,7 @@ class CommandMenuBuilder:
 
         Returns:
             選択されたログファイルのパス（キャンセル時はNone）
+
         """
         try:
             # LogManagerを使用してログ一覧を取得
@@ -1111,7 +1104,7 @@ class CommandMenuBuilder:
             # ログ一覧を表示
             self.console.print("[bold green]利用可能なログファイル:[/bold green]\n")
 
-            log_choices = {}
+            log_choices: dict[str, str] = {}
             for i, log_entry in enumerate(logs, 1):
                 key = str(i)
                 log_choices[key] = log_entry["log_file"]
@@ -1149,9 +1142,8 @@ class CommandMenuBuilder:
                     return None
 
                 return str(log_path)
-            else:
-                self.console.print("[red]無効な選択です[/red]")
-                return None
+            self.console.print("[red]無効な選択です[/red]")
+            return None
 
         except Exception as e:
             from ..core.exceptions import FileOperationError
@@ -1191,6 +1183,7 @@ class CommandMenuBuilder:
 
         Returns:
             設定されたパラメータの辞書（キャンセル時はNone）
+
         """
         self.console.print("[bold cyan]📋 整形パラメータ設定[/bold cyan]\n")
 
@@ -1261,7 +1254,7 @@ class CommandMenuBuilder:
                         "[green]最大失敗表示数を入力してください[/green]",
                         default="10",
                         console=self.console,
-                    )
+                    ),
                 )
 
         # 4. 高度なオプション（フォーマット固有）
@@ -1288,8 +1281,9 @@ class CommandMenuBuilder:
 
         Returns:
             高度なオプションの辞書
+
         """
-        advanced_options = {}
+        advanced_options: dict[str, Any] = {}
 
         # フォーマット固有のオプション設定
         if format_type == "ai":
@@ -1329,7 +1323,7 @@ class CommandMenuBuilder:
                     "include_context": include_context,
                     "include_suggestions": include_suggestions,
                     "include_related_files": include_related_files,
-                }
+                },
             )
 
         elif format_type == "human":
@@ -1361,7 +1355,7 @@ class CommandMenuBuilder:
                     "show_success_jobs": show_success_jobs,
                     "color_output": color_output,
                     "show_details": show_details,
-                }
+                },
             )
 
         elif format_type == "json":
@@ -1390,13 +1384,16 @@ class CommandMenuBuilder:
                 {
                     "pretty_print": pretty_print,
                     "include_metadata": include_metadata,
-                }
+                },
             )
 
         return advanced_options
 
     def _show_custom_format_confirmation(
-        self, custom_options: dict[str, Any], log_file: str | None, output_file: str | None
+        self,
+        custom_options: dict[str, Any],
+        log_file: str | None,
+        output_file: str | None,
     ) -> None:
         """カスタム整形設定の確認画面を表示
 
@@ -1404,6 +1401,7 @@ class CommandMenuBuilder:
             custom_options: 設定されたカスタムオプション
             log_file: 入力ログファイル
             output_file: 出力ファイル
+
         """
         self.console.print("\n[bold cyan]📋 設定確認[/bold cyan]\n")
 
@@ -1455,6 +1453,7 @@ class CommandMenuBuilder:
             log_file: 入力ログファイル
             output_file: 出力ファイル
             return_to_menu_func: メニューに戻る関数
+
         """
         from ..utils.progress_display import get_progress_manager
 
@@ -1488,7 +1487,7 @@ class CommandMenuBuilder:
             )
 
             # 成功メッセージ（カスタム詳細情報付き）
-            details = {}
+            details: dict[str, Any] = {}
             if custom_options.get("max_failures"):
                 details["max_failures"] = custom_options["max_failures"]
 

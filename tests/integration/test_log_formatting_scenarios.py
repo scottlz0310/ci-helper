@@ -1,5 +1,4 @@
-"""
-ログ整形機能シナリオテスト
+"""ログ整形機能シナリオテスト
 
 実際の使用シナリオに基づいた統合テストを提供します。
 """
@@ -15,12 +14,11 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from click.testing import CliRunner
-from rich.console import Console
-
 from ci_helper.cli import cli
 from ci_helper.core.models import ExecutionResult, Failure, FailureType, JobResult, WorkflowResult
 from ci_helper.formatters import get_formatter_manager
+from click.testing import CliRunner
+from rich.console import Console
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from tests.utils.mock_helpers import setup_stable_prompt_mock
@@ -208,7 +206,8 @@ class TestLogFormattingScenarios:
 
                 # エラーフィルタリングオプション付きで実行
                 result = runner.invoke(
-                    cli, ["format-logs", "--format", "ai", "--filter-errors", "--verbose-level", "detailed"]
+                    cli,
+                    ["format-logs", "--format", "ai", "--filter-errors", "--verbose-level", "detailed"],
                 )
 
                 assert result.exit_code == 0
@@ -228,17 +227,26 @@ class TestLogFormattingScenarios:
 
         # 基本オプション
         basic_output = formatter_manager.format_log(
-            complex_execution_result, "ai", filter_errors=False, verbose_level="normal"
+            complex_execution_result,
+            "ai",
+            filter_errors=False,
+            verbose_level="normal",
         )
 
         # 詳細オプション
         detailed_output = formatter_manager.format_log(
-            complex_execution_result, "ai", filter_errors=False, verbose_level="detailed"
+            complex_execution_result,
+            "ai",
+            filter_errors=False,
+            verbose_level="detailed",
         )
 
         # エラーフィルタリングオプション
         filtered_output = formatter_manager.format_log(
-            complex_execution_result, "ai", filter_errors=True, verbose_level="normal"
+            complex_execution_result,
+            "ai",
+            filter_errors=True,
+            verbose_level="normal",
         )
 
         # 各出力が生成されることを確認
@@ -274,7 +282,8 @@ class TestLogFormattingScenarios:
                         mock_save.return_value = (True, str(output_file))
 
                         result = runner.invoke(
-                            cli, ["format-logs", "--format", "ai", "--output", str(output_file), "--no-confirm"]
+                            cli,
+                            ["format-logs", "--format", "ai", "--output", str(output_file), "--no-confirm"],
                         )
 
                         assert result.exit_code == 0
@@ -306,7 +315,7 @@ class TestLogFormattingScenarios:
             # UserInputErrorも許可する（フォーマッターマネージャーが投げる可能性がある）
             from ci_helper.core.exceptions import UserInputError
 
-            assert isinstance(e, (ValueError, TypeError, AttributeError, UserInputError))
+            assert isinstance(e, ValueError | TypeError | AttributeError | UserInputError)
 
     @patch("rich.prompt.Prompt.ask")
     def test_menu_navigation_with_back_operations(self, mock_prompt: Mock):
@@ -355,7 +364,7 @@ class TestLogFormattingScenarios:
                     context_before=[f"line {i}", f"line {i + 1}"],
                     context_after=[f"line {i + 3}", f"line {i + 4}"],
                     stack_trace=f"Traceback for error {i}",
-                )
+                ),
             )
 
         job = JobResult(name="test", success=False, failures=failures, duration=300.0)

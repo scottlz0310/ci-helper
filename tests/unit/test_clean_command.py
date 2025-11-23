@@ -5,9 +5,8 @@ clean コマンドのユニットテスト
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from click.testing import CliRunner
-
 from ci_helper.cli import cli
+from click.testing import CliRunner
 
 
 class TestCleanCommand:

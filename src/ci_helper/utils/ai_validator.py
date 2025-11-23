@@ -1,5 +1,4 @@
-"""
-AI プロバイダーの検証ユーティリティ
+"""AI プロバイダーの検証ユーティリティ
 
 APIキーの有効性チェックとプロバイダー情報を提供します。
 """
@@ -81,6 +80,7 @@ class AIProviderValidator:
 
         Args:
             console: Rich Console インスタンス
+
         """
         self.console = console or Console()
 
@@ -89,6 +89,7 @@ class AIProviderValidator:
 
         Returns:
             プロバイダー情報の辞書
+
         """
         return SUPPORTED_PROVIDERS.copy()
 
@@ -100,6 +101,7 @@ class AIProviderValidator:
 
         Returns:
             APIキーが設定されている場合 True
+
         """
         if provider not in SUPPORTED_PROVIDERS:
             return False
@@ -118,6 +120,7 @@ class AIProviderValidator:
 
         Returns:
             検証結果
+
         """
         if provider not in SUPPORTED_PROVIDERS:
             return ValidationResult(
@@ -147,9 +150,9 @@ class AIProviderValidator:
         # API接続テスト
         if provider == "openai":
             return await self._validate_openai(provider_info)
-        elif provider == "anthropic":
+        if provider == "anthropic":
             return await self._validate_anthropic(provider_info)
-        elif provider == "local":
+        if provider == "local":
             return await self._validate_local(provider_info)
 
         return ValidationResult(
@@ -170,48 +173,51 @@ class AIProviderValidator:
                 "Content-Type": "application/json",
             }
 
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    provider_info.test_endpoint, headers=headers, timeout=aiohttp.ClientTimeout(total=10)
-                ) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        # 利用可能なモデルを取得
-                        available_models = []
-                        if "data" in data:
-                            for model in data["data"]:
-                                model_id = model.get("id", "")
-                                if any(supported in model_id for supported in ["gpt-4", "gpt-3.5"]):
-                                    available_models.append(model_id)
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(
+                    provider_info.test_endpoint,
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as response,
+            ):
+                if response.status == 200:
+                    data = await response.json()
+                    # 利用可能なモデルを取得
+                    available_models: list[str] = []
+                    if "data" in data:
+                        for model in data["data"]:
+                            model_id = model.get("id", "")
+                            if any(supported in model_id for supported in ["gpt-4", "gpt-3.5"]):
+                                available_models.append(model_id)
 
-                        if not available_models:
-                            available_models = provider_info.available_models
+                    if not available_models:
+                        available_models = provider_info.available_models
 
-                        return ValidationResult(
-                            provider=provider_info.name,
-                            is_valid=True,
-                            api_key_found=True,
-                            api_key_valid=True,
-                            available_models=available_models,
-                        )
-                    elif response.status == 401:
-                        return ValidationResult(
-                            provider=provider_info.name,
-                            is_valid=False,
-                            api_key_found=True,
-                            api_key_valid=False,
-                            available_models=provider_info.available_models,
-                            error_message="APIキーが無効です",
-                        )
-                    else:
-                        return ValidationResult(
-                            provider=provider_info.name,
-                            is_valid=False,
-                            api_key_found=True,
-                            api_key_valid=False,
-                            available_models=provider_info.available_models,
-                            error_message=f"API接続エラー (HTTP {response.status})",
-                        )
+                    return ValidationResult(
+                        provider=provider_info.name,
+                        is_valid=True,
+                        api_key_found=True,
+                        api_key_valid=True,
+                        available_models=available_models,
+                    )
+                if response.status == 401:
+                    return ValidationResult(
+                        provider=provider_info.name,
+                        is_valid=False,
+                        api_key_found=True,
+                        api_key_valid=False,
+                        available_models=provider_info.available_models,
+                        error_message="APIキーが無効です",
+                    )
+                return ValidationResult(
+                    provider=provider_info.name,
+                    is_valid=False,
+                    api_key_found=True,
+                    api_key_valid=False,
+                    available_models=provider_info.available_models,
+                    error_message=f"API接続エラー (HTTP {response.status})",
+                )
 
         except TimeoutError:
             return ValidationResult(
@@ -251,39 +257,40 @@ class AIProviderValidator:
                 "messages": [{"role": "user", "content": "test"}],
             }
 
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
+            async with (
+                aiohttp.ClientSession() as session,
+                session.post(
                     provider_info.test_endpoint,
                     headers=headers,
                     json=test_data,
                     timeout=aiohttp.ClientTimeout(total=10),
-                ) as response:
-                    if response.status in [200, 400]:  # 400も有効（リクエスト形式の問題）
-                        return ValidationResult(
-                            provider=provider_info.name,
-                            is_valid=True,
-                            api_key_found=True,
-                            api_key_valid=True,
-                            available_models=provider_info.available_models,
-                        )
-                    elif response.status == 401:
-                        return ValidationResult(
-                            provider=provider_info.name,
-                            is_valid=False,
-                            api_key_found=True,
-                            api_key_valid=False,
-                            available_models=provider_info.available_models,
-                            error_message="APIキーが無効です",
-                        )
-                    else:
-                        return ValidationResult(
-                            provider=provider_info.name,
-                            is_valid=False,
-                            api_key_found=True,
-                            api_key_valid=False,
-                            available_models=provider_info.available_models,
-                            error_message=f"API接続エラー (HTTP {response.status})",
-                        )
+                ) as response,
+            ):
+                if response.status in [200, 400]:  # 400も有効（リクエスト形式の問題）
+                    return ValidationResult(
+                        provider=provider_info.name,
+                        is_valid=True,
+                        api_key_found=True,
+                        api_key_valid=True,
+                        available_models=provider_info.available_models,
+                    )
+                if response.status == 401:
+                    return ValidationResult(
+                        provider=provider_info.name,
+                        is_valid=False,
+                        api_key_found=True,
+                        api_key_valid=False,
+                        available_models=provider_info.available_models,
+                        error_message="APIキーが無効です",
+                    )
+                return ValidationResult(
+                    provider=provider_info.name,
+                    is_valid=False,
+                    api_key_found=True,
+                    api_key_valid=False,
+                    available_models=provider_info.available_models,
+                    error_message=f"API接続エラー (HTTP {response.status})",
+                )
 
         except TimeoutError:
             return ValidationResult(
@@ -316,7 +323,7 @@ class AIProviderValidator:
                     if response.status == 200:
                         data = await response.json()
                         # インストール済みモデルを取得
-                        available_models = []
+                        available_models: list[str] = []
                         if "models" in data:
                             for model in data["models"]:
                                 model_name = model.get("name", "").split(":")[0]
@@ -341,15 +348,14 @@ class AIProviderValidator:
                             api_key_valid=True,
                             available_models=available_models,
                         )
-                    else:
-                        return ValidationResult(
-                            provider=provider_info.name,
-                            is_valid=False,
-                            api_key_found=True,
-                            api_key_valid=False,
-                            available_models=provider_info.available_models,
-                            error_message=f"Ollama接続エラー (HTTP {response.status})",
-                        )
+                    return ValidationResult(
+                        provider=provider_info.name,
+                        is_valid=False,
+                        api_key_found=True,
+                        api_key_valid=False,
+                        available_models=provider_info.available_models,
+                        error_message=f"Ollama接続エラー (HTTP {response.status})",
+                    )
 
         except TimeoutError:
             return ValidationResult(
@@ -377,10 +383,11 @@ class AIProviderValidator:
 
         Returns:
             プロバイダー名と検証結果のマッピング
-        """
-        results = {}
 
-        for provider_name in SUPPORTED_PROVIDERS.keys():
+        """
+        results: dict[str, ValidationResult] = {}
+
+        for provider_name in SUPPORTED_PROVIDERS:
             results[provider_name] = await self.validate_provider(provider_name)
 
         return results
@@ -390,6 +397,7 @@ class AIProviderValidator:
 
         Args:
             results: 検証結果の辞書
+
         """
         self.console.print("\n[bold blue]🤖 AIプロバイダー検証結果[/bold blue]\n")
 

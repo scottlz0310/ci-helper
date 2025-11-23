@@ -1,5 +1,4 @@
-"""
-パフォーマンス監視ユーティリティ
+"""パフォーマンス監視ユーティリティ
 
 ログ整形処理のパフォーマンスを監視・分析する機能を提供します。
 """
@@ -27,6 +26,7 @@ class PerformanceMonitor:
 
         Args:
             console: Rich Console インスタンス
+
         """
         self.console = console or Console()
         self.start_time: float | None = None
@@ -40,6 +40,7 @@ class PerformanceMonitor:
 
         Args:
             file_path: 処理対象ファイル（サイズ測定用）
+
         """
         self.start_time = time.time()
 
@@ -81,6 +82,7 @@ class PerformanceMonitor:
 
         Returns:
             パフォーマンス統計情報
+
         """
         end_time = time.time()
 
@@ -105,7 +107,7 @@ class PerformanceMonitor:
                 "peak_memory_mb": self.peak_memory,
                 "memory_increase_mb": end_memory - (self.start_memory or 0.0),
                 "throughput_mb_per_second": (self.file_size / (1024 * 1024)) / max(processing_time, 0.001),
-            }
+            },
         )
 
         return self.processing_stats
@@ -115,6 +117,7 @@ class PerformanceMonitor:
 
         Args:
             stats: 表示する統計情報（Noneの場合は現在の統計を使用）
+
         """
         if stats is None:
             stats = self.processing_stats
@@ -155,8 +158,9 @@ class PerformanceMonitor:
 
         Args:
             stats: 統計情報
+
         """
-        evaluations = []
+        evaluations: list[str] = []
 
         # 処理速度の評価
         throughput = stats.get("throughput_mb_per_second", 0)
@@ -208,11 +212,12 @@ class PerformanceMonitor:
 
         Returns:
             推奨事項のリスト
+
         """
         if stats is None:
             stats = self.processing_stats
 
-        recommendations = []
+        recommendations: list[str] = []
 
         # 処理速度ベースの推奨事項
         throughput = stats.get("throughput_mb_per_second", 0)
@@ -248,6 +253,7 @@ class PerformanceMonitor:
 
         Args:
             stats: 統計情報
+
         """
         recommendations = self.get_optimization_recommendations(stats)
 
@@ -256,7 +262,9 @@ class PerformanceMonitor:
             self.console.print(f"[dim]{i}.[/dim] {recommendation}")
 
     def compare_with_baseline(
-        self, baseline_stats: dict[str, Any], current_stats: dict[str, Any] | None = None
+        self,
+        baseline_stats: dict[str, Any],
+        current_stats: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """ベースライン統計と比較
 
@@ -266,11 +274,12 @@ class PerformanceMonitor:
 
         Returns:
             比較結果
+
         """
         if current_stats is None:
             current_stats = self.processing_stats
 
-        comparison = {}
+        comparison: dict[str, Any] = {}
 
         # 処理時間の比較
         baseline_time = baseline_stats.get("processing_time_seconds", 0)
@@ -300,6 +309,7 @@ class PerformanceMonitor:
 
         Args:
             comparison: 比較結果
+
         """
         table = Table(title="📈 パフォーマンス比較")
         table.add_column("項目", style="cyan")
@@ -337,7 +347,11 @@ class PerformanceProfiler:
         self.profiles: dict[str, dict[str, Any]] = {}
 
     def profile_formatter_performance(
-        self, formatter_name: str, file_size: int, processing_time: float, memory_usage: float
+        self,
+        formatter_name: str,
+        file_size: int,
+        processing_time: float,
+        memory_usage: float,
     ) -> None:
         """フォーマッターのパフォーマンスをプロファイル
 
@@ -346,6 +360,7 @@ class PerformanceProfiler:
             file_size: ファイルサイズ（バイト）
             processing_time: 処理時間（秒）
             memory_usage: メモリ使用量（MB）
+
         """
         if formatter_name not in self.profiles:
             self.profiles[formatter_name] = {
@@ -377,6 +392,7 @@ class PerformanceProfiler:
 
         Returns:
             統計情報（存在しない場合はNone）
+
         """
         if formatter_name not in self.profiles:
             return None
@@ -403,8 +419,9 @@ class PerformanceProfiler:
 
         Returns:
             比較結果
+
         """
-        comparison = {}
+        comparison: dict[str, Any] = {}
 
         for formatter_name in self.profiles:
             stats = self.get_formatter_statistics(formatter_name)
@@ -427,5 +444,6 @@ def get_performance_monitor(console: Console | None = None) -> PerformanceMonito
 
     Returns:
         パフォーマンス監視インスタンス
+
     """
     return PerformanceMonitor(console)

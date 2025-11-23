@@ -9,10 +9,9 @@ from io import StringIO
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from rich.console import Console
-
 from ci_helper.ui.command_menus import CommandMenuBuilder
 from ci_helper.ui.menu_system import MenuSystem
+from rich.console import Console
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from tests.utils.mock_helpers import setup_stable_prompt_mock

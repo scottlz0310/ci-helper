@@ -1,5 +1,4 @@
-"""
-JSON専用フォーマッター
+"""JSON専用フォーマッター
 
 CI実行結果を構造化されたJSON形式でフォーマットします。
 プログラム的に解析可能な構造を提供し、他のツールやスクリプトでの処理を容易にします。
@@ -8,6 +7,7 @@ CI実行結果を構造化されたJSON形式でフォーマットします。
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -43,6 +43,7 @@ class JSONFormatter(BaseLogFormatter):
             sanitize_secrets: シークレットのサニタイズを有効にするかどうか
             indent: JSON出力のインデント数（Noneで圧縮形式）
             ensure_ascii: ASCII文字のみを使用するかどうか
+
         """
         super().__init__(sanitize_secrets)
         self.indent = indent
@@ -66,6 +67,7 @@ class JSONFormatter(BaseLogFormatter):
 
         Returns:
             JSON形式の文字列
+
         """
         # オプションの処理
         validated_options = self.validate_options(**options)
@@ -162,6 +164,7 @@ class JSONFormatter(BaseLogFormatter):
 
         Returns:
             フォーマット名
+
         """
         return "json"
 
@@ -170,6 +173,7 @@ class JSONFormatter(BaseLogFormatter):
 
         Returns:
             フォーマットの説明文
+
         """
         return "構造化されたJSONデータを出力（プログラム解析用）"
 
@@ -184,6 +188,7 @@ class JSONFormatter(BaseLogFormatter):
 
         Raises:
             ValueError: 無効なオプションが指定された場合
+
         """
         # verbose_level を detail_level にマッピング（後方互換性のため）
         if "verbose_level" in options and "detail_level" not in options:
@@ -239,6 +244,7 @@ class JSONFormatter(BaseLogFormatter):
 
         Returns:
             サポートしている場合True
+
         """
         return option_name in self.get_supported_options()
 
@@ -247,6 +253,7 @@ class JSONFormatter(BaseLogFormatter):
 
         Returns:
             サポートされているオプション名のリスト
+
         """
         return [
             "compact",
@@ -271,6 +278,7 @@ class JSONFormatter(BaseLogFormatter):
 
         Raises:
             json.JSONDecodeError: 無効なJSON形式の場合
+
         """
         try:
             # JSON形式の検証
@@ -286,7 +294,7 @@ class JSONFormatter(BaseLogFormatter):
                 "all_failures",
             ]
 
-            missing_fields = []
+            missing_fields: list[str] = []
             for field in required_fields:
                 if field not in parsed_data:
                     missing_fields.append(field)
@@ -387,7 +395,7 @@ class JSONFormatter(BaseLogFormatter):
         include_stack_trace: bool = True,
     ) -> dict[str, Any]:
         """失敗をdict形式に変換"""
-        failure_dict = {
+        failure_dict: dict[str, Any] = {
             "type": failure.type.value,
             "message": failure.message,
             "file_path": failure.file_path,
@@ -399,7 +407,7 @@ class JSONFormatter(BaseLogFormatter):
                 {
                     "context_before": list(failure.context_before),
                     "context_after": list(failure.context_after),
-                }
+                },
             )
 
         if include_stack_trace:
@@ -407,7 +415,7 @@ class JSONFormatter(BaseLogFormatter):
 
         return failure_dict
 
-    def _get_failure_type_counts(self, failures: list[Failure]) -> dict[str, int]:
+    def _get_failure_type_counts(self, failures: Sequence[Failure]) -> dict[str, int]:
         """失敗タイプ別の件数を取得"""
         counts: dict[str, int] = {}
         for failure in failures:
@@ -424,7 +432,7 @@ class JSONFormatter(BaseLogFormatter):
                 counts[workflow.name] = failure_count
         return counts
 
-    def _get_critical_failures(self, failures: list[Failure]) -> list[Failure]:
+    def _get_critical_failures(self, failures: Sequence[Failure]) -> list[Failure]:
         """クリティカルな失敗を抽出（最大5件）"""
 
         # 優先度順にソート

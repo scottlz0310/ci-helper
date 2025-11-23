@@ -1,5 +1,4 @@
-"""
-ログ圧縮モジュール
+"""ログ圧縮モジュール
 
 大量ログファイルを効率的に圧縮し、重要な情報を保持しながら
 サイズを削減します。
@@ -31,10 +30,10 @@ class LogCompressor:
     """ログ圧縮クラス"""
 
     def __init__(self, target_tokens: int | None = None, target_size_mb: float | None = None):
-        """
-        Args:
-            target_tokens: 目標トークン数
-            target_size_mb: 目標サイズ（MB）
+        """Args:
+        target_tokens: 目標トークン数
+        target_size_mb: 目標サイズ（MB）
+
         """
         self.target_tokens = target_tokens
         self.target_size_bytes = int(target_size_mb * 1024 * 1024) if target_size_mb else None
@@ -91,6 +90,7 @@ class LogCompressor:
 
         Returns:
             圧縮されたログ内容
+
         """
         original_size = len(log_content.encode("utf-8"))
         lines = log_content.splitlines()
@@ -98,7 +98,7 @@ class LogCompressor:
 
         logger.info("ログ圧縮開始: %d 行, %.1f MB", original_line_count, original_size / (1024 * 1024))
 
-        techniques_applied = []
+        techniques_applied: list[str] = []
         compressed_lines = lines.copy()
 
         # 1. 空行とコメント行の除去
@@ -157,6 +157,7 @@ class LogCompressor:
 
         Returns:
             (フィルタ後の行, 除去された行数)
+
         """
         filtered_lines = []
         removed_count = 0
@@ -185,9 +186,10 @@ class LogCompressor:
 
         Returns:
             (重複除去後の行, 除去された行数)
+
         """
         line_counts: dict[str, int] = {}
-        unique_lines = []
+        unique_lines: list[str] = []
         duplicate_count = 0
 
         for line in lines:
@@ -202,7 +204,7 @@ class LogCompressor:
                 unique_lines.append(line)
 
         # 重複が多い行には集約マークを追加
-        final_lines = []
+        final_lines: list[str] = []
         for line in unique_lines:
             normalized_line = self._normalize_line_for_deduplication(line)
             count = line_counts[normalized_line]
@@ -222,6 +224,7 @@ class LogCompressor:
 
         Returns:
             正規化された行
+
         """
         # タイムスタンプパターンを除去
         normalized = re.sub(r"\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}[.\d]*[Z]?", "[TIMESTAMP]", line)
@@ -244,9 +247,10 @@ class LogCompressor:
 
         Returns:
             重要な行を保持したリスト
+
         """
-        important_lines = []
-        context_buffer = []
+        important_lines: list[str] = []
+        context_buffer: list[str] = []
         context_size = 2  # 重要な行の前後2行を保持
 
         for i, line in enumerate(lines):
@@ -284,8 +288,9 @@ class LogCompressor:
 
         Returns:
             短縮された行のリスト
+
         """
-        truncated_lines = []
+        truncated_lines: list[str] = []
 
         for line in lines:
             if len(line) > max_length:
@@ -323,6 +328,7 @@ class LogCompressor:
 
         Returns:
             目標サイズに圧縮された行のリスト
+
         """
         current_content = "\n".join(lines)
         current_size = len(current_content.encode("utf-8"))
@@ -343,7 +349,7 @@ class LogCompressor:
         target_line_count = int(len(lines) * compression_ratio)
 
         # 重要度でソートして上位を保持
-        scored_lines = []
+        scored_lines: list[tuple[float, int, str]] = []
         for i, line in enumerate(lines):
             importance_score = self._calculate_line_importance(line)
             scored_lines.append((importance_score, i, line))
@@ -365,6 +371,7 @@ class LogCompressor:
 
         Returns:
             重要度スコア（0.0-1.0）
+
         """
         score = 0.0
 
@@ -407,6 +414,7 @@ class LogCompressor:
 
         Returns:
             圧縮統計情報
+
         """
         original_size = len(original_content.encode("utf-8"))
         compressed_size = len(compressed_content.encode("utf-8"))
@@ -444,6 +452,7 @@ def compress_log_for_ai_analysis(log_content: str, max_tokens: int = 8000) -> tu
 
     Returns:
         (圧縮されたログ, 統計情報)
+
     """
     compressor = LogCompressor(target_tokens=max_tokens)
     compressed_content = compressor.compress_log(log_content)
@@ -463,6 +472,7 @@ def smart_log_sampling(log_content: str, sample_ratio: float = 0.3) -> str:
 
     Returns:
         サンプリングされたログ内容
+
     """
     lines = log_content.splitlines()
     target_line_count = int(len(lines) * sample_ratio)
@@ -470,7 +480,7 @@ def smart_log_sampling(log_content: str, sample_ratio: float = 0.3) -> str:
     compressor = LogCompressor()
 
     # 重要度でソート
-    scored_lines = []
+    scored_lines: list[tuple[float, int, str]] = []
     for i, line in enumerate(lines):
         importance_score = compressor._calculate_line_importance(line)
         scored_lines.append((importance_score, i, line))

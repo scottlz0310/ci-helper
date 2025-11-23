@@ -1,5 +1,4 @@
-"""
-進行状況表示ユーティリティ
+"""進行状況表示ユーティリティ
 
 ログ整形処理の進行状況表示機能を提供します。
 """
@@ -28,6 +27,7 @@ class ProgressDisplayManager:
 
         Args:
             console: Rich Console インスタンス
+
         """
         self.console = console or Console()
         self._large_file_threshold = 10 * 1024 * 1024  # 10MB
@@ -46,6 +46,7 @@ class ProgressDisplayManager:
             input_file: 入力ファイルパス
             output_file: 出力ファイルパス
             **options: 追加オプション
+
         """
         # フォーマット種別の日本語名
         format_names = {
@@ -86,7 +87,7 @@ class ProgressDisplayManager:
 
         # オプション情報
         if options:
-            option_info = []
+            option_info: list[str] = []
             if options.get("filter_errors"):
                 option_info.append("エラーフィルタ有効")
             if options.get("verbose_level"):
@@ -104,6 +105,7 @@ class ProgressDisplayManager:
 
         Returns:
             大きなファイルの場合True
+
         """
         if not file_path:
             return False
@@ -129,6 +131,7 @@ class ProgressDisplayManager:
 
         Returns:
             Progress インスタンス
+
         """
         columns = [
             SpinnerColumn(),
@@ -162,6 +165,7 @@ class ProgressDisplayManager:
 
         Returns:
             タスク関数の実行結果
+
         """
         # 詳細な進行状況表示の判定
         if show_detailed_progress is None:
@@ -170,9 +174,8 @@ class ProgressDisplayManager:
         if show_detailed_progress:
             # 大きなファイルの場合は詳細な進行状況を表示
             return self._execute_with_detailed_progress(task_func, task_description, completion_description)
-        else:
-            # 通常のファイルの場合はシンプルな進行状況を表示
-            return self._execute_with_simple_progress(task_func, task_description, completion_description)
+        # 通常のファイルの場合はシンプルな進行状況を表示
+        return self._execute_with_simple_progress(task_func, task_description, completion_description)
 
     def _execute_with_detailed_progress(
         self,
@@ -260,6 +263,7 @@ class ProgressDisplayManager:
             output_file: 出力ファイルパス
             processing_time: 処理時間（秒）
             **details: 追加の詳細情報
+
         """
         # フォーマット種別の日本語名
         format_names = {
@@ -330,12 +334,13 @@ class ProgressDisplayManager:
             error: 発生したエラー
             context: エラーのコンテキスト
             suggestions: 修正提案のリスト
+
         """
         self.console.print()
         self.console.print("[bold red]❌ エラーが発生しました[/bold red]")
 
         # エラー詳細をパネルで表示
-        error_lines = []
+        error_lines: list[str] = []
 
         # エラータイプと基本メッセージ
         error_type = type(error).__name__
@@ -370,6 +375,7 @@ class ProgressDisplayManager:
 
         Returns:
             メニューに戻る場合True
+
         """
         self.console.print("[dim]処理が完了しました。[/dim]")
 
@@ -380,21 +386,20 @@ class ProgressDisplayManager:
                 default=True,
                 console=self.console,
             )
-        else:
-            # メニューに戻るかの確認と実行
-            if Confirm.ask(
-                "[bold cyan]メニューに戻りますか？[/bold cyan]",
-                default=True,
-                console=self.console,
-            ):
-                try:
-                    return_to_menu_func()
-                    return True
-                except Exception as e:
-                    self.console.print(f"[red]メニューに戻る際にエラーが発生しました: {e}[/red]")
-                    return False
-            else:
+        # メニューに戻るかの確認と実行
+        if Confirm.ask(
+            "[bold cyan]メニューに戻りますか？[/bold cyan]",
+            default=True,
+            console=self.console,
+        ):
+            try:
+                return_to_menu_func()
+                return True
+            except Exception as e:
+                self.console.print(f"[red]メニューに戻る際にエラーが発生しました: {e}[/red]")
                 return False
+        else:
+            return False
 
     def get_file_processing_suggestions(self, error: Exception, file_path: str | None = None) -> list[str]:
         """ファイル処理エラーに対する修正提案を生成
@@ -405,8 +410,9 @@ class ProgressDisplayManager:
 
         Returns:
             修正提案のリスト
+
         """
-        suggestions = []
+        suggestions: list[str] = []
         error_type = type(error).__name__
 
         if error_type == "FileNotFoundError":
@@ -415,7 +421,7 @@ class ProgressDisplayManager:
                     "ファイルパスが正しいか確認してください",
                     "ファイルが存在するか確認してください",
                     "相対パスではなく絶対パスを使用してみてください",
-                ]
+                ],
             )
             if file_path:
                 suggestions.append(f"指定されたパス: {file_path}")
@@ -426,7 +432,7 @@ class ProgressDisplayManager:
                     "ファイルの読み取り権限を確認してください",
                     "ファイルが他のプロセスで使用されていないか確認してください",
                     "管理者権限で実行してみてください",
-                ]
+                ],
             )
 
         elif error_type == "UnicodeDecodeError":
@@ -435,7 +441,7 @@ class ProgressDisplayManager:
                     "ファイルの文字エンコーディングを確認してください",
                     "UTF-8以外のエンコーディングの場合は変換してください",
                     "バイナリファイルではないか確認してください",
-                ]
+                ],
             )
 
         elif error_type == "MemoryError":
@@ -444,7 +450,7 @@ class ProgressDisplayManager:
                     "ログファイルが大きすぎる可能性があります",
                     "不要なプロセスを終了してメモリを確保してください",
                     "ファイルを分割して処理してみてください",
-                ]
+                ],
             )
 
         elif "JSON" in str(error) or "json" in str(error):
@@ -453,7 +459,7 @@ class ProgressDisplayManager:
                     "JSON形式が正しいか確認してください",
                     "ファイルが破損していないか確認してください",
                     "別のフォーマット（ai, human）を試してみてください",
-                ]
+                ],
             )
 
         else:
@@ -464,7 +470,7 @@ class ProgressDisplayManager:
                     "ディスク容量が十分にあるか確認してください",
                     "別のフォーマットを試してみてください",
                     "ci-run doctor で環境をチェックしてください",
-                ]
+                ],
             )
 
         return suggestions
@@ -474,6 +480,7 @@ class ProgressDisplayManager:
 
         Args:
             threshold_mb: 閾値（MB単位）
+
         """
         self._large_file_threshold = int(threshold_mb * 1024 * 1024)
 
@@ -490,6 +497,7 @@ def get_progress_manager(console: Console | None = None) -> ProgressDisplayManag
 
     Returns:
         進行状況表示マネージャーインスタンス
+
     """
     global _global_progress_manager
     if _global_progress_manager is None or (console and _global_progress_manager.console != console):

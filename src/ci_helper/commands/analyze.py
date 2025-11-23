@@ -1,5 +1,4 @@
-"""
-analyze コマンドの実装
+"""analyze コマンドの実装
 
 AI分析機能を提供し、CI/CDの失敗ログを分析して根本原因の特定と修正提案を行います。
 """
@@ -7,20 +6,27 @@ AI分析機能を提供し、CI/CDの失敗ログを分析して根本原因の�
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import logging
 import sys
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Self
 
 import click
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 
 if TYPE_CHECKING:
-    from ..ai.models import AnalysisResult
+    from types import TracebackType
 
-from ..ai.exceptions import (
+    from ci_helper.ai.models import AnalysisResult, AnalyzeOptions, FixSuggestion, InteractiveSession
+    from ci_helper.utils.config import Config
+
+from ci_helper.ai.exceptions import (
     APIKeyError,
     ConfigurationError,
     NetworkError,
@@ -28,47 +34,66 @@ from ..ai.exceptions import (
     RateLimitError,
     TokenLimitError,
 )
-from ..ai.integration import AIIntegration
-from ..ai.models import AnalyzeOptions
-from ..core.error_handler import ErrorHandler
-from ..core.exceptions import CIHelperError
-from ..core.japanese_messages import JapaneseErrorHandler
-from ..core.log_manager import LogManager
-from ..ui.enhanced_formatter import EnhancedAnalysisFormatter
-from ..utils.config import Config
+from ci_helper.ai.integration import AIIntegration
+from ci_helper.core.error_handler import ErrorHandler
+from ci_helper.core.exceptions import CIHelperError
+from ci_helper.core.japanese_messages import JapaneseErrorHandler
+from ci_helper.core.log_manager import LogManager
+from ci_helper.ui.enhanced_formatter import EnhancedAnalysisFormatter
+
+CONFIDENCE_HIGH = 0.8
+CONFIDENCE_MEDIUM = 0.6
+TEXT_TRUNCATE_LENGTH = 30
+CONTEXT_PREVIEW_LENGTH = 100
+MAX_FILES_DISPLAY = 3
+MAX_AUTO_WAIT_SECONDS = 120
+
+logger = logging.getLogger(__name__)
 
 console = Console()
 
 
 class AnalysisErrorContext:
-    """分析エラーのコンテキスト管理"""
+    """分析エラーのコンテキスト管理."""
 
-    def __init__(self, console: Console, operation_name: str, verbose: bool = False):
+    def __init__(self, console: Console, operation_name: str, *, verbose: bool = False) -> None:
+        """初期化.
+
+        Args:
+            console: Richコンソール
+            operation_name: 操作名
+            verbose: 詳細表示フラグ.
+
+        """
         self.console = console
         self.operation_name = operation_name
         self.verbose = verbose
-        self.start_time = datetime.now()
+        self.start_time = datetime.now(UTC)
         self.error_count = 0
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
+        """コンテキスト開始."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool:
+        """コンテキスト終了."""
         if exc_type is not None:
             self.error_count += 1
-            duration = (datetime.now() - self.start_time).total_seconds()
+            duration = (datetime.now(UTC) - self.start_time).total_seconds()
 
             # エラー統計をログに記録
-            import logging
-
-            logger = logging.getLogger(__name__)
             logger.error("操作 '%s' が %.2f秒後にエラーで終了: %s", self.operation_name, duration, exc_val)
 
         return False  # エラーを再発生させる
 
-    def log_progress(self, message: str):
-        """進捗をログに記録"""
-        elapsed = (datetime.now() - self.start_time).total_seconds()
+    def log_progress(self, message: str) -> None:
+        """進捗をログに記録."""
+        elapsed = (datetime.now(UTC) - self.start_time).total_seconds()
         if self.verbose:
             self.console.print(f"[dim][{elapsed:.1f}s] {message}[/dim]")
 
@@ -78,16 +103,16 @@ class AnalysisErrorContext:
     "--log",
     "log_file",
     type=click.Path(exists=True, path_type=Path),
-    help="分析するログファイルのパス（指定しない場合は最新のログを使用）",
+    help="分析するログファイルのパス(指定しない場合は最新のログを使用)",
 )
 @click.option(
     "--provider",
     type=click.Choice(["openai", "anthropic", "local"], case_sensitive=False),
-    help="使用するAIプロバイダー（設定ファイルの値を上書き）",
+    help="使用するAIプロバイダー(設定ファイルの値を上書き)",
 )
 @click.option(
     "--model",
-    help="使用するAIモデル（例: gpt-4o, claude-3-sonnet）",
+    help="使用するAIモデル(例: gpt-4o, claude-3-sonnet)",
 )
 @click.option(
     "--prompt",
@@ -108,12 +133,12 @@ class AnalysisErrorContext:
 @click.option(
     "--streaming/--no-streaming",
     default=None,
-    help="ストリーミングレスポンスの有効/無効（設定ファイルの値を上書き）",
+    help="ストリーミングレスポンスの有効/無効(設定ファイルの値を上書き)",
 )
 @click.option(
     "--cache/--no-cache",
     default=True,
-    help="AIレスポンスキャッシュの使用（デフォルト: 有効）",
+    help="AIレスポンスキャッシュの使用(デフォルト: 有効)",
 )
 @click.option(
     "--stats",
@@ -125,7 +150,7 @@ class AnalysisErrorContext:
     "output_format",
     type=click.Choice(["markdown", "json", "table"], case_sensitive=False),
     default="markdown",
-    help="出力形式（デフォルト: markdown）",
+    help="出力形式(デフォルト: markdown)",
 )
 @click.option(
     "--verbose",
@@ -136,7 +161,7 @@ class AnalysisErrorContext:
 @click.option(
     "--retry",
     "retry_operation_id",
-    help="失敗した操作をリトライ（操作IDを指定）",
+    help="失敗した操作をリトライ(操作IDを指定)",
 )
 @click.pass_context
 def analyze(
@@ -154,7 +179,7 @@ def analyze(
     verbose: bool,
     retry_operation_id: str | None,
 ) -> None:
-    """CI/CDの失敗ログをAIで分析
+    r"""CI/CDの失敗ログをAIで分析.
 
     指定されたログファイルまたは最新のテスト実行結果をAIが分析し、
     根本原因の特定と修正提案を提供します。
@@ -169,10 +194,15 @@ def analyze(
       ci-run analyze --interactive             # 対話モードで分析
       ci-run analyze --stats                   # 使用統計を表示
     """
+    # デフォルトのコンソールを初期化（エラーハンドリング用）
+    console = Console()
+    config: Config | None = None
+
     try:
         # コンテキストから設定を取得
-        config: Config = ctx.obj["config"]
-        console: Console = ctx.obj["console"]
+        config = ctx.obj["config"]
+        if "console" in ctx.obj:
+            console = ctx.obj["console"]
 
         # 統計表示のみの場合
         if stats:
@@ -199,22 +229,27 @@ def analyze(
             asyncio.run(_handle_retry_operation(ai_integration, retry_operation_id, console))
             return
 
+        # 分析設定の作成
+        analysis_config = AnalysisConfig(
+            log_file=log_file,
+            provider=provider,
+            model=model,
+            custom_prompt=custom_prompt,
+            fix=fix,
+            interactive=interactive,
+            streaming=streaming,
+            use_cache=cache,
+            output_format=output_format,
+            verbose=verbose,
+        )
+
         # 非同期実行
         asyncio.run(
             _run_analysis(
                 ai_integration=ai_integration,
-                log_file=log_file,
-                provider=provider,
-                model=model,
-                custom_prompt=custom_prompt,
-                fix=fix,
-                interactive=interactive,
-                streaming=streaming,
-                use_cache=cache,
-                output_format=output_format,
-                verbose=verbose,
+                config=analysis_config,
                 console=console,
-            )
+            ),
         )
 
     except KeyboardInterrupt:
@@ -305,36 +340,49 @@ def analyze(
         sys.exit(1)
 
 
+@dataclass
+class AnalysisConfig:
+    """分析設定。"""
+
+    log_file: Path | None
+    provider: str | None
+    model: str | None
+    custom_prompt: str | None
+    fix: bool
+    interactive: bool
+    streaming: bool | None
+    use_cache: bool
+    output_format: str
+    verbose: bool
+
+
 async def _run_analysis(
     ai_integration: AIIntegration,
-    log_file: Path | None,
-    provider: str | None,
-    model: str | None,
-    custom_prompt: str | None,
-    fix: bool,
-    interactive: bool,
-    streaming: bool | None,
-    use_cache: bool,
-    output_format: str,
-    verbose: bool,
+    config: AnalysisConfig,
     console: Console,
 ) -> None:
-    """AI分析の実行
+    """AI分析の実行.
 
     Args:
         ai_integration: AI統合インスタンス
-        log_file: 分析するログファイル
-        provider: AIプロバイダー
-        model: AIモデル
-        custom_prompt: カスタムプロンプト
-        fix: 修正提案フラグ
-        interactive: 対話モードフラグ
-        streaming: ストリーミングフラグ
-        use_cache: キャッシュ使用フラグ
-        output_format: 出力形式
-        verbose: 詳細表示フラグ
+        config: 分析設定
         console: Richコンソール
+
     """
+    log_file = config.log_file
+    provider = config.provider
+    model = config.model
+    custom_prompt = config.custom_prompt
+    fix = config.fix
+    interactive = config.interactive
+    streaming = config.streaming
+    use_cache = config.use_cache
+    output_format = config.output_format
+    verbose = config.verbose
+    # 変数を初期化して例外ブロックでの未定義エラーを防ぐ
+    log_content = ""
+    options: AnalyzeOptions | None = None
+
     try:
         # AI統合の初期化
         await ai_integration.initialize()
@@ -396,9 +444,11 @@ async def _run_analysis(
         try:
             # プロバイダーのリソースを解放
             if ai_integration.providers:
-                for provider in ai_integration.providers.values():
-                    if provider and hasattr(provider, "cleanup"):
-                        await provider.cleanup()
+                for p in ai_integration.providers.values():
+                    # 型チェックを回避するためにAnyとして扱う
+                    provider_obj: Any = p
+                    if provider_obj and hasattr(provider_obj, "cleanup"):
+                        await provider_obj.cleanup()
         except Exception:
             pass
 
@@ -418,6 +468,7 @@ async def _run_standard_analysis(
         options: 分析オプション
         verbose: 詳細表示フラグ
         console: Richコンソール
+
     """
     with Progress(
         SpinnerColumn(),
@@ -453,7 +504,7 @@ async def _run_standard_analysis(
         except Exception as e:
             progress.stop()
             # AI固有のエラーハンドリング
-            _handle_analysis_error(e, console, False)
+            _handle_analysis_error(e, console, verbose=False)
             raise
 
 
@@ -463,13 +514,14 @@ async def _run_interactive_mode(
     options: AnalyzeOptions,
     console: Console,
 ) -> None:
-    """対話モードの実行
+    """対話モードの実行.
 
     Args:
         ai_integration: AI統合インスタンス
         log_content: ログ内容
         options: 分析オプション
         console: Richコンソール
+
     """
     console.print(Panel.fit("🤖 対話的AIデバッグモードを開始します", style="blue"))
     console.print("終了するには '/exit' と入力してください。")
@@ -482,83 +534,105 @@ async def _run_interactive_mode(
     try:
         while session.is_active:
             try:
-                # ユーザー入力の取得
-                user_input = console.input("[bold blue]> [/bold blue]")
-
-                if not user_input.strip():
-                    continue
-
-                # AI応答の処理
-                async for response_chunk in ai_integration.process_interactive_input(session.session_id, user_input):
-                    console.print(response_chunk, end="")
-
-                console.print()  # 改行
-
+                await _process_interactive_turn(ai_integration, session, console)
             except Exception as e:
-                # 個別の対話エラーを処理（セッションは継続）
-                console.print(f"\n[red]対話中にエラーが発生しました:[/red] {e}")
-
-                # エラータイプに応じた詳細なガイダンス
-                from ..ai.exceptions import NetworkError, RateLimitError, TokenLimitError
-
-                if isinstance(e, RateLimitError):
-                    retry_time = e.retry_after or 60
-                    console.print(f"[yellow]⏱️  レート制限に達しました。{retry_time}秒後に再試行してください。[/yellow]")
-
-                    # 短時間の場合は自動待機を提案
-                    if retry_time <= 120:  # 2分以内
-                        console.print("[blue]💡 自動待機しますか？ (y/n)[/blue]")
-                        # 実際の実装では入力を受け付ける
-
-                elif isinstance(e, NetworkError):
-                    console.print("[yellow]🌐 ネットワークエラーです。接続を確認してください。[/yellow]")
-                    console.print("[blue]💡 復旧手順:[/blue]")
-                    console.print("  1. インターネット接続を確認")
-                    console.print("  2. プロキシ設定を確認")
-                    console.print("  3. '/retry' で再試行")
-
-                elif isinstance(e, TokenLimitError):
-                    console.print("[yellow]📊 入力が長すぎます。より短い質問を試してください。[/yellow]")
-                    console.print("[blue]💡 対処法:[/blue]")
-                    console.print("  • 質問を短縮する")
-                    console.print("  • '/summarize' で要約を依頼")
-                    console.print("  • '/model smaller' で小さなモデルに変更")
-
-                else:
-                    console.print("[yellow]⚠️  一時的なエラーの可能性があります。[/yellow]")
-                    console.print("[blue]💡 対処法:[/blue]")
-                    console.print("  • '/retry' で再試行")
-                    console.print("  • '/provider switch' で別のプロバイダーに変更")
-                    console.print("  • '/reset' でセッションをリセット")
-
-                # 対話継続のオプション
-                console.print("\n[blue]🔄 対話オプション:[/blue]")
-                console.print("  [green]/retry[/green] - 最後の質問を再試行")
-                console.print("  [yellow]/help[/yellow] - 利用可能なコマンドを表示")
-                console.print("  [red]/exit[/red] - 対話セッションを終了")
-
-                # エラー統計の更新（実装は別途）
-                console.print(f"[dim]エラー発生時刻: {datetime.now().strftime('%H:%M:%S')}[/dim]")
-
+                _handle_interactive_error(e, console)
     except KeyboardInterrupt:
         console.print("\n[yellow]対話セッションを終了します。[/yellow]")
     except Exception as e:
         console.print(f"\n[red]対話セッションでエラーが発生しました:[/red] {e}")
-        _handle_analysis_error(e, console, False)
+        _handle_analysis_error(e, console, verbose=False)
     finally:
-        try:
+        with contextlib.suppress(Exception):
             await ai_integration.close_interactive_session(session.session_id)
-        except Exception:
-            # セッション終了エラーは無視（既に終了している可能性）
-            pass
+
+
+async def _process_interactive_turn(
+    ai_integration: AIIntegration, session: InteractiveSession, console: Console
+) -> None:
+    """対話の1ターンを処理."""
+    # ユーザー入力の取得
+    user_input = console.input("[bold blue]> [/bold blue]")
+
+    if not user_input.strip():
+        return
+
+    # AI応答の処理
+    async for response_chunk in ai_integration.process_interactive_input(session.session_id, user_input):
+        console.print(response_chunk, end="")
+
+    console.print()  # 改行
+
+
+def _handle_interactive_error(e: Exception, console: Console) -> None:
+    """対話エラーの処理."""
+    # 個別の対話エラーを処理。セッションは継続します。
+    console.print(f"\n[red]対話中にエラーが発生しました:[/red] {e}")
+
+    # エラータイプに応じた詳細なガイダンス
+    if isinstance(e, RateLimitError):
+        _handle_interactive_rate_limit(e, console)
+    elif isinstance(e, NetworkError):
+        _handle_interactive_network_error(console)
+    elif isinstance(e, TokenLimitError):
+        _handle_interactive_token_limit(console)
+    else:
+        _handle_interactive_generic_error(console)
+
+    # 対話継続のオプション
+    console.print("\n[blue]🔄 対話オプション:[/blue]")
+    console.print("  [green]/retry[/green] - 最後の質問を再試行")
+    console.print("  [yellow]/help[/yellow] - 利用可能なコマンドを表示")
+    console.print("  [red]/exit[/red] - 対話セッションを終了")
+
+    # エラー統計の更新
+    console.print(f"[dim]エラー発生時刻: {datetime.now(UTC).strftime('%H:%M:%S')}[/dim]")
+
+
+def _handle_interactive_rate_limit(e: RateLimitError, console: Console) -> None:
+    """レート制限エラーの処理."""
+    retry_time = e.retry_after or 60
+    console.print(f"[yellow]⏱️  レート制限に達しました。{retry_time}秒後に再試行してください。[/yellow]")
+
+    # 短時間の場合は自動待機を提案
+    if retry_time <= MAX_AUTO_WAIT_SECONDS:
+        console.print("[blue]💡 自動待機しますか? (y/n)[/blue]")
+
+
+def _handle_interactive_network_error(console: Console) -> None:
+    """ネットワークエラーの処理."""
+    console.print("[yellow]🌐 ネットワークエラーです。接続を確認してください。[/yellow]")
+    console.print("[blue]💡 復旧手順:[/blue]")
+    console.print("  1. インターネット接続を確認")
+    console.print("  2. プロキシ設定を確認")
+    console.print("  3. '/retry' で再試行")
+
+
+def _handle_interactive_token_limit(console: Console) -> None:
+    """トークン制限エラーの処理."""
+    console.print("[yellow]📊 入力が長すぎます。より短い質問を試してください。[/yellow]")
+    console.print("[blue]💡 対処法:[/blue]")
+    console.print("  • 質問を短縮する")
+    console.print("  • '/summarize' で要約を依頼")
+    console.print("  • '/model smaller' で小さなモデルに変更")
+
+
+def _handle_interactive_generic_error(console: Console) -> None:
+    """一般的なエラーの処理."""
+    console.print("[yellow]⚠️  一時的なエラーの可能性があります。[/yellow]")
+    console.print("[blue]💡 対処法:[/blue]")
+    console.print("  • '/retry' で再試行")
+    console.print("  • '/provider switch' で別のプロバイダーに変更")
+    console.print("  • '/reset' でセッションをリセット")
 
 
 def _display_fix_suggestions(result: AnalysisResult, console: Console) -> None:
-    """修正提案の表示
+    """修正提案の表示.
 
     Args:
         result: 分析結果
         console: Richコンソール
+
     """
     console.print("\n[bold green]修正提案が生成されました:[/bold green]")
 
@@ -582,7 +656,7 @@ async def _handle_fix_application(
     result: AnalysisResult,
     console: Console,
 ) -> bool:
-    """修正提案の適用処理
+    """修正提案の適用処理.
 
     Args:
         ai_integration: AI統合インスタンス
@@ -591,8 +665,9 @@ async def _handle_fix_application(
 
     Returns:
         bool: 少なくとも1つの修正が適用された場合True、そうでなければFalse
+
     """
-    console.print("\n[bold yellow]修正提案を適用しますか？[/bold yellow]")
+    console.print("\n[bold yellow]修正提案を適用しますか?[/bold yellow]")
 
     applied_count = 0
     user_rejected = False
@@ -600,7 +675,7 @@ async def _handle_fix_application(
     for i, suggestion in enumerate(result.fix_suggestions, 1):
         try:
             # 修正の適用確認
-            if click.confirm(f"修正案 {i} ({suggestion.title}) を適用しますか？"):
+            if click.confirm(f"修正案 {i} ({suggestion.title}) を適用しますか?"):
                 try:
                     await ai_integration.apply_fix(suggestion)
                     console.print(f"[green]修正案 {i} を適用しました。[/green]")
@@ -630,7 +705,7 @@ async def _handle_fix_application(
                 console.print(f"[yellow]修正案 {i} をスキップしました。[/yellow]")
                 user_rejected = True
         except (EOFError, KeyboardInterrupt, click.exceptions.Abort):
-            # 入力が利用できない場合（テスト環境など）やユーザーがキャンセルした場合
+            # 入力が利用できない場合(テスト環境など)やユーザーがキャンセルした場合
             console.print("\n[dim]対話的入力が利用できません。修正提案のみ表示されました。[/dim]")
             # 入力が利用できない場合は拒否とは見なさない
             break
@@ -640,37 +715,38 @@ async def _handle_fix_application(
 
 
 def _display_analysis_result(result: AnalysisResult, output_format: str, console: Console) -> None:
-    """分析結果の表示
+    """分析結果の表示。
 
     Args:
         result: 分析結果
         output_format: 出力形式
         console: Richコンソール
+
     """
     # 拡張フォーマッターを使用
     formatter = EnhancedAnalysisFormatter(console, language="ja")
 
     if output_format in ["enhanced", "markdown", "json", "table"]:
         formatter.format_analysis_result(result, output_format)
-    else:
-        # フォールバック: 従来の表示方式
-        if output_format == "json":
-            import json
-            from dataclasses import asdict
+    # フォールバック: 従来の表示方式
+    elif output_format == "json":
+        import json
+        from dataclasses import asdict
 
-            console.print(json.dumps(asdict(result), indent=2, ensure_ascii=False, default=str))
-        elif output_format == "table":
-            _display_result_as_table(result, console)
-        else:  # markdown
-            _display_result_as_markdown(result, console)
+        console.print(json.dumps(asdict(result), indent=2, ensure_ascii=False, default=str))
+    elif output_format == "table":
+        _display_result_as_table(result, console)
+    else:  # markdown
+        display_result_as_markdown(result, console)
 
 
-def _display_result_as_markdown(result: AnalysisResult, console: Console) -> None:
-    """分析結果をMarkdown形式で表示
+def display_result_as_markdown(result: AnalysisResult, console: Console) -> None:
+    """分析結果をMarkdown形式で表示。
 
     Args:
         result: 分析結果
         console: Richコンソール
+
     """
     # フォールバック情報を最初に表示
     _display_fallback_info(result, console)
@@ -678,7 +754,7 @@ def _display_result_as_markdown(result: AnalysisResult, console: Console) -> Non
     console.print(Panel.fit("🔍 AI分析結果", style="blue"))
     console.print()
 
-    # パターン認識結果を表示（新機能）
+    # パターン認識結果を表示(新機能)
     _display_pattern_recognition_results(result, console)
 
     # 要約
@@ -696,12 +772,12 @@ def _display_result_as_markdown(result: AnalysisResult, console: Console) -> Non
                 console.print(f"   ファイル: {cause.file_path}")
             if cause.line_number:
                 console.print(f"   行番号: {cause.line_number}")
-            # 信頼度を表示（新機能）
+            # 信頼度を表示(新機能)
             if hasattr(cause, "confidence") and cause.confidence > 0:
                 console.print(f"   信頼度: {cause.confidence:.1%}")
         console.print()
 
-    # 修正提案（詳細表示に拡張）
+    # 修正提案(詳細表示に拡張)
     if result.fix_suggestions:
         _display_detailed_fix_suggestions(result.fix_suggestions, console)
 
@@ -728,14 +804,13 @@ def _display_result_as_markdown(result: AnalysisResult, console: Console) -> Non
 
 
 def _display_result_as_table(result: AnalysisResult, console: Console) -> None:
-    """分析結果をテーブル形式で表示
+    """分析結果をテーブル形式で表示。
 
     Args:
         result: 分析結果
         console: Richコンソール
-    """
-    from rich.table import Table
 
+    """
     table = Table(title="AI分析結果")
     table.add_column("項目", style="cyan")
     table.add_column("内容", style="white")
@@ -753,18 +828,19 @@ def _display_result_as_table(result: AnalysisResult, console: Console) -> None:
 
 
 def _display_stats(config: Config, console: Console) -> None:
-    """AI使用統計の表示
+    """AI使用統計の表示。
 
     Args:
         config: 設定オブジェクト
         console: Richコンソール
+
     """
     try:
         from ..ai.cost_manager import CostManager
 
         storage_path = config.get_path("cache_dir") / "ai" / "usage.json"
         cost_manager = CostManager(storage_path, config.get_ai_cost_limits())
-        stats = cost_manager.get_monthly_report(datetime.now().year, datetime.now().month)
+        stats = cost_manager.get_monthly_report(datetime.now(UTC).year, datetime.now(UTC).month)
 
         console.print(Panel.fit("📊 AI使用統計", style="blue"))
         console.print()
@@ -785,7 +861,7 @@ def _display_stats(config: Config, console: Console) -> None:
             for provider, data in stats["provider_breakdown"].items():
                 if isinstance(data, dict):
                     console.print(
-                        f"{provider}: {data.get('total_tokens', 0):,} トークン, ${data.get('total_cost', 0):.4f}"
+                        f"{provider}: {data.get('total_tokens', 0):,} トークン, ${data.get('total_cost', 0):.4f}",
                     )
                 else:
                     console.print(f"{provider}: {data:,} 回使用")
@@ -795,13 +871,14 @@ def _display_stats(config: Config, console: Console) -> None:
 
 
 def _get_latest_log_file(config: Config) -> Path | None:
-    """最新のログファイルを取得
+    """最新のログファイルを取得。
 
     Args:
         config: 設定オブジェクト
 
     Returns:
-        最新のログファイルのパス（見つからない場合はNone）
+        最新のログファイルのパス(見つからない場合はNone)
+
     """
     try:
         log_manager = LogManager(config)
@@ -812,12 +889,13 @@ def _get_latest_log_file(config: Config) -> Path | None:
             if log_filename:
                 return log_dir / log_filename
         return None
-    except Exception:
+    except Exception as e:
+        logger.debug("Failed to get latest log: %s", e)
         return None
 
 
 def _read_log_file(log_file: Path) -> str:
-    """ログファイルの内容を読み込み
+    """ログファイルの内容を読み込み。
 
     Args:
         log_file: ログファイルのパス
@@ -827,11 +905,13 @@ def _read_log_file(log_file: Path) -> str:
 
     Raises:
         CIHelperError: ファイル読み込みに失敗した場合
+
     """
     try:
         return log_file.read_text(encoding="utf-8")
     except Exception as e:
-        raise CIHelperError(f"ログファイルの読み込みに失敗しました: {e}") from e
+        msg = f"ログファイルの読み込みに失敗しました: {e}"
+        raise CIHelperError(msg) from e
 
 
 async def _handle_retry_operation(ai_integration: AIIntegration, operation_id: str, console: Console) -> None:
@@ -841,6 +921,7 @@ async def _handle_retry_operation(ai_integration: AIIntegration, operation_id: s
         ai_integration: AI統合インスタンス
         operation_id: 操作ID
         console: コンソール
+
     """
     try:
         console.print(f"[blue]操作 {operation_id} をリトライしています...[/blue]")
@@ -870,23 +951,31 @@ async def _handle_retry_operation(ai_integration: AIIntegration, operation_id: s
 
 
 def _display_pattern_recognition_results(result: AnalysisResult, console: Console) -> None:
-    """パターン認識結果を詳細表示
+    """パターン認識結果を詳細表示。
 
     Args:
         result: 分析結果
         console: Richコンソール
+
     """
     # パターンマッチ情報がある場合のみ表示
     pattern_matches = getattr(result, "pattern_matches", None)
     if not pattern_matches:
         return
 
-    from rich.table import Table
-
     console.print(Panel.fit("🎯 検出されたパターン", style="green"))
     console.print()
 
-    # パターンマッチテーブルを作成
+    _display_pattern_table(pattern_matches, console)
+    console.print()
+
+    # 詳細なパターンマッチ情報を表示
+    for i, match in enumerate(pattern_matches[:3], 1):  # 上位3つのみ詳細表示
+        _display_single_pattern_detail(i, match, console)
+
+
+def _display_pattern_table(pattern_matches: list[Any], console: Console) -> None:
+    """パターンマッチテーブルを表示。"""
     pattern_table = Table(title="パターン認識結果", show_header=True, header_style="bold green")
     pattern_table.add_column("パターン名", style="cyan", width=25)
     pattern_table.add_column("カテゴリ", style="yellow", width=12)
@@ -895,7 +984,13 @@ def _display_pattern_recognition_results(result: AnalysisResult, console: Consol
 
     for match in pattern_matches:
         # 信頼度を色分け
-        confidence_color = "green" if match.confidence >= 0.8 else "yellow" if match.confidence >= 0.6 else "red"
+        confidence_color = (
+            "green"
+            if match.confidence >= CONFIDENCE_HIGH
+            else "yellow"
+            if match.confidence >= CONFIDENCE_MEDIUM
+            else "red"
+        )
         confidence_text = f"[{confidence_color}]{match.confidence:.1%}[/{confidence_color}]"
 
         # マッチ理由を構築
@@ -906,110 +1001,128 @@ def _display_pattern_recognition_results(result: AnalysisResult, console: Consol
             match_reasons = ["パターンマッチ検出"]
 
         reason_text = ", ".join(match_reasons)
-        if len(reason_text) > 30:
-            reason_text = reason_text[:27] + "..."
+        if len(reason_text) > TEXT_TRUNCATE_LENGTH:
+            reason_text = reason_text[: TEXT_TRUNCATE_LENGTH - 3] + "..."
 
         pattern_table.add_row(match.pattern.name, match.pattern.category, confidence_text, reason_text)
 
     console.print(pattern_table)
+
+
+def _display_single_pattern_detail(index: int, match: Any, console: Console) -> None:
+    """個別のパターン詳細を表示。"""
+    console.print(f"[bold cyan]パターン {index}: {match.pattern.name}[/bold cyan]")
+    console.print(f"  カテゴリ: {match.pattern.category}")
+    console.print(f"  信頼度: {match.confidence:.1%}")
+
+    if hasattr(match, "extracted_context") and match.extracted_context:
+        context_preview = match.extracted_context[:CONTEXT_PREVIEW_LENGTH]
+        if len(match.extracted_context) > CONTEXT_PREVIEW_LENGTH:
+            context_preview += "..."
+        console.print(f"  コンテキスト: [dim]{context_preview}[/dim]")
+
+    if hasattr(match, "supporting_evidence") and match.supporting_evidence:
+        console.print("  検出根拠:")
+        for evidence in match.supporting_evidence[:3]:  # 最初の3つの証拠
+            console.print(f"    • {evidence}")
+
     console.print()
 
-    # 詳細なパターンマッチ情報を表示
-    for i, match in enumerate(pattern_matches[:3], 1):  # 上位3つのみ詳細表示
-        console.print(f"[bold cyan]パターン {i}: {match.pattern.name}[/bold cyan]")
-        console.print(f"  カテゴリ: {match.pattern.category}")
-        console.print(f"  信頼度: {match.confidence:.1%}")
 
-        if hasattr(match, "extracted_context") and match.extracted_context:
-            context_preview = match.extracted_context[:100]
-            if len(match.extracted_context) > 100:
-                context_preview += "..."
-            console.print(f"  コンテキスト: [dim]{context_preview}[/dim]")
-
-        if hasattr(match, "supporting_evidence") and match.supporting_evidence:
-            console.print("  検出根拠:")
-            for evidence in match.supporting_evidence[:3]:  # 最初の3つの証拠
-                console.print(f"    • {evidence}")
-
-        console.print()
-
-
-def _display_detailed_fix_suggestions(fix_suggestions: list, console: Console) -> None:
-    """修正提案を詳細表示
+def _display_detailed_fix_suggestions(fix_suggestions: list[FixSuggestion], console: Console) -> None:
+    """修正提案を詳細表示。
 
     Args:
         fix_suggestions: 修正提案のリスト
         console: Richコンソール
-    """
 
+    """
     console.print("[bold]修正提案:[/bold]")
 
     # 修正提案をランキング形式で表示
     for i, fix in enumerate(fix_suggestions, 1):
-        # 優先度に応じた色分け
-        priority_colors = {"urgent": "red", "high": "yellow", "medium": "blue", "low": "dim"}
-        priority = getattr(fix, "priority", "medium")
-        priority_str = priority.value if hasattr(priority, "value") else str(priority)
-        priority_color = priority_colors.get(priority_str.lower(), "blue")
+        _display_single_fix_suggestion(i, fix, console)
 
-        console.print(f"\n[bold {priority_color}]修正案 {i}: {fix.title}[/bold {priority_color}]")
-        console.print(f"  説明: {fix.description}")
+    # 修正提案のランキング表示(効果と安全性による)
+    if len(fix_suggestions) > 1:
+        _display_fix_suggestions_ranking(fix_suggestions, console)
 
-        # 信頼度表示
-        if hasattr(fix, "confidence") and fix.confidence > 0:
-            confidence_color = "green" if fix.confidence >= 0.8 else "yellow" if fix.confidence >= 0.6 else "red"
-            console.print(f"  信頼度: [{confidence_color}]{fix.confidence:.1%}[/{confidence_color}]")
 
-        # 背景理由（新機能）
-        if hasattr(fix, "background_reason") and fix.background_reason:
-            console.print(f"  [bold cyan]背景理由:[/bold cyan] {fix.background_reason}")
+def _display_single_fix_suggestion(index: int, fix: FixSuggestion, console: Console) -> None:
+    """個別の修正提案を表示。"""
+    _display_fix_header(index, fix, console)
+    _display_fix_metrics(fix, console)
+    _display_fix_details(fix, console)
 
-        # 影響評価（新機能）
-        if hasattr(fix, "impact_assessment") and fix.impact_assessment:
-            console.print(f"  [bold yellow]影響評価:[/bold yellow] {fix.impact_assessment}")
 
-        # リスク評価と推定時間（詳細表示）
-        _display_risk_and_time_details(fix, console)
+def _display_fix_header(index: int, fix: FixSuggestion, console: Console) -> None:
+    """修正提案のヘッダーを表示。"""
+    priority_colors = {"urgent": "red", "high": "yellow", "medium": "blue", "low": "dim"}
+    priority = getattr(fix, "priority", "medium")
+    priority_val: Any = priority
+    priority_str = priority_val.value if hasattr(priority_val, "value") else str(priority_val)
+    priority_color = priority_colors.get(priority_str.lower(), "blue")
 
-        # 影響ファイル
-        if hasattr(fix, "code_changes") and fix.code_changes:
-            files = {change.file_path for change in fix.code_changes}
-            console.print(f"  影響ファイル: {', '.join(list(files)[:3])}")
-            if len(files) > 3:
-                console.print(f"    ... 他 {len(files) - 3} ファイル")
+    console.print(f"\n[bold {priority_color}]修正案 {index}: {fix.title}[/bold {priority_color}]")
+    console.print(f"  説明: {fix.description}")
 
-        # 前提条件（新機能）
-        if hasattr(fix, "prerequisites") and fix.prerequisites:
-            console.print("  [bold magenta]前提条件:[/bold magenta]")
-            for prereq in fix.prerequisites[:3]:  # 最初の3つ
-                console.print(f"    • {prereq}")
 
-        # 検証ステップ（新機能）
-        if hasattr(fix, "validation_steps") and fix.validation_steps:
-            console.print("  [bold green]検証ステップ:[/bold green]")
-            for step in fix.validation_steps[:3]:  # 最初の3つ
-                console.print(f"    • {step}")
+def _display_fix_metrics(fix: FixSuggestion, console: Console) -> None:
+    """修正提案のメトリクスを表示。"""
+    if hasattr(fix, "confidence") and fix.confidence > 0:
+        if fix.confidence >= CONFIDENCE_HIGH:
+            confidence_color = "green"
+        elif fix.confidence >= CONFIDENCE_MEDIUM:
+            confidence_color = "yellow"
+        else:
+            confidence_color = "red"
+        console.print(f"  信頼度: [{confidence_color}]{fix.confidence:.1%}[/{confidence_color}]")
 
-        # 参考リンク
-        if hasattr(fix, "references") and fix.references:
-            console.print("  参考:")
-            for ref in fix.references[:2]:  # 最初の2つのみ
-                console.print(f"    • {ref}")
+    if hasattr(fix, "background_reason") and fix.background_reason:
+        console.print(f"  [bold cyan]背景理由:[/bold cyan] {fix.background_reason}")
+
+    if hasattr(fix, "impact_assessment") and fix.impact_assessment:
+        console.print(f"  [bold yellow]影響評価:[/bold yellow] {fix.impact_assessment}")
+
+    _display_risk_and_time_details(fix, console)
+
+
+def _display_fix_details(fix: FixSuggestion, console: Console) -> None:
+    """修正提案の詳細を表示。"""
+    if hasattr(fix, "code_changes") and fix.code_changes:
+        files = {change.file_path for change in fix.code_changes}
+        console.print(f"  影響ファイル: {', '.join(list(files)[:MAX_FILES_DISPLAY])}")
+        if len(files) > MAX_FILES_DISPLAY:
+            console.print(f"    ... 他 {len(files) - MAX_FILES_DISPLAY} ファイル")
+
+    if hasattr(fix, "prerequisites") and fix.prerequisites:
+        console.print("  [bold magenta]前提条件:[/bold magenta]")
+        for prereq in fix.prerequisites[:3]:
+            console.print(f"    • {prereq}")
+
+    if hasattr(fix, "validation_steps") and fix.validation_steps:
+        console.print("  [bold green]検証ステップ:[/bold green]")
+        for step in fix.validation_steps[:3]:
+            console.print(f"    • {step}")
+
+    if hasattr(fix, "references") and fix.references:
+        console.print("  参考:")
+        for ref in fix.references[:2]:
+            console.print(f"    • {ref}")
 
     # 修正提案のランキング表示（効果と安全性による）
     if len(fix_suggestions) > 1:
         _display_fix_suggestions_ranking(fix_suggestions, console)
 
 
-def _display_risk_and_time_details(fix_suggestion, console: Console) -> None:
+def _display_risk_and_time_details(fix_suggestion: FixSuggestion, console: Console) -> None:
     """リスク評価と推定時間の詳細表示
 
     Args:
         fix_suggestion: 修正提案
         console: Richコンソール
-    """
-    from rich.table import Table
 
+    """
     # リスクレベルの表示
     risk_level = getattr(fix_suggestion, "risk_level", "medium")
     risk_colors = {"low": "green", "medium": "yellow", "high": "red"}
@@ -1051,15 +1164,14 @@ def _display_risk_and_time_details(fix_suggestion, console: Console) -> None:
         console.print(score_table)
 
 
-def _display_fix_suggestions_ranking(fix_suggestions: list, console: Console) -> None:
+def _display_fix_suggestions_ranking(fix_suggestions: list[FixSuggestion], console: Console) -> None:
     """修正提案のランキング表示（効果と安全性による）
 
     Args:
         fix_suggestions: 修正提案のリスト
         console: Richコンソール
-    """
-    from rich.table import Table
 
+    """
     console.print("\n[bold blue]修正提案ランキング (効果・安全性順):[/bold blue]")
 
     ranking_table = Table(show_header=True, header_style="bold blue")
@@ -1071,7 +1183,7 @@ def _display_fix_suggestions_ranking(fix_suggestions: list, console: Console) ->
     ranking_table.add_column("総合評価", style="blue", width=10)
 
     # 修正提案をスコアでソート
-    scored_fixes = []
+    scored_fixes: list[tuple[FixSuggestion, float, float, float, float]] = []
     for fix in fix_suggestions:
         effectiveness = getattr(fix, "effectiveness_score", getattr(fix, "confidence", 0.5))
         safety = getattr(fix, "safety_score", 1.0 - _calculate_risk_score(fix))
@@ -1121,7 +1233,7 @@ def _display_fix_suggestions_ranking(fix_suggestions: list, console: Console) ->
     console.print()
 
 
-def _calculate_risk_score(fix_suggestion) -> float:
+def _calculate_risk_score(fix_suggestion: FixSuggestion) -> float:
     """修正提案のリスクスコアを計算
 
     Args:
@@ -1129,6 +1241,7 @@ def _calculate_risk_score(fix_suggestion) -> float:
 
     Returns:
         リスクスコア (0.0-1.0, 高いほどリスキー)
+
     """
     risk_score = 0.0
 
@@ -1165,6 +1278,7 @@ def _display_fallback_info(result: AnalysisResult, console: Console) -> None:
     Args:
         result: 分析結果
         console: コンソール
+
     """
     if result.status.value != "fallback":
         return
@@ -1191,51 +1305,6 @@ def _display_fallback_info(result: AnalysisResult, console: Console) -> None:
     console.print("[dim]リトライするには: ci-run analyze --retry {operation_id}[/dim]")
 
 
-def _handle_ci_helper_error(error: CIHelperError, console: Console, verbose: bool) -> None:
-    """CI Helper固有のエラーを処理
-
-    Args:
-        error: CI Helperエラー
-        console: Richコンソール
-        verbose: 詳細表示フラグ
-    """
-    from ..core.exceptions import ConfigurationError, DependencyError, ValidationError, WorkflowNotFoundError
-
-    if isinstance(error, ConfigurationError):
-        console.print(f"[red]設定エラー:[/red] {error.message}")
-        console.print("[blue]💡 解決方法:[/blue]")
-        console.print("  • ci-run init で設定ファイルを再生成")
-        console.print("  • ci-helper.toml の [ai] セクションを確認")
-        console.print("  • 環境変数でAPIキーを設定")
-
-    elif isinstance(error, DependencyError):
-        console.print(f"[red]依存関係エラー:[/red] {error.message}")
-        console.print("[blue]💡 解決方法:[/blue]")
-        console.print("  • ci-run doctor で環境をチェック")
-        console.print("  • 必要な依存関係をインストール")
-
-    elif isinstance(error, ValidationError):
-        console.print(f"[red]入力検証エラー:[/red] {error.message}")
-        console.print("[blue]💡 解決方法:[/blue]")
-        console.print("  • 入力パラメータを確認")
-        console.print("  • ci-run analyze --help でオプションを確認")
-
-    elif isinstance(error, WorkflowNotFoundError):
-        console.print(f"[red]ワークフローエラー:[/red] {error.message}")
-        console.print("[blue]💡 解決方法:[/blue]")
-        console.print("  • ci-run test でログを生成")
-        console.print("  • --log オプションで特定のログファイルを指定")
-
-    else:
-        console.print(f"[red]CI Helperエラー:[/red] {error.message}")
-        if error.suggestion:
-            console.print(f"[blue]💡 解決方法:[/blue] {error.suggestion}")
-
-    # 詳細表示モードの場合は追加情報を表示
-    if verbose and hasattr(error, "details") and error.details:
-        console.print(f"\n[dim]詳細: {error.details}[/dim]")
-
-
 def _handle_analysis_error(error: Exception, console: Console, verbose: bool) -> None:
     """分析エラーの処理
 
@@ -1245,16 +1314,8 @@ def _handle_analysis_error(error: Exception, console: Console, verbose: bool) ->
         error: 発生したエラー
         console: Richコンソール
         verbose: 詳細表示フラグ
-    """
-    from ..ai.exceptions import (
-        APIKeyError,
-        ConfigurationError,
-        NetworkError,
-        ProviderError,
-        RateLimitError,
-        TokenLimitError,
-    )
 
+    """
     # エラーの重要度を判定
     error_severity = _determine_error_severity(error)
     severity_color = _get_severity_color(error_severity)
@@ -1297,25 +1358,15 @@ def _determine_error_severity(error: Exception) -> str:
 
     Returns:
         エラーの重要度 (critical, high, medium, low)
-    """
-    from ..ai.exceptions import (
-        APIKeyError,
-        ConfigurationError,
-        NetworkError,
-        ProviderError,
-        RateLimitError,
-        SecurityError,
-        TokenLimitError,
-    )
 
+    """
     if isinstance(error, APIKeyError | SecurityError | ConfigurationError):
         return "critical"
-    elif isinstance(error, RateLimitError | NetworkError):
+    if isinstance(error, RateLimitError | NetworkError):
         return "medium"
-    elif isinstance(error, ProviderError | TokenLimitError):
+    if isinstance(error, ProviderError | TokenLimitError):
         return "high"
-    else:
-        return "low"
+    return "low"
 
 
 def _get_severity_color(severity: str) -> str:
@@ -1326,6 +1377,7 @@ def _get_severity_color(severity: str) -> str:
 
     Returns:
         Rich用の色名
+
     """
     colors = {
         "critical": "bright_red",
@@ -1557,9 +1609,9 @@ def _suggest_fallback_options(console: Console, log_file: Path | None) -> None:
     Args:
         console: Richコンソール
         log_file: 分析対象のログファイル
+
     """
     from rich.panel import Panel
-    from rich.table import Table
 
     # フォールバックオプションをテーブル形式で表示
     console.print(Panel.fit("🔄 利用可能な代替手段", style="blue"))
@@ -1641,7 +1693,10 @@ def _suggest_fallback_options(console: Console, log_file: Path | None) -> None:
 
 
 async def _save_partial_analysis_state(
-    ai_integration: AIIntegration, log_content: str, options: AnalyzeOptions, error: Exception
+    ai_integration: AIIntegration,
+    log_content: str,
+    options: AnalyzeOptions,
+    error: Exception,
 ) -> None:
     """部分的な分析状態を保存
 
@@ -1650,6 +1705,7 @@ async def _save_partial_analysis_state(
         log_content: ログ内容
         options: 分析オプション
         error: 発生したエラー
+
     """
     try:
         from datetime import datetime
@@ -1677,227 +1733,6 @@ async def _save_partial_analysis_state(
         pass
 
 
-async def _attempt_automatic_recovery(
-    error: Exception, ai_integration: AIIntegration, log_content: str, options: AnalyzeOptions, console: Console
-) -> AnalysisResult | None:
-    """自動復旧を試行
-
-    Args:
-        error: 発生したエラー
-        ai_integration: AI統合インスタンス
-        log_content: ログ内容
-        options: 分析オプション
-        console: Richコンソール
-
-    Returns:
-        復旧成功時の分析結果、失敗時はNone
-    """
-    from ..ai.exceptions import NetworkError, ProviderError, RateLimitError, TokenLimitError
-
-    console.print("\n[blue]🔄 自動復旧を試行中...[/blue]")
-
-    try:
-        # エラータイプに応じた復旧戦略
-        if isinstance(error, TokenLimitError):
-            return await _recover_from_token_limit(error, ai_integration, log_content, options, console)
-        elif isinstance(error, RateLimitError):
-            return await _recover_from_rate_limit(error, ai_integration, log_content, options, console)
-        elif isinstance(error, NetworkError):
-            return await _recover_from_network_error(error, ai_integration, log_content, options, console)
-        elif isinstance(error, ProviderError):
-            return await _recover_from_provider_error(error, ai_integration, log_content, options, console)
-        else:
-            return await _recover_from_generic_error(error, ai_integration, log_content, options, console)
-
-    except Exception as recovery_error:
-        console.print(f"[red]自動復旧に失敗しました: {recovery_error}[/red]")
-        return None
-
-
-async def _recover_from_token_limit(
-    error: TokenLimitError, ai_integration: AIIntegration, log_content: str, options: AnalyzeOptions, console: Console
-) -> AnalysisResult | None:
-    """トークン制限エラーからの復旧"""
-    console.print("[yellow]📊 トークン制限エラーの自動復旧を実行中...[/yellow]")
-
-    # ログ内容を圧縮
-    try:
-        from ..core.log_compressor import LogCompressor
-
-        compressor = LogCompressor(target_tokens=error.limit // 2)  # 制限の半分を目標
-        compressed_content = compressor.compress_log(log_content)
-
-        console.print(f"[green]✓ ログを圧縮しました ({len(log_content)} → {len(compressed_content)} 文字)[/green]")
-
-        # 圧縮されたログで再試行
-        result = await ai_integration.analyze_log(compressed_content, options)
-        console.print("[green]✓ 圧縮ログでの分析が成功しました[/green]")
-        return result
-
-    except Exception as e:
-        console.print(f"[red]✗ ログ圧縮による復旧に失敗: {e}[/red]")
-
-    # より小さなモデルで試行
-    try:
-        smaller_models = {
-            "gpt-4o": "gpt-4o-mini",
-            "gpt-4-turbo": "gpt-4o-mini",
-            "claude-3-5-sonnet-20241022": "claude-3-5-haiku-20241022",
-        }
-
-        if options.model and options.model in smaller_models:
-            console.print(f"[blue]🔄 より小さなモデルで再試行: {smaller_models[options.model]}[/blue]")
-            options.model = smaller_models[options.model]
-            result = await ai_integration.analyze_log(log_content, options)
-            console.print("[green]✓ 小さなモデルでの分析が成功しました[/green]")
-            return result
-
-    except Exception as e:
-        console.print(f"[red]✗ 小さなモデルでの復旧に失敗: {e}[/red]")
-
-    return None
-
-
-async def _recover_from_rate_limit(
-    error: RateLimitError, ai_integration: AIIntegration, log_content: str, options: AnalyzeOptions, console: Console
-) -> AnalysisResult | None:
-    """レート制限エラーからの復旧"""
-    console.print("[yellow]⏱️  レート制限エラーの自動復旧を実行中...[/yellow]")
-
-    # 短時間の制限の場合は待機
-    if error.retry_after and error.retry_after <= 60:  # 1分以内
-        console.print(f"[blue]⏰ {error.retry_after}秒間待機中...[/blue]")
-
-        import asyncio
-
-        from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
-
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            TimeElapsedColumn(),
-            console=console,
-        ) as progress:
-            task = progress.add_task("レート制限解除まで待機中...", total=error.retry_after)
-            await asyncio.sleep(error.retry_after)
-            progress.update(task, completed=error.retry_after)
-
-        try:
-            result = await ai_integration.analyze_log(log_content, options)
-            console.print("[green]✓ 待機後の分析が成功しました[/green]")
-            return result
-        except Exception as e:
-            console.print(f"[red]✗ 待機後の再試行に失敗: {e}[/red]")
-
-    # 代替プロバイダーで試行
-    alternative_providers = ["openai", "anthropic", "local"]
-    current_provider = options.provider or "openai"
-
-    for provider in alternative_providers:
-        if provider != current_provider:
-            try:
-                console.print(f"[blue]🔄 代替プロバイダーで試行: {provider}[/blue]")
-                options.provider = provider
-                result = await ai_integration.analyze_log(log_content, options)
-                console.print(f"[green]✓ {provider}プロバイダーでの分析が成功しました[/green]")
-                return result
-            except Exception as e:
-                console.print(f"[yellow]⚠️  {provider}プロバイダーでも失敗: {e}[/yellow]")
-                continue
-
-    return None
-
-
-async def _recover_from_network_error(
-    error: NetworkError, ai_integration: AIIntegration, log_content: str, options: AnalyzeOptions, console: Console
-) -> AnalysisResult | None:
-    """ネットワークエラーからの復旧"""
-    console.print("[yellow]🌐 ネットワークエラーの自動復旧を実行中...[/yellow]")
-
-    # 指数バックオフでリトライ
-    max_retries = 3
-    for attempt in range(max_retries):
-        if attempt > 0:
-            delay = min(2**attempt, 30)  # 最大30秒
-            console.print(f"[blue]⏰ {delay}秒後にリトライします (試行 {attempt + 1}/{max_retries})[/blue]")
-
-            import asyncio
-
-            await asyncio.sleep(delay)
-
-        try:
-            result = await ai_integration.analyze_log(log_content, options)
-            console.print(f"[green]✓ リトライ {attempt + 1} で分析が成功しました[/green]")
-            return result
-        except NetworkError as e:
-            console.print(f"[yellow]⚠️  リトライ {attempt + 1} 失敗: {e}[/yellow]")
-            if attempt == max_retries - 1:
-                console.print("[red]✗ 全てのリトライが失敗しました[/red]")
-        except Exception as e:
-            console.print(f"[red]✗ リトライ中に別のエラー: {e}[/red]")
-            break
-
-    return None
-
-
-async def _recover_from_provider_error(
-    error: ProviderError, ai_integration: AIIntegration, log_content: str, options: AnalyzeOptions, console: Console
-) -> AnalysisResult | None:
-    """プロバイダーエラーからの復旧"""
-    console.print(f"[yellow]🔌 プロバイダーエラー ({error.provider}) の自動復旧を実行中...[/yellow]")
-
-    # 代替プロバイダーで試行
-    alternative_providers = ["openai", "anthropic", "local"]
-    failed_provider = error.provider
-
-    for provider in alternative_providers:
-        if provider != failed_provider:
-            try:
-                console.print(f"[blue]🔄 代替プロバイダーで試行: {provider}[/blue]")
-                options.provider = provider
-                result = await ai_integration.analyze_log(log_content, options)
-                console.print(f"[green]✓ {provider}プロバイダーでの分析が成功しました[/green]")
-                return result
-            except Exception as e:
-                console.print(f"[yellow]⚠️  {provider}プロバイダーでも失敗: {e}[/yellow]")
-                continue
-
-    console.print("[red]✗ 全ての代替プロバイダーで失敗しました[/red]")
-    return None
-
-
-async def _recover_from_generic_error(
-    error: Exception, ai_integration: AIIntegration, log_content: str, options: AnalyzeOptions, console: Console
-) -> AnalysisResult | None:
-    """汎用エラーからの復旧"""
-    console.print(f"[yellow]❌ 汎用エラー ({type(error).__name__}) の自動復旧を実行中...[/yellow]")
-
-    # キャッシュを無効にして再試行
-    try:
-        console.print("[blue]🔄 キャッシュを無効にして再試行...[/blue]")
-        options.use_cache = False
-        result = await ai_integration.analyze_log(log_content, options)
-        console.print("[green]✓ キャッシュ無効化での分析が成功しました[/green]")
-        return result
-    except Exception as e:
-        console.print(f"[yellow]⚠️  キャッシュ無効化でも失敗: {e}[/yellow]")
-
-    # 従来のログ表示にフォールバック
-    try:
-        if not ai_integration.fallback_handler:
-            console.print("[red]✗ フォールバックハンドラーが利用できません[/red]")
-            return None
-
-        console.print("[blue]🔄 従来のログ分析にフォールバック...[/blue]")
-        fallback_result = await ai_integration.fallback_handler.handle_analysis_failure(error, log_content, options)
-        console.print("[green]✓ 従来のログ分析が成功しました[/green]")
-        return fallback_result
-    except Exception as e:
-        console.print(f"[red]✗ フォールバック分析も失敗: {e}[/red]")
-
-    return None
-
-
 def _offer_interactive_recovery(console: Console) -> str:
     """対話的な復旧オプションを提供
 
@@ -1906,6 +1741,7 @@ def _offer_interactive_recovery(console: Console) -> str:
 
     Returns:
         ユーザーの選択 ('auto', 'manual', 'skip')
+
     """
     from rich.panel import Panel
     from rich.prompt import Prompt
@@ -1934,6 +1770,7 @@ def _validate_analysis_environment(config: Config, console: Console) -> bool:
 
     Returns:
         環境が有効かどうか
+
     """
     issues = []
     warnings = []

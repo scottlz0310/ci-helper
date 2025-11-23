@@ -1,5 +1,4 @@
-"""
-ログ比較エンジン
+"""ログ比較エンジン
 
 過去実行との結果比較機能、新規エラー・解決済みエラーの分類、
 差分表示とサマリー生成を提供します。
@@ -8,10 +7,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    pass
+from typing import Any
 
 from ..core.models import ExecutionResult, Failure, LogComparisonResult, WorkflowResult
 
@@ -24,7 +20,6 @@ class LogComparator:
 
     def __init__(self) -> None:
         """ログ比較エンジンを初期化"""
-        pass
 
     def compare_executions(
         self,
@@ -39,6 +34,7 @@ class LogComparator:
 
         Returns:
             ログ比較結果
+
         """
         if previous is None:
             # 初回実行の場合
@@ -84,6 +80,7 @@ class LogComparator:
 
         Returns:
             比較用のキー（失敗タイプ、メッセージ、ファイルパス、行番号）
+
         """
         return (
             failure.type.value,
@@ -100,6 +97,7 @@ class LogComparator:
 
         Returns:
             差分サマリー情報
+
         """
         current = comparison.current_execution
         previous = comparison.previous_execution
@@ -157,6 +155,7 @@ class LogComparator:
 
         Returns:
             ワークフロー別の変化情報
+
         """
         current_workflows: dict[str, WorkflowResult] = {w.name: w for w in comparison.current_execution.workflows}
         previous_workflows: dict[str, WorkflowResult] = {}
@@ -203,6 +202,7 @@ class LogComparator:
 
         Returns:
             失敗タイプ別の分析情報
+
         """
         # 現在の失敗タイプを集計
         current_types: defaultdict[str, int] = defaultdict(int)
@@ -241,13 +241,13 @@ class LogComparator:
 
         Returns:
             フォーマットされた差分表示
+
         """
         if format_type == "json":
             return self._format_diff_json(comparison)
-        elif format_type == "markdown":
+        if format_type == "markdown":
             return self._format_diff_markdown(comparison)
-        else:
-            return self._format_diff_table(comparison)
+        return self._format_diff_table(comparison)
 
     def _format_diff_json(self, comparison: LogComparisonResult) -> str:
         """JSON形式で差分を表示
@@ -257,6 +257,7 @@ class LogComparator:
 
         Returns:
             JSON形式の差分表示
+
         """
         import json
 
@@ -304,9 +305,10 @@ class LogComparator:
 
         Returns:
             Markdown形式の差分表示
+
         """
         summary = self.generate_diff_summary(comparison)
-        lines = []
+        lines: list[str] = []
 
         # ヘッダー
         lines.append("# 実行結果の比較")
@@ -385,6 +387,7 @@ class LogComparator:
 
         Returns:
             テーブル表示用の情報（実際の表示は呼び出し元で行う）
+
         """
         summary = self.generate_diff_summary(comparison)
         return str(summary)  # 実際のテーブル表示は呼び出し元で実装

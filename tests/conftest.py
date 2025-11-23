@@ -11,7 +11,6 @@ from tempfile import TemporaryDirectory
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-
 from ci_helper.utils.config import Config
 
 

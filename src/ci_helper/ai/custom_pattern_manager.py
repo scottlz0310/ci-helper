@@ -1,5 +1,4 @@
-"""
-カスタムパターン管理
+"""カスタムパターン管理
 
 ユーザー定義パターンの作成、管理、インポート/エクスポート機能を提供します。
 """
@@ -25,6 +24,7 @@ class CustomPatternManager:
 
         Args:
             config: メイン設定オブジェクト
+
         """
         self.config = config
         self.custom_patterns_dir = self.config.get_pattern_database_path() / "custom"
@@ -54,6 +54,7 @@ class CustomPatternManager:
 
         Raises:
             ValidationError: パターンが無効な場合
+
         """
         # パターンの検証
         self._validate_pattern_data(name, category, regex_patterns, keywords, confidence_base)
@@ -86,6 +87,7 @@ class CustomPatternManager:
 
         Returns:
             カスタムパターンのリスト
+
         """
         if not self.custom_patterns_file.exists():
             return []
@@ -131,6 +133,7 @@ class CustomPatternManager:
 
         Raises:
             ValidationError: パターンが見つからない場合
+
         """
         patterns = self.load_custom_patterns()
         pattern_to_update = None
@@ -172,6 +175,7 @@ class CustomPatternManager:
 
         Returns:
             削除が成功したかどうか
+
         """
         patterns = self.load_custom_patterns()
         original_count = len(patterns)
@@ -195,6 +199,7 @@ class CustomPatternManager:
 
         Raises:
             ConfigurationError: エクスポートに失敗した場合
+
         """
         patterns = self.load_custom_patterns()
 
@@ -247,6 +252,7 @@ class CustomPatternManager:
 
         Raises:
             ConfigurationError: インポートに失敗した場合
+
         """
         if not import_file.exists():
             raise ConfigurationError(
@@ -334,6 +340,7 @@ class CustomPatternManager:
 
         Returns:
             検証結果の辞書
+
         """
         validation_result = {
             "valid": True,
@@ -369,18 +376,18 @@ class CustomPatternManager:
                             "pattern1": pattern1.name,
                             "pattern2": pattern2.name,
                             "reason": "類似した正規表現パターン",
-                        }
+                        },
                     )
 
         # 警告とエラーを設定
         if validation_result["duplicate_names"]:
             validation_result["warnings"].append(
-                f"重複するパターン名があります: {', '.join(validation_result['duplicate_names'])}"
+                f"重複するパターン名があります: {', '.join(validation_result['duplicate_names'])}",
             )
 
         if validation_result["conflicting_patterns"]:
             validation_result["warnings"].append(
-                f"{len(validation_result['conflicting_patterns'])}件のパターン競合が検出されました"
+                f"{len(validation_result['conflicting_patterns'])}件のパターン競合が検出されました",
             )
 
         # 有効性を判定
@@ -407,6 +414,7 @@ class CustomPatternManager:
 
         Raises:
             ValidationError: データが無効な場合
+
         """
         if not name or not isinstance(name, str):
             raise ValidationError("パターン名は空でない文字列である必要があります")
@@ -420,7 +428,7 @@ class CustomPatternManager:
         if not isinstance(keywords, list) or not keywords:
             raise ValidationError("キーワードは空でないリストである必要があります")
 
-        if not isinstance(confidence_base, (int, float)) or not (0.0 <= confidence_base <= 1.0):
+        if not isinstance(confidence_base, int | float) or not (0.0 <= confidence_base <= 1.0):
             raise ValidationError("基本信頼度は0.0から1.0の間の数値である必要があります")
 
         # 正規表現の妥当性をチェック
@@ -440,6 +448,7 @@ class CustomPatternManager:
 
         Raises:
             ValidationError: パターンが無効な場合
+
         """
         self._validate_pattern_data(
             pattern.name,
@@ -454,6 +463,7 @@ class CustomPatternManager:
 
         Args:
             pattern: 保存するPatternオブジェクト
+
         """
         patterns = self.load_custom_patterns()
         patterns.append(pattern)
@@ -467,6 +477,7 @@ class CustomPatternManager:
 
         Raises:
             ConfigurationError: 保存に失敗した場合
+
         """
         # ディレクトリを作成
         self.custom_patterns_dir.mkdir(parents=True, exist_ok=True)
@@ -512,6 +523,7 @@ class CustomPatternManager:
 
         Returns:
             競合するかどうか
+
         """
         # 同じカテゴリで類似したキーワードを持つ場合は競合とみなす
         if pattern1.category == pattern2.category:

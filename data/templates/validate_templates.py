@@ -52,7 +52,7 @@ def validate_template_structure(template: dict, template_id: str) -> list[str]:
 
     # 成功率の確認
     success_rate = template.get("success_rate")
-    if not isinstance(success_rate, (int, float)) or not (0.0 <= success_rate <= 1.0):
+    if not isinstance(success_rate, int | float) or not (0.0 <= success_rate <= 1.0):
         errors.append(f"無効な成功率: {success_rate}")
 
     # fix_stepsの確認

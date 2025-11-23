@@ -1,5 +1,4 @@
-"""
-実際のCI環境での検証テスト
+"""実際のCI環境での検証テスト
 
 実際のGitHub Actionsログでパターン認識をテストし、
 修正提案の有効性と自動修正機能の安全性を確認します。
@@ -12,7 +11,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 from ci_helper.ai.auto_fixer import AutoFixer
 from ci_helper.ai.models import AnalysisStatus, FixSuggestion, Priority
 from ci_helper.ai.pattern_engine import PatternRecognitionEngine
@@ -110,14 +108,16 @@ class TestRealCIValidation:
                     "source": "manual",
                     "occurrence_count": 0,
                 },
-            ]
+            ],
         }
 
         with open(pattern_data_dir / "ci_patterns.json", "w", encoding="utf-8") as f:
             json.dump(ci_patterns, f, ensure_ascii=False, indent=2)
 
         engine = PatternRecognitionEngine(
-            data_directory=str(pattern_data_dir), confidence_threshold=0.7, max_patterns_per_analysis=5
+            data_directory=str(pattern_data_dir),
+            confidence_threshold=0.7,
+            max_patterns_per_analysis=5,
         )
         return engine
 
@@ -314,7 +314,7 @@ Error: Process completed with exit code 1.
                         "description": "設定値の更新",
                         "new_code": "# Updated configuration\nkey=new_value\n",
                     },
-                )()
+                )(),
             ],
             priority=Priority.LOW,
             estimated_effort="30秒",
@@ -366,7 +366,7 @@ version = "1.0.0"
                         "description": "プロジェクト設定の大幅変更",
                         "new_code": "# Completely different configuration\n",
                     },
-                )()
+                )(),
             ],
             priority=Priority.HIGH,
             estimated_effort="30分",
@@ -418,7 +418,7 @@ Build process terminated unexpectedly
                         "error_category": "unknown",
                         "analysis_result": fallback_result,
                         "_needs_learning_processing": True,
-                    }
+                    },
                 )
                 # 学習統計を確認（エラーが発生しても処理が継続されることを確認）
                 stats = pattern_engine.learning_engine.get_learning_statistics()
@@ -487,8 +487,8 @@ Build process terminated unexpectedly
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # 結果の検証
-        successful_results = [r for r in results if not isinstance(r, (Exception, str))]
-        error_results = [r for r in results if isinstance(r, (Exception, str))]
+        successful_results = [r for r in results if not isinstance(r, Exception | str)]
+        error_results = [r for r in results if isinstance(r, Exception | str)]
 
         # 大部分の分析が成功することを確認
         success_rate = len(successful_results) / len(results)
@@ -530,7 +530,7 @@ Build process terminated unexpectedly
                             "description": ".actrcに--privilegedオプションを追加",
                             "new_code": "# Original .actrc\n--privileged\n",
                         },
-                    )()
+                    )(),
                 ],
                 priority=Priority.HIGH,
                 estimated_effort="2分",
@@ -604,7 +604,8 @@ class TestRealCIEnvironmentIntegration:
             assert "jobs:" in content, f"ジョブが定義されていません: {workflow_file}"
 
     @pytest.mark.skipif(
-        not Path("act").exists() and not Path("/usr/local/bin/act").exists(), reason="actが利用できません"
+        not Path("act").exists() and not Path("/usr/local/bin/act").exists(),
+        reason="actが利用できません",
     )
     def test_act_compatibility(self):
         """act（ローカルGitHub Actions実行）との互換性テスト"""
@@ -612,11 +613,11 @@ class TestRealCIEnvironmentIntegration:
 
         try:
             # actのバージョン確認
-            result = subprocess.run(["act", "--version"], capture_output=True, text=True, timeout=10)
+            result = subprocess.run(["act", "--version"], check=False, capture_output=True, text=True, timeout=10)
             assert result.returncode == 0, "actコマンドが正常に動作しません"
 
             # ワークフローの一覧表示テスト
-            result = subprocess.run(["act", "--list"], capture_output=True, text=True, timeout=30)
+            result = subprocess.run(["act", "--list"], check=False, capture_output=True, text=True, timeout=30)
             assert result.returncode == 0, "actでワークフローの一覧表示に失敗しました"
 
         except subprocess.TimeoutExpired:
@@ -630,11 +631,11 @@ class TestRealCIEnvironmentIntegration:
 
         try:
             # Dockerの動作確認
-            result = subprocess.run(["docker", "--version"], capture_output=True, text=True, timeout=10)
+            result = subprocess.run(["docker", "--version"], check=False, capture_output=True, text=True, timeout=10)
             assert result.returncode == 0, "Dockerが利用できません"
 
             # Docker権限の確認
-            result = subprocess.run(["docker", "ps"], capture_output=True, text=True, timeout=10)
+            result = subprocess.run(["docker", "ps"], check=False, capture_output=True, text=True, timeout=10)
             if result.returncode != 0:
                 print("Docker権限エラーが検出されました（これは期待される動作です）")
                 assert "permission denied" in result.stderr.lower(), "予期しないDockerエラーです"

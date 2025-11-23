@@ -1,5 +1,4 @@
-"""
-設定ファイルローダー
+"""設定ファイルローダー
 
 テスト用の設定ファイルを読み込むためのユーティリティ
 """
@@ -22,6 +21,7 @@ def load_toml_config(filename: str) -> dict[str, Any]:
 
     Returns:
         設定データの辞書
+
     """
     config_path = CONFIG_EXAMPLES_DIR / filename
     if not config_path.exists():
@@ -39,6 +39,7 @@ def load_json_config(filename: str) -> dict[str, Any]:
 
     Returns:
         設定データの辞書
+
     """
     config_path = CONFIG_EXAMPLES_DIR / filename
     if not config_path.exists():
@@ -56,6 +57,7 @@ def load_env_file(filename: str) -> dict[str, str]:
 
     Returns:
         環境変数の辞書
+
     """
     env_path = CONFIG_EXAMPLES_DIR / filename
     if not env_path.exists():
@@ -81,6 +83,7 @@ def load_actrc_file(filename: str) -> list[str]:
 
     Returns:
         設定行のリスト
+
     """
     actrc_path = CONFIG_EXAMPLES_DIR / filename
     if not actrc_path.exists():
@@ -104,6 +107,7 @@ def get_config_file_path(filename: str) -> Path:
 
     Returns:
         設定ファイルのパス
+
     """
     return CONFIG_EXAMPLES_DIR / filename
 
@@ -113,6 +117,7 @@ def list_available_configs() -> dict[str, list[str]]:
 
     Returns:
         設定ファイルタイプ別のファイル一覧
+
     """
     if not CONFIG_EXAMPLES_DIR.exists():
         return {}
@@ -138,7 +143,7 @@ BASIC_CONFIG = "basic_ci_helper.toml"
 AI_ENABLED_CONFIG = "ai_enabled_ci_helper.toml"
 MINIMAL_CONFIG = "minimal_ci_helper.toml"
 MULTI_PROVIDER_CONFIG = "multi_provider_ci_helper.toml"
-INVALID_CONFIG = "invalid_ci_helper.toml"
+INVALID_CONFIG = "invalid_ci_helper.toml.invalid"
 PATTERN_RECOGNITION_CONFIG = "pattern_recognition_ci_helper.toml"
 AUTO_FIX_CONFIG = "auto_fix_ci_helper.toml"
 LEARNING_ENABLED_CONFIG = "learning_enabled_ci_helper.toml"

@@ -1,5 +1,4 @@
-"""
-対話的メニューシステム
+"""対話的メニューシステム
 
 Rich ライブラリを使用した美しいメニュー表示とキーボードナビゲーション機能を提供します。
 """
@@ -50,6 +49,7 @@ class MenuSystem:
 
         Args:
             console: Rich Console インスタンス（省略時は新規作成）
+
         """
         self.console = console or Console()
         self.menu_stack: list[Menu] = []
@@ -60,6 +60,7 @@ class MenuSystem:
 
         Args:
             menu: 表示するメニュー
+
         """
         # メニュータイトルを表示
         title_text = Text(menu.title, style="bold cyan")
@@ -89,13 +90,17 @@ class MenuSystem:
         # 戻るオプション
         if menu.show_back:
             table.add_row(
-                "[bold yellow]b[/bold yellow]", "[bold white]戻る[/bold white]", "[dim]前のメニューに戻ります[/dim]"
+                "[bold yellow]b[/bold yellow]",
+                "[bold white]戻る[/bold white]",
+                "[dim]前のメニューに戻ります[/dim]",
             )
 
         # 終了オプション
         if menu.show_quit:
             table.add_row(
-                "[bold red]q[/bold red]", "[bold white]終了[/bold white]", "[dim]プログラムを終了します[/dim]"
+                "[bold red]q[/bold red]",
+                "[bold white]終了[/bold white]",
+                "[dim]プログラムを終了します[/dim]",
             )
 
         self.console.print(table)
@@ -109,9 +114,10 @@ class MenuSystem:
 
         Returns:
             ユーザーが選択したキー
+
         """
         # 有効な選択肢を収集
-        valid_choices = []
+        valid_choices: list[str] = []
         for item in menu.items:
             if item.enabled:
                 valid_choices.append(item.key.lower())
@@ -128,8 +134,7 @@ class MenuSystem:
 
                 if choice in valid_choices:
                     return choice
-                else:
-                    self.console.print(f"[red]無効な選択です。有効な選択肢: {', '.join(valid_choices)}[/red]")
+                self.console.print(f"[red]無効な選択です。有効な選択肢: {', '.join(valid_choices)}[/red]")
             except KeyboardInterrupt:
                 self.console.print("\n[yellow]操作がキャンセルされました。[/yellow]")
                 return "q"
@@ -144,6 +149,7 @@ class MenuSystem:
 
         Returns:
             メニューを継続するかどうか（False で終了）
+
         """
         try:
             if item.submenu:
@@ -182,6 +188,7 @@ class MenuSystem:
 
         Args:
             menu: 実行するメニュー
+
         """
         self.menu_stack.append(menu)
 
@@ -200,16 +207,15 @@ class MenuSystem:
                 if choice == "q":
                     # 終了
                     break
-                elif choice == "b" and menu.show_back:
+                if choice == "b" and menu.show_back:
                     # 戻る
                     break
-                else:
-                    # メニュー項目を実行
-                    for item in menu.items:
-                        if item.enabled and item.key.lower() == choice:
-                            if not self.execute_menu_item(item):
-                                return
-                            break
+                # メニュー項目を実行
+                for item in menu.items:
+                    if item.enabled and item.key.lower() == choice:
+                        if not self.execute_menu_item(item):
+                            return
+                        break
 
         finally:
             self.menu_stack.pop()
@@ -219,6 +225,7 @@ class MenuSystem:
 
         Args:
             main_menu: メインメニュー
+
         """
         self.running = True
 
@@ -245,6 +252,7 @@ class MenuSystem:
 
         Returns:
             実行中の場合 True
+
         """
         return self.running
 
@@ -253,5 +261,6 @@ class MenuSystem:
 
         Returns:
             現在のメニュー（スタックが空の場合は None）
+
         """
         return self.menu_stack[-1] if self.menu_stack else None

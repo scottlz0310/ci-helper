@@ -7,7 +7,6 @@
 from pathlib import Path
 
 import pytest
-
 from ci_helper.core.log_analyzer import LogAnalyzer
 from ci_helper.core.log_extractor import LogExtractor
 from ci_helper.core.models import FailureType

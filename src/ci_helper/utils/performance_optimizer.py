@@ -1,5 +1,4 @@
-"""
-パフォーマンス最適化ユーティリティ
+"""パフォーマンス最適化ユーティリティ
 
 大きなログファイルの処理、メモリ使用量制限、キャッシュ機能を提供します。
 """
@@ -12,10 +11,7 @@ import tempfile
 from collections.abc import Iterator
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    pass
+from typing import Any
 
 
 class MemoryLimiter:
@@ -29,6 +25,7 @@ class MemoryLimiter:
 
         Args:
             max_memory_mb: 最大メモリ使用量（MB）
+
         """
         self.max_memory_bytes = max_memory_mb * 1024 * 1024
         self.chunk_size = min(self.max_memory_bytes // 4, 1024 * 1024)  # 1MB以下
@@ -38,6 +35,7 @@ class MemoryLimiter:
 
         Returns:
             チャンクサイズ（バイト）
+
         """
         return self.chunk_size
 
@@ -49,6 +47,7 @@ class MemoryLimiter:
 
         Returns:
             ストリーミング処理を使用すべき場合True
+
         """
         return file_size > self.max_memory_bytes
 
@@ -64,6 +63,7 @@ class LogFileStreamer:
 
         Args:
             memory_limiter: メモリリミッター
+
         """
         self.memory_limiter = memory_limiter or MemoryLimiter()
 
@@ -79,6 +79,7 @@ class LogFileStreamer:
         Raises:
             FileNotFoundError: ファイルが存在しない場合
             IOError: ファイル読み込みエラー
+
         """
         if not file_path.exists():
             raise FileNotFoundError(f"ログファイルが見つかりません: {file_path}")
@@ -103,6 +104,7 @@ class LogFileStreamer:
 
         Yields:
             ファイルの行（文字列）
+
         """
         if not file_path.exists():
             raise FileNotFoundError(f"ログファイルが見つかりません: {file_path}")
@@ -122,6 +124,7 @@ class LogFileStreamer:
 
         Returns:
             ファイル情報の辞書
+
         """
         if not file_path.exists():
             return {
@@ -154,6 +157,7 @@ class LogFileStreamer:
 
         Returns:
             行数
+
         """
         if file_size == 0:
             return 0
@@ -197,6 +201,7 @@ class FormatResultCache:
         Args:
             cache_dir: キャッシュディレクトリ（Noneの場合は一時ディレクトリ）
             max_cache_size_mb: 最大キャッシュサイズ（MB）
+
         """
         if cache_dir is None:
             cache_dir = Path(tempfile.gettempdir()) / "ci_helper_cache"
@@ -220,6 +225,7 @@ class FormatResultCache:
 
         Returns:
             キャッシュキー（ハッシュ値）
+
         """
         # ファイルの最終更新時刻とサイズを含める
         try:
@@ -243,6 +249,7 @@ class FormatResultCache:
 
         Returns:
             キャッシュされた結果（存在しない場合はNone）
+
         """
         cache_file = self.cache_dir / f"{cache_key}.cache"
 
@@ -279,6 +286,7 @@ class FormatResultCache:
 
         Returns:
             保存に成功した場合True
+
         """
         try:
             # キャッシュサイズをチェック
@@ -307,6 +315,7 @@ class FormatResultCache:
 
         Returns:
             削除されたエントリ数
+
         """
         deleted_count = 0
 
@@ -336,6 +345,7 @@ class FormatResultCache:
 
         Returns:
             キャッシュ統計情報
+
         """
         index_data = self._load_cache_index()
         entries = index_data.get("entries", {})
@@ -360,6 +370,7 @@ class FormatResultCache:
 
         Returns:
             インデックスデータ
+
         """
         if not self.index_file.exists():
             default_index = {
@@ -388,6 +399,7 @@ class FormatResultCache:
 
         Args:
             index_data: インデックスデータ
+
         """
         try:
             with open(self.index_file, "w", encoding="utf-8") as f:
@@ -402,6 +414,7 @@ class FormatResultCache:
             cache_key: キャッシュキー
             size: データサイズ
             metadata: メタデータ
+
         """
         index_data = self._load_cache_index()
 
@@ -422,6 +435,7 @@ class FormatResultCache:
 
         Args:
             cache_key: キャッシュキー
+
         """
         index_data = self._load_cache_index()
 
@@ -438,6 +452,7 @@ class FormatResultCache:
 
         Args:
             cache_key: キャッシュキー
+
         """
         # キャッシュファイルを削除
         cache_file = self.cache_dir / f"{cache_key}.cache"
@@ -462,6 +477,7 @@ class FormatResultCache:
 
         Returns:
             期限切れの場合True
+
         """
         index_data = self._load_cache_index()
 
@@ -518,6 +534,7 @@ class DuplicateProcessingPreventer:
 
         Returns:
             処理中の場合True
+
         """
         file_key = self._get_file_key(file_path)
 
@@ -541,6 +558,7 @@ class DuplicateProcessingPreventer:
 
         Returns:
             処理を開始できた場合True（既に処理中の場合False）
+
         """
         if self.is_processing(file_path):
             return False
@@ -554,6 +572,7 @@ class DuplicateProcessingPreventer:
 
         Args:
             file_path: 処理対象ファイル
+
         """
         file_key = self._get_file_key(file_path)
         if file_key in self._processing_files:
@@ -564,9 +583,10 @@ class DuplicateProcessingPreventer:
 
         Returns:
             処理状況の辞書
+
         """
         current_time = datetime.now()
-        active_processes = []
+        active_processes: list[dict[str, Any]] = []
 
         for file_key, start_time in self._processing_files.items():
             duration = current_time - start_time
@@ -575,7 +595,7 @@ class DuplicateProcessingPreventer:
                     "file": file_key,
                     "start_time": start_time.isoformat(),
                     "duration_minutes": round(duration.total_seconds() / 60, 1),
-                }
+                },
             )
 
         return {
@@ -588,9 +608,10 @@ class DuplicateProcessingPreventer:
 
         Returns:
             クリーンアップされたロック数
+
         """
         current_time = datetime.now()
-        expired_keys = []
+        expired_keys: list[str] = []
 
         for file_key, start_time in self._processing_files.items():
             if current_time - start_time > timedelta(minutes=self._lock_timeout_minutes):
@@ -609,6 +630,7 @@ class DuplicateProcessingPreventer:
 
         Returns:
             ファイルキー
+
         """
         try:
             # 絶対パスと最終更新時刻を組み合わせてキーを生成
@@ -638,6 +660,7 @@ class PerformanceOptimizer:
             max_memory_mb: 最大メモリ使用量（MB）
             cache_dir: キャッシュディレクトリ
             max_cache_size_mb: 最大キャッシュサイズ（MB）
+
         """
         self.memory_limiter = MemoryLimiter(max_memory_mb)
         self.streamer = LogFileStreamer(self.memory_limiter)
@@ -652,6 +675,7 @@ class PerformanceOptimizer:
 
         Returns:
             最適化機能の使用判定結果
+
         """
         file_info = self.streamer.get_file_info(file_path)
 
@@ -666,6 +690,7 @@ class PerformanceOptimizer:
 
         Returns:
             最適化統計情報
+
         """
         return {
             "memory_limit_mb": self.memory_limiter.max_memory_bytes // (1024 * 1024),
@@ -679,6 +704,7 @@ class PerformanceOptimizer:
 
         Returns:
             クリーンアップ結果
+
         """
         return {
             "cleared_cache_entries": self.cache.clear_cache(),

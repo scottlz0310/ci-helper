@@ -1,5 +1,4 @@
-"""
-対話的初期設定
+"""対話的初期設定
 
 AIモデル選択とAPIキー検証を含む対話的な初期設定機能を提供します。
 """
@@ -26,6 +25,7 @@ class InteractiveSetup:
 
         Args:
             console: Rich Console インスタンス
+
         """
         self.console = console or Console()
         self.validator = AIProviderValidator(self.console)
@@ -38,9 +38,10 @@ class InteractiveSetup:
 
         Returns:
             設定情報の辞書
+
         """
         self.console.print(
-            Panel(Text("CI-Helper 対話的初期設定", style="bold magenta"), expand=False, border_style="magenta")
+            Panel(Text("CI-Helper 対話的初期設定", style="bold magenta"), expand=False, border_style="magenta"),
         )
         self.console.print()
 
@@ -62,9 +63,8 @@ class InteractiveSetup:
 
         if Confirm.ask("\n[bold green]この設定でci-helper.tomlを生成しますか？[/bold green]"):
             return config
-        else:
-            self.console.print("[yellow]設定をキャンセルしました。[/yellow]")
-            return {}
+        self.console.print("[yellow]設定をキャンセルしました。[/yellow]")
+        return {}
 
     def _show_environment_status(self) -> None:
         """環境変数の状況を表示"""
@@ -91,7 +91,7 @@ class InteractiveSetup:
                 api_key_exists = bool(os.getenv(provider_info.api_key_env))
                 if api_key_exists:
                     self.console.print(
-                        f"[green]✓[/green] {provider_info.display_name} APIキー: {provider_info.api_key_env}"
+                        f"[green]✓[/green] {provider_info.display_name} APIキー: {provider_info.api_key_env}",
                     )
                 else:
                     self.console.print(f"[dim]○[/dim] {provider_info.display_name} APIキー: 未設定")
@@ -140,8 +140,8 @@ class InteractiveSetup:
         # デフォルトプロバイダーの選択
         self.console.print("デフォルトのAIプロバイダーを選択してください：")
 
-        provider_choices = []
-        provider_display = {}
+        provider_choices: list[str] = []
+        provider_display: dict[str, str] = {}
 
         for provider_name in available_providers:
             provider_info = SUPPORTED_PROVIDERS[provider_name]
@@ -161,7 +161,9 @@ class InteractiveSetup:
 
         default_choice = "1" if "1" in provider_choices else provider_choices[0]
         selected_choice = Prompt.ask(
-            "\n[bold green]選択してください[/bold green]", choices=provider_choices, default=default_choice
+            "\n[bold green]選択してください[/bold green]",
+            choices=provider_choices,
+            default=default_choice,
         )
 
         default_provider = provider_display[selected_choice]
@@ -200,8 +202,8 @@ class InteractiveSetup:
         prefix = "デフォルト" if is_default else provider_info.display_name
         self.console.print(f"\n{prefix}モデルを選択してください：")
 
-        model_choices = []
-        model_display = {}
+        model_choices: list[str] = []
+        model_display: dict[str, str] = {}
 
         for i, model in enumerate(available_models, 1):
             choice_key = str(i)
@@ -226,7 +228,9 @@ class InteractiveSetup:
                 break
 
         selected_choice = Prompt.ask(
-            "[bold green]選択してください[/bold green]", choices=model_choices, default=default_choice
+            "[bold green]選択してください[/bold green]",
+            choices=model_choices,
+            default=default_choice,
         )
 
         selected_model = model_display[selected_choice]
@@ -236,7 +240,7 @@ class InteractiveSetup:
         """追加設定を行う"""
         self.console.print("\n[bold blue]⚙️ 追加設定[/bold blue]\n")
 
-        config = {}
+        config: dict[str, Any] = {}
 
         # キャッシュ設定
         cache_enabled = Confirm.ask("AIレスポンスのキャッシュを有効にしますか？", default=True)
@@ -282,7 +286,7 @@ class InteractiveSetup:
                     "monthly_usd": additional_config.get("monthly_usd", 50.0),
                     "per_request_usd": additional_config.get("per_request_usd", 1.0),
                 },
-            }
+            },
         }
 
         # プロバイダー設定を追加
@@ -381,7 +385,7 @@ class InteractiveSetup:
                 f"cache_enabled = {str(ai_config.get('cache_enabled', True)).lower()}",
                 f"cache_ttl_hours = {ai_config.get('cache_ttl_hours', 24)}",
                 "",
-            ]
+            ],
         )
 
         # プロバイダー設定
@@ -391,7 +395,7 @@ class InteractiveSetup:
                 [
                     f"[ai.providers.{provider_name}]",
                     f'default_model = "{provider_config.get("default_model")}"',
-                ]
+                ],
             )
 
             # available_models を配列として出力
@@ -404,7 +408,7 @@ class InteractiveSetup:
                 [
                     f"timeout_seconds = {provider_config.get('timeout_seconds', 30)}",
                     f"max_retries = {provider_config.get('max_retries', 3)}",
-                ]
+                ],
             )
 
             # ローカルLLMの場合は base_url を追加
@@ -423,7 +427,7 @@ class InteractiveSetup:
                     f"monthly_usd = {cost_limits.get('monthly_usd', 50.0)}",
                     f"per_request_usd = {cost_limits.get('per_request_usd', 1.0)}",
                     "",
-                ]
+                ],
             )
 
         return "\n".join(lines)

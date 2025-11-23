@@ -1,5 +1,4 @@
-"""
-人間可読フォーマッター
+"""人間可読フォーマッター
 
 Rich ライブラリを使用して色付けされた構造化出力を生成し、
 開発者が読みやすい形式でCI実行結果を表示します。
@@ -7,6 +6,7 @@ Rich ライブラリを使用して色付けされた構造化出力を生成し
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
@@ -37,6 +37,7 @@ class HumanReadableFormatter(BaseLogFormatter):
 
         Args:
             sanitize_secrets: シークレットのサニタイズを有効にするかどうか
+
         """
         super().__init__(sanitize_secrets)
 
@@ -77,6 +78,7 @@ class HumanReadableFormatter(BaseLogFormatter):
 
         Returns:
             人間可読形式でフォーマットされた文字列
+
         """
         # verbose_level を detail_level にマッピング（後方互換性のため）
         if "verbose_level" in options and "detail_level" not in options:
@@ -112,7 +114,7 @@ class HumanReadableFormatter(BaseLogFormatter):
             self.console = Console(file=None, width=120, legacy_windows=False, no_color=True)
 
         # 出力セクションを構築
-        sections = []
+        sections: list[Any] = []
 
         # 1. 実行サマリー
         sections.append(self._format_execution_summary(execution_result))
@@ -247,7 +249,10 @@ class HumanReadableFormatter(BaseLogFormatter):
         )
 
     def _format_failure_details(
-        self, execution_result: ExecutionResult, max_failures: int = 20, show_details: bool = True
+        self,
+        execution_result: ExecutionResult,
+        max_failures: int = 20,
+        show_details: bool = True,
     ) -> Panel:
         """失敗詳細を生成"""
         if execution_result.success:
@@ -282,7 +287,12 @@ class HumanReadableFormatter(BaseLogFormatter):
         )
 
     def _create_failure_node(
-        self, failure: Failure, failure_num: int, workflow_name: str, job_name: str, show_details: bool = True
+        self,
+        failure: Failure,
+        failure_num: int,
+        workflow_name: str,
+        job_name: str,
+        show_details: bool = True,
     ) -> Tree:
         """単一の失敗ノードを作成"""
         # 失敗タイプのスタイル取得
@@ -419,7 +429,7 @@ class HumanReadableFormatter(BaseLogFormatter):
             success_text = Text("🎉 全てのテストが成功しました！", style="bold green")
             return Panel(success_text, title="推奨アクション", border_style="green")
 
-        actions = []
+        actions: list[str] = []
 
         # 失敗パターンに基づく推奨アクション
         failure_types = {f.type for f in execution_result.all_failures}
@@ -442,7 +452,7 @@ class HumanReadableFormatter(BaseLogFormatter):
                 "📋 上記の失敗詳細を確認し、優先度の高い問題から対処してください",
                 "🔄 修正後は再度CI実行して結果を確認してください",
                 "📚 不明な点があれば、ログの詳細やドキュメントを参照してください",
-            ]
+            ],
         )
 
         # アクションリストを作成
@@ -458,7 +468,7 @@ class HumanReadableFormatter(BaseLogFormatter):
             padding=(1, 2),
         )
 
-    def _prioritize_failures(self, failures: list[Failure]) -> list[Failure]:
+    def _prioritize_failures(self, failures: Sequence[Failure]) -> list[Failure]:
         """失敗を優先度順にソート（AI Context Formatterと同じロジック）"""
 
         def calculate_priority_score(failure: Failure) -> int:

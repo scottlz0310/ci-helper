@@ -1,5 +1,4 @@
-"""
-パターン認識設定管理
+"""パターン認識設定管理
 
 パターン認識、自動修正、学習機能の設定を管理するクラスを提供します。
 """
@@ -21,6 +20,7 @@ class PatternRecognitionConfigManager:
 
         Args:
             config: メイン設定オブジェクト
+
         """
         self.config = config
 
@@ -29,6 +29,7 @@ class PatternRecognitionConfigManager:
 
         Returns:
             パターン認識設定の辞書
+
         """
         return {
             "enabled": self.config.is_pattern_recognition_enabled(),
@@ -43,6 +44,7 @@ class PatternRecognitionConfigManager:
 
         Returns:
             自動修正設定の辞書
+
         """
         return {
             "enabled": self.config.is_auto_fix_enabled(),
@@ -57,6 +59,7 @@ class PatternRecognitionConfigManager:
 
         Returns:
             学習設定の辞書
+
         """
         return {
             "enabled": self.config.is_learning_enabled(),
@@ -76,6 +79,7 @@ class PatternRecognitionConfigManager:
 
         Raises:
             ConfigurationError: カテゴリが無効な場合
+
         """
         if not isinstance(category, str) or not category.strip():
             raise ConfigurationError(
@@ -103,8 +107,9 @@ class PatternRecognitionConfigManager:
 
         Raises:
             ConfigurationError: 閾値が無効な場合
+
         """
-        if not isinstance(threshold, (int, float)):
+        if not isinstance(threshold, int | float):
             raise ConfigurationError(
                 f"{threshold_type}信頼度閾値が無効です: {threshold}",
                 "数値を指定してください",
@@ -124,6 +129,7 @@ class PatternRecognitionConfigManager:
 
         Raises:
             ConfigurationError: リスク許容度が無効な場合
+
         """
         valid_levels = ["low", "medium", "high"]
         if risk_tolerance not in valid_levels:
@@ -137,6 +143,7 @@ class PatternRecognitionConfigManager:
 
         Returns:
             AIConfigオブジェクト
+
         """
         return self.create_ai_config_from_settings()
 
@@ -145,6 +152,7 @@ class PatternRecognitionConfigManager:
 
         Returns:
             AIConfigオブジェクト
+
         """
         ai_config_dict = self.config.get_ai_config()
 
@@ -181,7 +189,8 @@ class PatternRecognitionConfigManager:
             pattern_database_path=ai_config_dict.get("pattern_database_path", "data/patterns"),
             custom_patterns_enabled=ai_config_dict.get("custom_patterns_enabled", True),
             enabled_pattern_categories=ai_config_dict.get(
-                "enabled_pattern_categories", ["permission", "network", "config", "dependency", "build", "test"]
+                "enabled_pattern_categories",
+                ["permission", "network", "config", "dependency", "build", "test"],
             ),
             auto_fix_enabled=ai_config_dict.get("auto_fix_enabled", False),
             auto_fix_confidence_threshold=ai_config_dict.get("auto_fix_confidence_threshold", 0.8),
@@ -202,6 +211,7 @@ class PatternRecognitionConfigManager:
 
         Raises:
             ConfigurationError: 保存に失敗した場合
+
         """
         # カテゴリの検証
         for category in categories:
@@ -224,6 +234,7 @@ class PatternRecognitionConfigManager:
 
         Returns:
             パターンデータベース情報の辞書
+
         """
         db_path = self.config.get_pattern_database_path()
 
@@ -239,6 +250,7 @@ class PatternRecognitionConfigManager:
 
         Raises:
             ConfigurationError: ディレクトリ作成に失敗した場合
+
         """
         try:
             # パターンデータベースディレクトリ

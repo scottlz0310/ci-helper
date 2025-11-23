@@ -1,5 +1,4 @@
-"""
-ストリーミングフォーマッター
+"""ストリーミングフォーマッター
 
 大きなログファイルを効率的に処理するためのストリーミング対応フォーマッター。
 パフォーマンス最適化機能と統合されています。
@@ -38,6 +37,7 @@ class StreamingFormatterMixin:
 
         Returns:
             フォーマット結果
+
         """
         # ログファイルパスを取得
         log_path = self._get_log_file_path(execution_result)
@@ -102,6 +102,7 @@ class StreamingFormatterMixin:
 
         Returns:
             フォーマット結果
+
         """
         # デフォルト実装では通常のフォーマットにフォールバック
         # 各フォーマッターでオーバーライドして最適化実装を提供
@@ -115,6 +116,7 @@ class StreamingFormatterMixin:
 
         Returns:
             ログファイルパス（存在しない場合はNone）
+
         """
         if hasattr(execution_result, "log_path") and execution_result.log_path:
             log_path = Path(execution_result.log_path)
@@ -130,6 +132,7 @@ class StreamingFormatterMixin:
 
         Returns:
             ストリーミング処理情報
+
         """
         log_path = self._get_log_file_path(execution_result)
         if not log_path:
@@ -164,6 +167,7 @@ class StreamingAwareFormatter(StreamingFormatterMixin, BaseLogFormatter):
 
         Returns:
             フォーマット結果
+
         """
         # 基底実装では簡単なテキスト出力
         status = "成功" if execution_result.success else "失敗"
@@ -185,6 +189,7 @@ class ChunkedLogProcessor:
 
         Args:
             performance_optimizer: パフォーマンス最適化インスタンス
+
         """
         self.performance_optimizer = performance_optimizer or PerformanceOptimizer()
 
@@ -198,6 +203,7 @@ class ChunkedLogProcessor:
 
         Yields:
             処理されたチャンク結果
+
         """
         streamer = self.performance_optimizer.streamer
 
@@ -211,7 +217,11 @@ class ChunkedLogProcessor:
                 continue
 
     def process_log_lines(
-        self, log_path: Path, line_processor_func: Callable, batch_size: int = 1000, **processor_options: Any
+        self,
+        log_path: Path,
+        line_processor_func: Callable,
+        batch_size: int = 1000,
+        **processor_options: Any,
     ) -> Iterator[str]:
         """ログを行単位でバッチ処理
 
@@ -223,10 +233,11 @@ class ChunkedLogProcessor:
 
         Yields:
             処理されたバッチ結果
+
         """
         streamer = self.performance_optimizer.streamer
 
-        batch_lines = []
+        batch_lines: list[str] = []
         for line in streamer.stream_lines(log_path):
             batch_lines.append(line)
 
@@ -239,7 +250,7 @@ class ChunkedLogProcessor:
                     # バッチ処理エラーは無視して続行
                     pass
                 finally:
-                    batch_lines = []
+                    batch_lines: list[str] = []
 
         # 残りのバッチを処理
         if batch_lines:
@@ -258,11 +269,12 @@ class ChunkedLogProcessor:
 
         Yields:
             抽出された失敗情報
+
         """
 
         def extract_failures_from_lines(lines: list[str]) -> list[dict[str, Any]]:
             """行のバッチから失敗情報を抽出"""
-            failures = []
+            failures: list[dict[str, Any]] = []
 
             for i, line in enumerate(lines):
                 # 簡単な失敗パターンマッチング
@@ -295,6 +307,7 @@ class ProgressTrackingFormatter:
 
         Args:
             console: Rich Console インスタンス
+
         """
         self.console = console
         if console is None:
@@ -303,7 +316,10 @@ class ProgressTrackingFormatter:
             self.console = Console()
 
     def format_with_progress(
-        self, formatter: BaseLogFormatter, execution_result: ExecutionResult, **options: Any
+        self,
+        formatter: BaseLogFormatter,
+        execution_result: ExecutionResult,
+        **options: Any,
     ) -> str:
         """進行状況表示付きでフォーマット実行
 
@@ -314,6 +330,7 @@ class ProgressTrackingFormatter:
 
         Returns:
             フォーマット結果
+
         """
         from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
@@ -366,6 +383,7 @@ class ProgressTrackingFormatter:
 
         Returns:
             推定処理時間（秒）
+
         """
         # 簡易的な処理時間推定
         # 実際の使用状況に基づいて調整が必要

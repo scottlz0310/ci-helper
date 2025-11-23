@@ -1,5 +1,4 @@
-"""
-ログ管理システム
+"""ログ管理システム
 
 CI実行ログの保存、管理、一覧表示機能を提供します。
 """
@@ -9,10 +8,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
-
-if TYPE_CHECKING:
-    pass
+from typing import Any, cast
 
 from ..core.exceptions import ExecutionError
 from ..core.models import ExecutionResult
@@ -30,6 +26,7 @@ class LogManager:
 
         Args:
             config: 設定オブジェクト
+
         """
         self.config = config
         self.log_dir = config.get_path("log_dir")
@@ -56,6 +53,7 @@ class LogManager:
 
         Raises:
             ExecutionError: ログ保存に失敗した場合
+
         """
         try:
             # タイムスタンプ付きのログファイル名を生成
@@ -93,6 +91,7 @@ class LogManager:
             log_path: ログファイルのパス
             execution_result: 実行結果
             command_args: 実行時のコマンド引数
+
         """
         # 既存のインデックスを読み込み
         index_data: dict[str, Any] = self._load_log_index()
@@ -121,7 +120,7 @@ class LogManager:
         if not isinstance(logs_value, list):
             logs_value = []
             index_data["logs"] = logs_value
-        logs_list = cast(list[dict[str, Any]], logs_value)
+        logs_list = cast("list[dict[str, Any]]", logs_value)
         logs_list.append(log_entry)
 
         # 最新の実行情報を更新
@@ -136,6 +135,7 @@ class LogManager:
 
         Returns:
             インデックスデータ
+
         """
         if not self.index_file.exists():
             return {
@@ -148,7 +148,7 @@ class LogManager:
         try:
             with open(self.index_file, encoding="utf-8") as f:
                 loaded = json.load(f)
-                return cast(dict[str, Any], loaded)
+                return cast("dict[str, Any]", loaded)
         except (json.JSONDecodeError, OSError):
             # 破損したインデックスファイルの場合は新規作成
             return {
@@ -166,13 +166,14 @@ class LogManager:
 
         Returns:
             ログエントリのリスト（新しい順）
+
         """
         index_data: dict[str, Any] = self._load_log_index()
         logs_value = index_data.get("logs", [])
         logs: list[dict[str, Any]] = []
 
         if isinstance(logs_value, list):
-            logs = cast(list[dict[str, Any]], logs_value)
+            logs = cast("list[dict[str, Any]]", logs_value)
 
         # インデックスにログがない場合はディレクトリを直接スキャン
         if not logs:
@@ -197,6 +198,7 @@ class LogManager:
 
         Raises:
             ExecutionError: ログファイルが見つからない場合
+
         """
         log_path = self.log_dir / log_filename
 
@@ -220,11 +222,12 @@ class LogManager:
 
         Returns:
             最新のログエントリ（存在しない場合はNone）
+
         """
         index_data: dict[str, Any] = self._load_log_index()
         last_execution = index_data.get("last_execution")
         if isinstance(last_execution, dict):
-            return cast(dict[str, Any], last_execution)
+            return cast("dict[str, Any]", last_execution)
         return None
 
     def _load_logs_from_directory(self) -> list[dict[str, Any]]:
@@ -246,7 +249,7 @@ class LogManager:
                     "total_duration": 0.0,
                     "total_failures": 0,
                     "workflows": [],
-                }
+                },
             )
 
         return log_entries
@@ -275,6 +278,7 @@ class LogManager:
 
         Returns:
             削除されたファイル数
+
         """
         if max_count is None:
             max_count = 50  # デフォルトで50件まで保持
@@ -296,7 +300,7 @@ class LogManager:
 
         # サイズ制限による削除
         total_size = 0
-        remaining_logs = []
+        remaining_logs: list[dict[str, Any]] = []
 
         for log_entry in logs[:max_count]:
             log_path = self.log_dir / log_entry["log_file"]
@@ -332,6 +336,7 @@ class LogManager:
 
         Returns:
             ログ統計情報
+
         """
         logs = self.list_logs()
 
@@ -366,9 +371,10 @@ class LogManager:
 
         Returns:
             該当するログエントリのリスト
+
         """
         logs = self.list_logs()
-        matching_logs = []
+        matching_logs: list[dict[str, Any]] = []
 
         for log in logs:
             workflows = log.get("workflows", [])
@@ -385,9 +391,10 @@ class LogManager:
 
         Returns:
             ExecutionResultオブジェクトのリスト（新しい順）
+
         """
         logs = self.list_logs(limit)
-        execution_results = []
+        execution_results: list[ExecutionResult] = []
 
         for log_entry in logs:
             try:
@@ -409,6 +416,7 @@ class LogManager:
 
         Returns:
             復元されたExecutionResult（失敗時はNone）
+
         """
         try:
             from datetime import datetime
@@ -431,7 +439,7 @@ class LogManager:
 
             # ワークフロー情報を復元
             if "workflows" in log_entry:
-                restored_workflows = []
+                restored_workflows: list[WorkflowResult] = []
                 for workflow_meta in log_entry["workflows"]:
                     # 既存のワークフローを検索
                     existing_workflow = None
@@ -470,6 +478,7 @@ class LogManager:
 
         Returns:
             前回のExecutionResult（存在しない場合はNone）
+
         """
         execution_history = self.get_execution_history()
 
@@ -482,15 +491,15 @@ class LogManager:
                 if execution.timestamp < current_timestamp:
                     return execution
             return None
-        else:
-            # 最新の実行を返す
-            return execution_history[0] if execution_history else None
+        # 最新の実行を返す
+        return execution_history[0] if execution_history else None
 
     def save_execution_history_metadata(self, execution_result: ExecutionResult) -> None:
         """実行履歴のメタデータを保存
 
         Args:
             execution_result: 実行結果
+
         """
         # 既存のインデックスを更新（save_execution_logで既に行われているが、追加情報を保存）
         index_data = self._load_log_index()
@@ -522,6 +531,7 @@ class LogManager:
 
         Returns:
             比較結果（前回の実行が存在しない場合はNone）
+
         """
         previous_result = self.get_previous_execution(current_result.timestamp)
 

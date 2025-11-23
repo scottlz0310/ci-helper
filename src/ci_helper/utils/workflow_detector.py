@@ -1,5 +1,4 @@
-"""
-ワークフロー検出ユーティリティ
+"""ワークフロー検出ユーティリティ
 
 GitHub Actionsワークフローファイルを検出・解析する機能を提供します。
 """
@@ -35,6 +34,7 @@ class WorkflowDetector:
 
         Args:
             console: Rich Console インスタンス
+
         """
         self.console = console or Console()
 
@@ -46,6 +46,7 @@ class WorkflowDetector:
 
         Returns:
             検出されたワークフロー情報のリスト
+
         """
         if project_root is None:
             project_root = Path.cwd()
@@ -55,7 +56,7 @@ class WorkflowDetector:
         if not workflows_dir.exists():
             return []
 
-        workflows = []
+        workflows: list[WorkflowInfo] = []
 
         # .yml と .yaml ファイルを検索
         for pattern in ["*.yml", "*.yaml"]:
@@ -80,6 +81,7 @@ class WorkflowDetector:
 
         Returns:
             ワークフロー情報（解析失敗時は None）
+
         """
         try:
             content = file_path.read_text(encoding="utf-8")
@@ -101,7 +103,7 @@ class WorkflowDetector:
             description = self._generate_description(workflow_data)
 
             # ジョブ一覧を取得
-            jobs = []
+            jobs: list[str] = []
             if "jobs" in workflow_data and isinstance(workflow_data["jobs"], dict):
                 jobs = list(workflow_data["jobs"].keys())
 
@@ -120,13 +122,14 @@ class WorkflowDetector:
 
         Returns:
             ワークフロー情報
+
         """
         # name フィールドを検索
         name_match = re.search(r'^name:\s*["\']?([^"\'\n]+)["\']?', content, re.MULTILINE)
         name = name_match.group(1).strip() if name_match else file_path.stem
 
         # jobs セクションからジョブ名を抽出
-        jobs = []
+        jobs: list[str] = []
         jobs_section = re.search(r"^jobs:\s*\n((?:  \w+:.*\n?)*)", content, re.MULTILINE)
         if jobs_section:
             job_matches = re.findall(r"^  (\w+):", jobs_section.group(1), re.MULTILINE)
@@ -152,15 +155,16 @@ class WorkflowDetector:
 
         Returns:
             説明文
+
         """
-        description_parts = []
+        description_parts: list[str] = []
 
         # トリガー情報
         on_data = workflow_data.get("on", {})
         if isinstance(on_data, str):
             description_parts.append(f"{on_data}時実行")
         elif isinstance(on_data, dict):
-            triggers = []
+            triggers: list[str] = []
             if "push" in on_data:
                 triggers.append("push")
             if "pull_request" in on_data:
@@ -191,8 +195,9 @@ class WorkflowDetector:
 
         Returns:
             選択キーとワークフロー情報のマッピング
+
         """
-        choices = {}
+        choices: dict[str, WorkflowInfo] = {}
 
         for i, workflow in enumerate(workflows, 1):
             key = str(i)
@@ -205,11 +210,12 @@ class WorkflowDetector:
 
         Args:
             workflows: ワークフロー情報のリスト
+
         """
         if not workflows:
             self.console.print("[yellow]ワークフローファイルが見つかりません[/yellow]")
             self.console.print(
-                "[dim].github/workflows/ ディレクトリに .yml または .yaml ファイルを配置してください[/dim]"
+                "[dim].github/workflows/ ディレクトリに .yml または .yaml ファイルを配置してください[/dim]",
             )
             return
 

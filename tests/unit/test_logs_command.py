@@ -7,8 +7,6 @@ logs コマンドの詳細ユニットテスト
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from click.testing import CliRunner
-
 from ci_helper.cli import cli
 from ci_helper.commands.logs import (
     _display_diff_table,
@@ -18,6 +16,7 @@ from ci_helper.commands.logs import (
     _show_log_diff,
     _show_log_statistics,
 )
+from click.testing import CliRunner
 
 
 class TestShowLogStatistics:
