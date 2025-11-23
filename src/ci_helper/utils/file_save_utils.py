@@ -579,7 +579,7 @@ class FileSaveManager:
 
             # テスト環境の場合は一時ディレクトリを許可
             path_str = str(abs_path)
-            if "/tmp" in path_str or "pytest" in path_str:  # noqa: S108
+            if "/tmp" in path_str or "pytest" in path_str:  # noqa: S108  # nosec B108
                 return False
 
             # 上位ディレクトリへの書き込みを防止

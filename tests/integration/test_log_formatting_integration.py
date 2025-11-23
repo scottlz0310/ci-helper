@@ -116,9 +116,9 @@ class TestLogFormattingIntegration:
         json_formatter_2 = formatter_manager.get_formatter("json")
 
         # 同じフォーマッタークラスのインスタンスであることを確認
-        assert type(ai_formatter_1) == type(ai_formatter_2)
-        assert type(human_formatter_1) == type(human_formatter_2)
-        assert type(json_formatter_1) == type(json_formatter_2)
+        assert type(ai_formatter_1) is type(ai_formatter_2)
+        assert type(human_formatter_1) is type(human_formatter_2)
+        assert type(json_formatter_1) is type(json_formatter_2)
 
         # フォーマッターが正しく登録されていることを確認
         available_formats = formatter_manager.list_available_formats()
