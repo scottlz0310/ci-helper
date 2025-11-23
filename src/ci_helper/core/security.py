@@ -45,6 +45,26 @@ class SecretSummary(TypedDict):
     total_missing: int
 
 
+class ConfigIssue(TypedDict):
+    """設定ファイルで検出された問題"""
+
+    type: str
+    severity: str
+    message: str
+    file_path: str
+    line_number: int
+    context: str
+    recommendation: str
+
+
+class ConfigFileScanResult(TypedDict, total=False):
+    """設定ファイルごとの検証結果"""
+
+    valid: bool
+    issues: list[ConfigIssue]
+    error: str
+
+
 class SecretDetector:
     """シークレット検出とフィルタリングクラス"""
 
@@ -248,7 +268,7 @@ class SecretDetector:
 
         return sanitized_content
 
-    def validate_config_file(self, config_content: str, file_path: str) -> list[dict[str, Any]]:
+    def validate_config_file(self, config_content: str, file_path: str) -> list[ConfigIssue]:
         """設定ファイル内のシークレット記載をチェック
 
         Args:
@@ -262,7 +282,7 @@ class SecretDetector:
             SecurityError: 重大なセキュリティ問題が検出された場合
 
         """
-        issues: list[dict[str, Any]] = []
+        issues: list[ConfigIssue] = []
 
         # シークレットの直接記載をチェック
         detected_secrets = self.detect_secrets(config_content)
@@ -570,8 +590,8 @@ class SecurityValidator:
             検証結果の辞書
 
         """
-        all_issues = []
-        file_results = {}
+        all_issues: list[ConfigIssue] = []
+        file_results: dict[str, ConfigFileScanResult] = {}
 
         for file_path, content in config_files.items():
             try:
@@ -588,7 +608,7 @@ class SecurityValidator:
                     "issues": [],
                 }
 
-        overall_valid = all(result["valid"] for result in file_results.values())
+        overall_valid = all(result.get("valid", False) for result in file_results.values())
         critical_issues = sum(1 for issue in all_issues if issue["severity"] == "critical")
         warning_issues = sum(1 for issue in all_issues if issue["severity"] == "warning")
         config_recommendations = self._get_config_security_recommendations(all_issues)
@@ -655,7 +675,7 @@ class SecurityValidator:
 
         return recommendations
 
-    def _get_config_security_recommendations(self, issues: list[dict[str, Any]]) -> list[str]:
+    def _get_config_security_recommendations(self, issues: list[ConfigIssue]) -> list[str]:
         """設定セキュリティの推奨事項を生成
 
         Args:

@@ -159,7 +159,7 @@ class LogCompressor:
             (フィルタ後の行, 除去された行数)
 
         """
-        filtered_lines = []
+        filtered_lines: list[str] = []
         removed_count = 0
 
         for line in lines:
@@ -351,7 +351,7 @@ class LogCompressor:
         # 重要度でソートして上位を保持
         scored_lines: list[tuple[float, int, str]] = []
         for i, line in enumerate(lines):
-            importance_score = self._calculate_line_importance(line)
+            importance_score = self.calculate_line_importance(line)
             scored_lines.append((importance_score, i, line))
 
         # 重要度順にソート
@@ -363,7 +363,7 @@ class LogCompressor:
 
         return compressed_lines
 
-    def _calculate_line_importance(self, line: str) -> float:
+    def calculate_line_importance(self, line: str) -> float:
         """行の重要度を計算
 
         Args:
@@ -482,7 +482,7 @@ def smart_log_sampling(log_content: str, sample_ratio: float = 0.3) -> str:
     # 重要度でソート
     scored_lines: list[tuple[float, int, str]] = []
     for i, line in enumerate(lines):
-        importance_score = compressor._calculate_line_importance(line)
+        importance_score = compressor.calculate_line_importance(line)
         scored_lines.append((importance_score, i, line))
 
     # 重要度順にソート

@@ -6,7 +6,7 @@ AIモデル選択とAPIキー検証を含む対話的な初期設定機能を提
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, TypedDict, cast
 
 from rich.console import Console
 from rich.panel import Panel
@@ -15,6 +15,39 @@ from rich.table import Table
 from rich.text import Text
 
 from ..utils.ai_validator import SUPPORTED_PROVIDERS, AIProviderValidator, ValidationResult
+
+
+class ProviderConfigEntry(TypedDict, total=False):
+    """プロバイダー設定情報"""
+
+    default_model: str
+    available_models: list[str]
+    timeout_seconds: int
+    max_retries: int
+    base_url: str
+
+
+class CostLimitConfig(TypedDict):
+    """コスト制限設定"""
+
+    monthly_usd: float
+    per_request_usd: float
+
+
+class AISectionConfig(TypedDict):
+    """AIセクション設定"""
+
+    default_provider: str
+    cache_enabled: bool
+    cache_ttl_hours: int
+    providers: dict[str, ProviderConfigEntry]
+    cost_limits: CostLimitConfig
+
+
+class InteractiveConfiguration(TypedDict):
+    """全体設定"""
+
+    ai: AISectionConfig
 
 
 class InteractiveSetup:
@@ -276,18 +309,19 @@ class InteractiveSetup:
 
         default_provider = self.selected_providers[0]
 
-        config = {
-            "ai": {
-                "default_provider": default_provider,
-                "cache_enabled": additional_config.get("cache_enabled", True),
-                "cache_ttl_hours": additional_config.get("cache_ttl_hours", 24),
-                "providers": {},
-                "cost_limits": {
-                    "monthly_usd": additional_config.get("monthly_usd", 50.0),
-                    "per_request_usd": additional_config.get("per_request_usd", 1.0),
-                },
-            },
+        providers: dict[str, ProviderConfigEntry] = {}
+        cost_limits: CostLimitConfig = {
+            "monthly_usd": float(additional_config.get("monthly_usd", 50.0)),
+            "per_request_usd": float(additional_config.get("per_request_usd", 1.0)),
         }
+        ai_config: AISectionConfig = {
+            "default_provider": default_provider,
+            "cache_enabled": bool(additional_config.get("cache_enabled", True)),
+            "cache_ttl_hours": int(additional_config.get("cache_ttl_hours", 24)),
+            "providers": providers,
+            "cost_limits": cost_limits,
+        }
+        config: InteractiveConfiguration = {"ai": ai_config}
 
         # プロバイダー設定を追加
         for provider_name in self.selected_providers:
@@ -297,9 +331,9 @@ class InteractiveSetup:
             selected_model = self.selected_models.get(provider_name, provider_info.default_model)
             available_models = result.available_models if result.available_models else provider_info.available_models
 
-            provider_config = {
+            provider_config: ProviderConfigEntry = {
                 "default_model": selected_model,
-                "available_models": available_models,
+                "available_models": list(available_models),
                 "timeout_seconds": 30,
                 "max_retries": 3,
             }
@@ -311,9 +345,9 @@ class InteractiveSetup:
                 provider_config["base_url"] = os.getenv("OLLAMA_BASE_URL", default_url)
                 provider_config["timeout_seconds"] = 60
 
-            config["ai"]["providers"][provider_name] = provider_config
+            providers[provider_name] = provider_config
 
-        return config
+        return cast(dict[str, Any], config)
 
     def _show_configuration_summary(self, config: dict[str, Any]) -> None:
         """設定の概要を表示"""

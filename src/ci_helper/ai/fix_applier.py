@@ -9,7 +9,7 @@ import logging
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 from rich.console import Console
 
@@ -28,6 +28,83 @@ class FixApprovalResult:
         self.approved = approved
         self.reason = reason
         self.timestamp = datetime.now()
+
+
+class CodeChangeApplyResult(TypedDict):
+    """単一のコード変更適用結果"""
+
+    file_path: str
+    success: bool
+    backup_path: str | None
+    error: str | None
+
+
+class SingleFixApplicationResult(TypedDict):
+    """単一の修正提案適用結果"""
+
+    suggestion: str
+    success: bool
+    backups: list[str]
+    applied_changes: list[CodeChangeApplyResult]
+    error: str | None
+
+
+class FixValidationResult(TypedDict):
+    """修正後の検証結果"""
+
+    valid: bool
+    checks: list[str]
+    error: str | None
+
+
+class RollbackFailure(TypedDict):
+    """ロールバック失敗情報"""
+
+    backup_path: str
+    error: str
+
+
+class RollbackResult(TypedDict):
+    """ロールバック結果"""
+
+    total_backups: int
+    restored_count: int
+    failed_count: int
+    restored_files: list[str]
+    failed_files: list[RollbackFailure]
+
+
+class FixSuggestionsSummary(TypedDict):
+    """修正提案適用のサマリー"""
+
+    total_suggestions: int
+    applied_count: int
+    skipped_count: int
+    failed_count: int
+    applied_fixes: list[SingleFixApplicationResult]
+    failed_fixes: list[SingleFixApplicationResult]
+    backups_created: list[str]
+
+
+class PatternFixFailure(TypedDict):
+    """パターンベース修正の失敗情報"""
+
+    pattern: str
+    template: str
+    error: str
+    success: bool
+
+
+class PatternFixResults(TypedDict):
+    """パターンベース修正適用のサマリー"""
+
+    total_patterns: int
+    applied_count: int
+    skipped_count: int
+    failed_count: int
+    applied_fixes: list[SingleFixApplicationResult]
+    failed_fixes: list[SingleFixApplicationResult | PatternFixFailure]
+    backups_created: list[str]
 
 
 class BackupManager:
@@ -142,7 +219,11 @@ class FixApplier:
         self.applied_fixes: list[dict[str, Any]] = []
         self.failed_fixes: list[dict[str, Any]] = []
 
-    def apply_fix_suggestions(self, fix_suggestions: list[FixSuggestion], auto_approve: bool = False) -> dict[str, Any]:
+    def apply_fix_suggestions(
+        self,
+        fix_suggestions: list[FixSuggestion],
+        auto_approve: bool = False,
+    ) -> FixSuggestionsSummary:
         """修正提案を適用
 
         Args:
@@ -155,7 +236,7 @@ class FixApplier:
         """
         logger.info("修正提案の適用を開始 (提案数: %d)", len(fix_suggestions))
 
-        results: dict[str, Any] = {
+        results: FixSuggestionsSummary = {
             "total_suggestions": len(fix_suggestions),
             "applied_count": 0,
             "skipped_count": 0,
@@ -183,17 +264,24 @@ class FixApplier:
                 if apply_result["success"]:
                     results["applied_count"] += 1
                     results["applied_fixes"].append(apply_result)
-                    results["backups_created"].extend(apply_result.get("backups", []))
+                    results["backups_created"].extend(apply_result["backups"])
                     logger.info("修正提案を適用しました: %s", suggestion.title)
                 else:
                     results["failed_count"] += 1
                     results["failed_fixes"].append(apply_result)
-                    logger.error("修正提案の適用に失敗: %s", apply_result.get("error", "不明なエラー"))
+                    logger.error("修正提案の適用に失敗: %s", apply_result["error"] or "不明なエラー")
 
             except Exception as e:
                 logger.error("修正提案の処理中にエラー: %s", e)
                 results["failed_count"] += 1
-                results["failed_fixes"].append({"suggestion": suggestion.title, "error": str(e), "success": False})
+                failure_entry: SingleFixApplicationResult = {
+                    "suggestion": suggestion.title,
+                    "success": False,
+                    "backups": [],
+                    "applied_changes": [],
+                    "error": str(e),
+                }
+                results["failed_fixes"].append(failure_entry)
 
         logger.info(
             "修正適用完了 - 適用: %d, スキップ: %d, 失敗: %d",
@@ -243,7 +331,7 @@ class FixApplier:
             except EOFError:
                 return FixApprovalResult(False, "入力エラー")
 
-    def _apply_single_fix(self, suggestion: FixSuggestion) -> dict[str, Any]:
+    def _apply_single_fix(self, suggestion: FixSuggestion) -> SingleFixApplicationResult:
         """単一の修正提案を適用
 
         Args:
@@ -253,7 +341,7 @@ class FixApplier:
             適用結果の辞書
 
         """
-        result: dict[str, Any] = {
+        result: SingleFixApplicationResult = {
             "suggestion": suggestion.title,
             "success": False,
             "backups": [],
@@ -268,8 +356,9 @@ class FixApplier:
 
                 if change_result["success"]:
                     result["applied_changes"].append(change_result)
-                    if change_result.get("backup_path"):
-                        result["backups"].append(str(change_result["backup_path"]))
+                    backup_path = change_result["backup_path"]
+                    if backup_path:
+                        result["backups"].append(backup_path)
                 else:
                     # 一つでも失敗したら全体を失敗とする
                     result["error"] = change_result.get("error", "コード変更の適用に失敗")
@@ -290,7 +379,7 @@ class FixApplier:
 
         return result
 
-    def _apply_code_change(self, change: CodeChange) -> dict[str, Any]:
+    def _apply_code_change(self, change: CodeChange) -> CodeChangeApplyResult:
         """コード変更を適用
 
         Args:
@@ -300,7 +389,12 @@ class FixApplier:
             変更適用結果の辞書
 
         """
-        result = {"file_path": change.file_path, "success": False, "backup_path": None, "error": None}
+        result: CodeChangeApplyResult = {
+            "file_path": change.file_path,
+            "success": False,
+            "backup_path": None,
+            "error": None,
+        }
 
         try:
             file_path = self.project_root / change.file_path
@@ -315,7 +409,7 @@ class FixApplier:
 
             # バックアップを作成
             backup_path = self.backup_manager.create_backup(file_path)
-            result["backup_path"] = backup_path
+            result["backup_path"] = str(backup_path)
 
             # ファイル内容を読み込み
             content = file_path.read_text(encoding="utf-8")
@@ -353,7 +447,7 @@ class FixApplier:
 
         return result
 
-    def _validate_fix(self, suggestion: FixSuggestion) -> dict[str, Any]:
+    def _validate_fix(self, suggestion: FixSuggestion) -> FixValidationResult:
         """修正後の検証を実行
 
         Args:
@@ -363,7 +457,7 @@ class FixApplier:
             検証結果の辞書
 
         """
-        result = {"valid": True, "checks": [], "error": None}
+        result: FixValidationResult = {"valid": True, "checks": [], "error": None}
 
         try:
             # 基本的な検証
@@ -427,7 +521,7 @@ class FixApplier:
         except Exception as e:
             return f"構文チェック失敗: {file_path} - {e}"
 
-    def rollback_fixes(self, backup_paths: list[str]) -> dict[str, Any]:
+    def rollback_fixes(self, backup_paths: list[str]) -> RollbackResult:
         """修正をロールバック
 
         Args:
@@ -439,7 +533,7 @@ class FixApplier:
         """
         logger.info("修正のロールバックを開始 (バックアップ数: %d)", len(backup_paths))
 
-        result = {
+        result: RollbackResult = {
             "total_backups": len(backup_paths),
             "restored_count": 0,
             "failed_count": 0,
@@ -505,7 +599,7 @@ class FixApplier:
         pattern_matches: list[PatternMatch],
         fix_templates: dict[str, FixTemplate],
         auto_approve: bool = False,
-    ) -> dict[str, Any]:
+    ) -> PatternFixResults:
         """パターンベースの修正提案を適用
 
         Args:
@@ -519,7 +613,7 @@ class FixApplier:
         """
         logger.info("パターンベースの修正適用を開始 (パターン数: %d)", len(pattern_matches))
 
-        results = {
+        results: PatternFixResults = {
             "total_patterns": len(pattern_matches),
             "applied_count": 0,
             "skipped_count": 0,
@@ -566,12 +660,12 @@ class FixApplier:
                 if apply_result["success"]:
                     results["applied_count"] += 1
                     results["applied_fixes"].append(apply_result)
-                    results["backups_created"].extend(apply_result.get("backups", []))
+                    results["backups_created"].extend(apply_result["backups"])
                     logger.info("パターンベース修正を適用しました: %s", fix_template.name)
                 else:
                     results["failed_count"] += 1
                     results["failed_fixes"].append(apply_result)
-                    logger.error("パターンベース修正の適用に失敗: %s", apply_result.get("error", "不明なエラー"))
+                    logger.error("パターンベース修正の適用に失敗: %s", apply_result["error"] or "不明なエラー")
 
             except Exception as e:
                 logger.error("パターンベース修正の処理中にエラー: %s", e)
@@ -606,7 +700,7 @@ class FixApplier:
 
         """
         # FixStepをCodeChangeに変換
-        code_changes = []
+        code_changes: list[CodeChange] = []
         for step in fix_template.fix_steps:
             if step.type == "file_modification" and step.file_path:
                 code_change = CodeChange(

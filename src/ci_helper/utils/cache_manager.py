@@ -108,7 +108,7 @@ class CacheManager:
         stats_before = self.optimizer.cache.get_cache_statistics()
 
         # 強制的にクリーンアップを実行
-        self.optimizer.cache._cleanup_cache_if_needed()
+        self.optimizer.cache.cleanup_cache()
 
         stats_after = self.optimizer.cache.get_cache_statistics()
 
@@ -189,7 +189,7 @@ class CacheManager:
         new_cache = FormatResultCache(cache_dir, target_size_mb)
 
         # クリーンアップを強制実行
-        new_cache._cleanup_cache_if_needed()
+        new_cache.cleanup_cache()
 
         stats_after = new_cache.get_cache_statistics()
 

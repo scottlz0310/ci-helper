@@ -45,7 +45,7 @@ class HumanReadableFormatter(BaseLogFormatter):
         self.console = Console(file=None, width=120, legacy_windows=False)
 
         # 失敗タイプ別の色とアイコン設定
-        self.failure_type_styles = {
+        self.failure_type_styles: dict[FailureType, dict[str, str]] = {
             FailureType.ASSERTION: {"color": "red", "icon": "❌", "style": "bold red"},
             FailureType.ERROR: {"color": "bright_red", "icon": "🚨", "style": "bold bright_red"},
             FailureType.BUILD_FAILURE: {"color": "orange3", "icon": "🔨", "style": "bold orange3"},
@@ -55,7 +55,7 @@ class HumanReadableFormatter(BaseLogFormatter):
         }
 
         # ステータス別の色設定
-        self.status_styles = {
+        self.status_styles: dict[str, dict[str, str]] = {
             "success": {"color": "green", "icon": "✅"},
             "failure": {"color": "red", "icon": "❌"},
             "warning": {"color": "yellow", "icon": "⚠️"},
@@ -403,11 +403,12 @@ class HumanReadableFormatter(BaseLogFormatter):
 
         # 失敗タイプ別統計
         if not execution_result.success:
-            failure_types = {}
+            failure_counts: dict[FailureType, int] = {}
             for failure in execution_result.all_failures:
-                failure_types[failure.type] = failure_types.get(failure.type, 0) + 1
+                failure_type = failure.type
+                failure_counts[failure_type] = failure_counts.get(failure_type, 0) + 1
 
-            for failure_type, count in failure_types.items():
+            for failure_type, count in failure_counts.items():
                 style_config = self.failure_type_styles.get(failure_type, self.failure_type_styles[FailureType.UNKNOWN])
                 stats_table.add_row(
                     f"{style_config['icon']} {failure_type.value}",

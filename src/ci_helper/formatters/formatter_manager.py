@@ -57,9 +57,6 @@ class FormatterManager:
         if not name:
             raise ValueError("フォーマッター名は空にできません")
 
-        if not isinstance(formatter, BaseLogFormatter):
-            raise ValueError("フォーマッターはBaseLogFormatterを継承する必要があります")
-
         if name in self._formatters:
             raise ValueError(f"フォーマッター '{name}' は既に登録されています")
 
@@ -172,26 +169,20 @@ class FormatterManager:
             # パフォーマンス最適化機能を使用可能かチェック
             use_optimization = validated_options.get("use_optimization", True)
 
-            if use_optimization and hasattr(formatter, "format_with_optimization"):
-                # 最適化機能を使用してフォーマット実行
+            if use_optimization:
+                # 最適化機能を使用してフォーマット実行（未実装の場合は通常フォーマット）
                 return formatter.format_with_optimization(execution_result, **validated_options)
-            else:
-                # 通常のフォーマット実行
-                return formatter.format(execution_result, **validated_options)
+
+            # 通常のフォーマット実行
+            return formatter.format(execution_result, **validated_options)
 
         except (ValueError, TypeError) as e:
             from ..core.exceptions import UserInputError
 
-            invalid_options = [key for key in options.keys() if not isinstance(key, str)]
-            if invalid_options:
-                raise UserInputError.invalid_option_value(
-                    "format_options", str(invalid_options), "有効なオプション名"
-                ) from e
-            else:
-                raise UserInputError(
-                    f"フォーマットオプションが無効です: {e}",
-                    "オプションの値と型を確認してください",
-                ) from e
+            raise UserInputError(
+                f"フォーマットオプションが無効です: {e}",
+                "オプションの値と型を確認してください",
+            ) from e
         except MemoryError as e:
             from ..core.exceptions import LogFormattingError
 

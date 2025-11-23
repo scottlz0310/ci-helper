@@ -528,8 +528,9 @@ class LogFormattingErrorHandler:
         error_type = type(error).__name__
         summary_parts = [f"エラー種別: {error_type}"]
 
-        if hasattr(error, "message"):
-            summary_parts.append(f"メッセージ: {error.message}")
+        custom_message = getattr(error, "message", None)
+        if isinstance(custom_message, str) and custom_message:
+            summary_parts.append(f"メッセージ: {custom_message}")
         else:
             summary_parts.append(f"メッセージ: {error!s}")
 

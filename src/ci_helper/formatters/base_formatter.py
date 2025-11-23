@@ -7,10 +7,21 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 if TYPE_CHECKING:
     from ..core.models import ExecutionResult
+    from ..core.security import SecurityValidator
+
+
+class LogSecurityValidationResult(TypedDict):
+    """ログセキュリティ検証結果"""
+
+    has_secrets: bool
+    secret_count: int
+    detected_secrets: list[dict[str, Any]]
+    sanitized_content: str
+    recommendations: list[str]
 
 
 class BaseLogFormatter(ABC):
@@ -26,7 +37,7 @@ class BaseLogFormatter(ABC):
             sanitize_secrets: シークレットのサニタイズを有効にするかどうか
         """
         self.sanitize_secrets = sanitize_secrets
-        self.security_validator = None
+        self.security_validator: SecurityValidator | None = None
 
         if sanitize_secrets:
             from ..core.security import SecurityValidator
@@ -87,7 +98,11 @@ class BaseLogFormatter(ABC):
                 formatter_name=self.get_format_name(),
             ) from e
 
-    def validate_log_content_security(self, content: str) -> dict[str, Any]:
+    def format_with_optimization(self, execution_result: ExecutionResult, **options: Any) -> str:
+        """最適化付きフォーマット（デフォルトは通常フォーマットと同じ挙動）"""
+        return self.format(execution_result, **options)
+
+    def validate_log_content_security(self, content: str) -> LogSecurityValidationResult:
         """ログコンテンツのセキュリティ検証
 
         Args:
@@ -105,7 +120,7 @@ class BaseLogFormatter(ABC):
                 "recommendations": [],
             }
 
-        return self.security_validator.validate_log_content(content)
+        return cast(LogSecurityValidationResult, self.security_validator.validate_log_content(content))
 
     def validate_options(self, **options: Any) -> dict[str, Any]:
         """オプションの検証と正規化
@@ -119,7 +134,7 @@ class BaseLogFormatter(ABC):
         Raises:
             ValueError: 無効なオプションが指定された場合
         """
-        validated_options = {}
+        validated_options: dict[str, Any] = {}
         supported_options = self.get_supported_options()
 
         # サポートされているオプションのみを処理

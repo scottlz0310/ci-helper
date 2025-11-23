@@ -7,10 +7,7 @@ actの実行ログを解析し、ワークフローとジョブごとに失敗�
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
+from datetime import datetime
 
 from ..core.exceptions import LogParsingError
 from ..core.log_extractor import LogExtractor
@@ -79,7 +76,7 @@ class LogAnalyzer:
             detected_workflows = workflows or self._detect_workflows(log_content)
 
             # ワークフローごとに解析
-            workflow_results = []
+            workflow_results: list[WorkflowResult] = []
             total_duration = 0.0
             overall_success = True
 
@@ -117,7 +114,7 @@ class LogAnalyzer:
         Returns:
             検出されたワークフロー名のリスト
         """
-        workflow_names = set()
+        workflow_names: set[str] = set()
 
         # ワークフロー名パターンから抽出
         for match in self.workflow_name_pattern.finditer(log_content):
@@ -204,7 +201,7 @@ class LogAnalyzer:
             ワークフロー関連のログセクション
         """
         lines = log_content.splitlines()
-        workflow_lines = []
+        workflow_lines: list[str] = []
         in_workflow = False
 
         for line in lines:
@@ -233,10 +230,10 @@ class LogAnalyzer:
         Returns:
             ジョブの解析結果リスト
         """
-        jobs = []
+        jobs: list[JobResult] = []
 
         # ジョブ開始位置を検出
-        job_matches = list(self.job_start_pattern.finditer(log_section))
+        job_matches: list[re.Match[str]] = list(self.job_start_pattern.finditer(log_section))
 
         if not job_matches:
             # ジョブが明示的に検出されない場合は、デフォルトジョブを作成
@@ -337,10 +334,10 @@ class LogAnalyzer:
         Returns:
             ステップの解析結果リスト
         """
-        steps = []
+        steps: list[StepResult] = []
 
         # ステップ開始位置を検出
-        step_matches = list(self.step_start_pattern.finditer(job_section))
+        step_matches: list[re.Match[str]] = list(self.step_start_pattern.finditer(job_section))
 
         for i, match in enumerate(step_matches):
             step_name = match.group(1)
@@ -381,7 +378,7 @@ class LogAnalyzer:
             セクション内の失敗のリスト
         """
         # セクション固有の失敗を直接抽出（より正確）
-        section_failures = self.log_extractor.extract_failures(section)
+        section_failures: list[Failure] = self.log_extractor.extract_failures(section)
 
         # 全失敗リストからセクション内の失敗も確認
         for failure in all_failures:
@@ -427,7 +424,7 @@ class LogAnalyzer:
         """
         # タイムスタンプパターンから時間を推測
         timestamp_pattern = re.compile(r"\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})")
-        timestamps = []
+        timestamps: list[datetime] = []
 
         for match in timestamp_pattern.finditer(log_section):
             timestamp_str = match.group(1)
@@ -454,7 +451,7 @@ class LogAnalyzer:
         Returns:
             ステップの出力
         """
-        output_lines = []
+        output_lines: list[str] = []
 
         # エラー出力パターンから出力を抽出
         for match in self.error_output_pattern.finditer(step_section):
@@ -542,8 +539,8 @@ class LogAnalyzer:
         Returns:
             重複を除去した失敗のリスト
         """
-        seen = set()
-        unique_failures = []
+        seen: set[tuple[str, str | None, int | None]] = set()
+        unique_failures: list[Failure] = []
 
         for failure in failures:
             # メッセージ、ファイルパス、行番号の組み合わせで重複判定

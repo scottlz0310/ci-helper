@@ -97,7 +97,7 @@ class LegacyAIFormatterAdapter(BaseLogFormatter):
         Raises:
             ValueError: 無効なオプションが指定された場合
         """
-        validated_options = {}
+        validated_options: dict[str, str] = {}
 
         # format_typeの検証
         if "format_type" in options:

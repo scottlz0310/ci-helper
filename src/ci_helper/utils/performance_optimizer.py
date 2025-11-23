@@ -380,6 +380,10 @@ class FormatResultCache:
             "cache_dir": str(self.cache_dir),
         }
 
+    def cleanup_cache(self) -> None:
+        """キャッシュクリーンアップを強制実行"""
+        self._cleanup_cache_if_needed()
+
     def _load_cache_index(self) -> CacheIndex:
         """キャッシュインデックスを読み込み
 

@@ -9,14 +9,30 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 
 if TYPE_CHECKING:
     from ..core.models import ExecutionResult, Failure
 
 from ..core.models import FailureType
 from .base_formatter import BaseLogFormatter
-from .streaming_formatter import StreamingFormatterMixin
+from .streaming_formatter import StreamingFailureInfo, StreamingFormatterMixin
+
+
+class FailureTypeConfigEntry(TypedDict):
+    """失敗タイプ設定"""
+
+    icon: str
+    priority: int
+    category: str
+
+
+class FixSuggestionDetail(TypedDict):
+    """修正提案の詳細"""
+
+    title: str
+    description: str
+    steps: list[str]
 
 
 class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
@@ -39,7 +55,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
         super().__init__(sanitize_secrets)
 
         # 失敗タイプ別のアイコンと優先度
-        self.failure_type_config = {
+        self.failure_type_config: dict[FailureType, FailureTypeConfigEntry] = {
             FailureType.ASSERTION: {"icon": "❌", "priority": 100, "category": "テスト失敗"},
             FailureType.ERROR: {"icon": "🚨", "priority": 90, "category": "実行エラー"},
             FailureType.BUILD_FAILURE: {"icon": "🔨", "priority": 85, "category": "ビルド失敗"},
@@ -205,7 +221,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
         prioritized_failures = self._prioritize_failures(execution_result.all_failures)
         top_failures = prioritized_failures[:max_failures] if max_failures else prioritized_failures
 
-        sections = ["## 🚨 クリティカル失敗 (修正必須)"]
+        sections: list[str] = ["## 🚨 クリティカル失敗 (修正必須)"]
 
         if max_failures and len(prioritized_failures) > max_failures:
             sections.append(f"*注意: 全{len(prioritized_failures)}件の失敗のうち、上位{max_failures}件を表示*")
@@ -303,7 +319,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
         # 失敗を分析して修正提案を生成
         prioritized_failures = self._prioritize_failures(execution_result.all_failures)[:5]
 
-        suggestions: list[dict[str, Any]] = []
+        suggestions: list[FixSuggestionDetail] = []
         for failure in prioritized_failures:
             suggestion = self._generate_fix_suggestion(failure)
             if suggestion:
@@ -314,9 +330,10 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
             for i, suggestion in enumerate(suggestions, 1):
                 sections.append(f"**{i}. {suggestion['title']}**")
                 sections.append(f"- {suggestion['description']}")
-                if suggestion.get("steps"):
+                steps = suggestion["steps"]
+                if steps:
                     sections.append("- 手順:")
-                    for step in suggestion["steps"]:
+                    for step in steps:
                         sections.append(f"  - {step}")
                 sections.append("")
         else:
@@ -363,7 +380,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
 
     def _format_context_analysis(self, execution_result: ExecutionResult) -> str:
         """詳細なコンテキスト分析を生成"""
-        sections = ["## 📊 コンテキスト分析"]
+        sections: list[str] = ["## 📊 コンテキスト分析"]
 
         # 実行環境情報
         sections.append("### 実行環境")
@@ -385,7 +402,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
 
     def _format_full_logs(self, execution_result: ExecutionResult) -> str:
         """完全なログ情報を整形（最後に配置）"""
-        sections = ["## 📋 完全なログ情報"]
+        sections: list[str] = ["## 📋 完全なログ情報"]
 
         for workflow in execution_result.workflows:
             workflow_icon = "✅" if workflow.success else "❌"
@@ -408,7 +425,8 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
         def calculate_priority_score(failure: Failure) -> int:
             """失敗の優先度スコアを計算"""
             # 基本優先度（失敗タイプ別）
-            base_priority = self.failure_type_config.get(failure.type, {"priority": 50})["priority"]
+            config = self.failure_type_config.get(failure.type, self.failure_type_config[FailureType.UNKNOWN])
+            base_priority = config["priority"]
 
             # 追加スコア
             additional_score = 0
@@ -463,12 +481,12 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
 
         return None
 
-    def _generate_fix_suggestion(self, failure: Failure) -> dict[str, Any] | None:
+    def _generate_fix_suggestion(self, failure: Failure) -> FixSuggestionDetail | None:
         """失敗に対する修正提案を生成"""
         message = failure.message.lower()
 
         # 失敗タイプ別の修正提案
-        suggestions = {
+        suggestions: dict[FailureType, FixSuggestionDetail] = {
             FailureType.ASSERTION: {
                 "title": "アサーション失敗の修正",
                 "description": "期待値と実際の値を確認し、テストロジックまたは実装を修正してください",
@@ -502,14 +520,20 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
         if not base_suggestion:
             return None
 
+        suggestion: FixSuggestionDetail = {
+            "title": base_suggestion["title"],
+            "description": base_suggestion["description"],
+            "steps": list(base_suggestion["steps"]),
+        }
+
         # メッセージ内容に基づく具体的な提案を追加
         if "file not found" in message and failure.file_path:
-            base_suggestion["steps"].insert(0, f"ファイル `{failure.file_path}` の存在を確認")
+            suggestion["steps"].insert(0, f"ファイル `{failure.file_path}` の存在を確認")
 
         if "permission denied" in message:
-            base_suggestion["steps"].insert(0, "ファイルまたはディレクトリの権限を確認")
+            suggestion["steps"].insert(0, "ファイルまたはディレクトリの権限を確認")
 
-        return base_suggestion
+        return suggestion
 
     def _categorize_file(self, file_path: str) -> str:
         """ファイルをカテゴリ別に分類"""
@@ -523,9 +547,9 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
             return "ソースコード"
         return "その他"
 
-    def _analyze_failure_patterns(self, failures: list[Failure]) -> dict[str, int]:
+    def _analyze_failure_patterns(self, failures: Sequence[Failure]) -> dict[str, int]:
         """失敗パターンを分析"""
-        patterns = {}
+        patterns: dict[str, int] = {}
 
         for failure in failures:
             # 失敗タイプ別の集計
@@ -548,7 +572,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
         if len(lines) <= 10:
             return stack_trace
 
-        summary_lines = []
+        summary_lines: list[str] = []
         summary_lines.extend(lines[:3])  # 最初の3行
         summary_lines.append("... (中略) ...")
         summary_lines.extend(lines[-3:])  # 最後の3行
@@ -573,7 +597,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
         processor = ChunkedLogProcessor(self.performance_optimizer)
 
         # ストリーミングで失敗情報を抽出
-        streaming_failures = []
+        streaming_failures: list[StreamingFailureInfo] = []
         for failure_info in processor.extract_failures_streaming(log_path):
             streaming_failures.append(failure_info)
 
@@ -590,7 +614,7 @@ class AIContextFormatter(StreamingFormatterMixin, BaseLogFormatter):
     def _enhance_execution_result_with_streaming_data(
         self,
         execution_result: ExecutionResult,
-        streaming_failures: list[dict[str, Any]],
+        streaming_failures: list[StreamingFailureInfo],
     ) -> ExecutionResult:
         """ストリーミングデータでExecutionResultを強化
 

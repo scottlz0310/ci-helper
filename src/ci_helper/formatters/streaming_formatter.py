@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict, TypeVar
 
 if TYPE_CHECKING:
     from ..core.models import ExecutionResult
@@ -281,7 +281,7 @@ class ChunkedLogProcessor:
             except Exception:
                 pass
 
-    def extract_failures_streaming(self, log_path: Path) -> Iterator[dict[str, Any]]:
+    def extract_failures_streaming(self, log_path: Path) -> Iterator[StreamingFailureInfo]:
         """ストリーミングで失敗情報を抽出
 
         Args:
@@ -292,14 +292,14 @@ class ChunkedLogProcessor:
 
         """
 
-        def extract_failures_from_lines(lines: list[str], **_: Any) -> list[dict[str, Any]]:
+        def extract_failures_from_lines(lines: list[str], **_: Any) -> list[StreamingFailureInfo]:
             """行のバッチから失敗情報を抽出"""
-            failures: list[dict[str, Any]] = []
+            failures: list[StreamingFailureInfo] = []
 
             for i, line in enumerate(lines):
                 # 簡単な失敗パターンマッチング
                 if any(keyword in line.lower() for keyword in ["error", "failed", "failure"]):
-                    failure_info = {
+                    failure_info: StreamingFailureInfo = {
                         "line_number": i + 1,
                         "message": line.strip(),
                         "type": "error",
@@ -421,3 +421,13 @@ class ProgressTrackingFormatter:
         file_size_mb = file_size / (1024 * 1024)
 
         return file_size_mb * time_per_mb
+
+
+class StreamingFailureInfo(TypedDict):
+    """ストリーミング抽出された失敗情報"""
+
+    line_number: int
+    message: str
+    type: str
+    context_before: list[str]
+    context_after: list[str]

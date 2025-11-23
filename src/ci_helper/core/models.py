@@ -8,10 +8,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
 
 
 class FailureType(Enum):
@@ -34,8 +30,8 @@ class Failure:
     message: str
     file_path: str | None = None
     line_number: int | None = None
-    context_before: Sequence[str] = field(default_factory=list)
-    context_after: Sequence[str] = field(default_factory=list)
+    context_before: list[str] = field(default_factory=list)
+    context_after: list[str] = field(default_factory=list)
     stack_trace: str | None = None
 
 
@@ -55,8 +51,8 @@ class JobResult:
 
     name: str
     success: bool
-    failures: Sequence[Failure] = field(default_factory=list)
-    steps: Sequence[StepResult] = field(default_factory=list)
+    failures: list[Failure] = field(default_factory=list)
+    steps: list[StepResult] = field(default_factory=list)
     duration: float = 0.0
 
 
@@ -66,7 +62,7 @@ class WorkflowResult:
 
     name: str
     success: bool
-    jobs: Sequence[JobResult] = field(default_factory=list)
+    jobs: list[JobResult] = field(default_factory=list)
     duration: float = 0.0
 
 
@@ -75,7 +71,7 @@ class ExecutionResult:
     """CI実行の全体結果"""
 
     success: bool
-    workflows: Sequence[WorkflowResult]
+    workflows: list[WorkflowResult]
     total_duration: float
     log_path: str | None = None
     timestamp: datetime = field(default_factory=datetime.now)
@@ -86,12 +82,12 @@ class ExecutionResult:
         return sum(len(job.failures) for workflow in self.workflows for job in workflow.jobs)
 
     @property
-    def failed_workflows(self) -> Sequence[WorkflowResult]:
+    def failed_workflows(self) -> list[WorkflowResult]:
         """失敗したワークフローのリストを取得"""
         return [w for w in self.workflows if not w.success]
 
     @property
-    def failed_jobs(self) -> Sequence[JobResult]:
+    def failed_jobs(self) -> list[JobResult]:
         """失敗したジョブのリストを取得"""
         failed_jobs: list[JobResult] = []
         for workflow in self.workflows:
@@ -99,7 +95,7 @@ class ExecutionResult:
         return failed_jobs
 
     @property
-    def all_failures(self) -> Sequence[Failure]:
+    def all_failures(self) -> list[Failure]:
         """全ての失敗のリストを取得"""
         all_failures: list[Failure] = []
         for workflow in self.workflows:
@@ -114,9 +110,9 @@ class LogComparisonResult:
 
     current_execution: ExecutionResult
     previous_execution: ExecutionResult | None
-    new_errors: Sequence[Failure] = field(default_factory=list)
-    resolved_errors: Sequence[Failure] = field(default_factory=list)
-    persistent_errors: Sequence[Failure] = field(default_factory=list)
+    new_errors: list[Failure] = field(default_factory=list)
+    resolved_errors: list[Failure] = field(default_factory=list)
+    persistent_errors: list[Failure] = field(default_factory=list)
 
     @property
     def has_changes(self) -> bool:

@@ -435,7 +435,7 @@ class Config:
                 "message": "セキュリティ検証が無効になっています",
             }
 
-        config_files = {}
+        config_files: dict[str, str] = {}
 
         # ci-helper.toml
         if self.config_file.exists():
