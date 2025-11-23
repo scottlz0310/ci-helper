@@ -12,13 +12,9 @@ from unittest.mock import AsyncMock, Mock, patch
 
 # 新しい非同期モック安定化システムをインポート
 try:
-    from .async_mock_stabilizer import AsyncMockStabilizer as NewAsyncMockStabilizer
     from .async_mock_stabilizer import (
         create_stable_async_mock_with_error_handling,
-        ensure_async_mock_cleanup,
         get_async_mock_stabilizer,
-        patch_with_stable_async_mock,
-        stable_async_test_context,
     )
 
     ASYNC_STABILIZER_AVAILABLE = True
