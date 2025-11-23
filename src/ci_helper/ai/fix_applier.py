@@ -155,7 +155,7 @@ class FixApplier:
         """
         logger.info("修正提案の適用を開始 (提案数: %d)", len(fix_suggestions))
 
-        results = {
+        results: dict[str, Any] = {
             "total_suggestions": len(fix_suggestions),
             "applied_count": 0,
             "skipped_count": 0,
@@ -253,7 +253,13 @@ class FixApplier:
             適用結果の辞書
 
         """
-        result = {"suggestion": suggestion.title, "success": False, "backups": [], "applied_changes": [], "error": None}
+        result: dict[str, Any] = {
+            "suggestion": suggestion.title,
+            "success": False,
+            "backups": [],
+            "applied_changes": [],
+            "error": None,
+        }
 
         try:
             # コード変更を適用
