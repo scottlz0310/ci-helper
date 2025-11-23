@@ -1,5 +1,4 @@
-"""
-設定管理ユーティリティ
+"""設定管理ユーティリティ
 
 TOML設定ファイル、環境変数、デフォルト値の管理を行います。
 """
@@ -7,13 +6,9 @@ TOML設定ファイル、環境変数、デフォルト値の管理を行いま�
 from __future__ import annotations
 
 import os
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar
-
-if TYPE_CHECKING:
-    pass
-
 import tomllib
+from pathlib import Path
+from typing import Any, ClassVar
 
 from ..core.exceptions import ConfigurationError, SecurityError
 
@@ -112,6 +107,7 @@ class Config:
         Args:
             project_root: プロジェクトルートディレクトリ（Noneの場合は現在のディレクトリ）
             validate_security: セキュリティ検証を有効にするかどうか
+
         """
         self.project_root = project_root or Path.cwd()
         self.config_file = self.project_root / "ci-helper.toml"
@@ -174,7 +170,8 @@ class Config:
                         env_config[key] = int(env_value)
                     except ValueError as e:
                         raise ConfigurationError(
-                            f"環境変数 {env_key} の値が無効です: {env_value}", "整数値を指定してください"
+                            f"環境変数 {env_key} の値が無効です: {env_value}",
+                            "整数値を指定してください",
                         ) from e
                 elif isinstance(default_value, str):
                     env_config[key] = env_value
@@ -305,14 +302,16 @@ class Config:
                         env_config[config_key] = int(env_value)
                     except ValueError as e:
                         raise ConfigurationError(
-                            f"環境変数 {env_key} の値が無効です: {env_value}", "整数値を指定してください"
+                            f"環境変数 {env_key} の値が無効です: {env_value}",
+                            "整数値を指定してください",
                         ) from e
                 elif config_key in float_keys:
                     try:
                         env_config[config_key] = float(env_value)
                     except ValueError as e:
                         raise ConfigurationError(
-                            f"環境変数 {env_key} の値が無効です: {env_value}", "数値を指定してください"
+                            f"環境変数 {env_key} の値が無効です: {env_value}",
+                            "数値を指定してください",
                         ) from e
                 else:
                     env_config[config_key] = env_value
@@ -328,6 +327,7 @@ class Config:
 
         Returns:
             設定値
+
         """
         return self._config.get(key, default)
 
@@ -339,6 +339,7 @@ class Config:
 
         Returns:
             絶対パス
+
         """
         path_str = self.get(key)
         if path_str is None:
@@ -393,6 +394,7 @@ class Config:
 
         Raises:
             SecurityError: セキュリティ問題が検出された場合
+
         """
         if not hasattr(self, "security_validator"):
             return
@@ -425,6 +427,7 @@ class Config:
 
         Returns:
             検証結果の辞書
+
         """
         if not hasattr(self, "security_validator"):
             return {
@@ -464,6 +467,7 @@ class Config:
 
         Returns:
             推奨事項のリスト
+
         """
         return [
             "シークレット管理のベストプラクティス:",
@@ -492,6 +496,7 @@ class Config:
 
         Returns:
             プロジェクトルートディレクトリのパス
+
         """
         return self.project_root
 
@@ -505,6 +510,7 @@ class Config:
 
         Returns:
             AI設定値
+
         """
         if key is None:
             return self._ai_config
@@ -518,6 +524,7 @@ class Config:
 
         Returns:
             プロバイダー設定（存在しない場合はNone）
+
         """
         providers = self.get_ai_config("providers", {})
         return providers.get(provider_name)
@@ -527,6 +534,7 @@ class Config:
 
         Returns:
             プロバイダー名のリスト
+
         """
         providers = self.get_ai_config("providers", {})
         return list(providers.keys())
@@ -536,6 +544,7 @@ class Config:
 
         Returns:
             デフォルトプロバイダー名
+
         """
         return self.get_ai_config("default_provider", "openai")
 
@@ -544,6 +553,7 @@ class Config:
 
         Returns:
             キャッシュが有効かどうか
+
         """
         return self.get_ai_config("cache_enabled", True)
 
@@ -552,6 +562,7 @@ class Config:
 
         Returns:
             ストリーミングが有効かどうか
+
         """
         return self.get_ai_config("streaming_enabled", True)
 
@@ -560,6 +571,7 @@ class Config:
 
         Returns:
             コスト制限の辞書
+
         """
         return self.get_ai_config("cost_limits", {})
 
@@ -568,6 +580,7 @@ class Config:
 
         Returns:
             プロンプトテンプレートの辞書
+
         """
         return self.get_ai_config("prompt_templates", {})
 
@@ -576,6 +589,7 @@ class Config:
 
         Raises:
             ConfigurationError: 設定が無効な場合
+
         """
         # デフォルトプロバイダーの存在確認
         default_provider = self.get_default_ai_provider()
@@ -615,7 +629,7 @@ class Config:
         # コスト制限の検証
         cost_limits = self.get_ai_cost_limits()
         for limit_key, limit_value in cost_limits.items():
-            if not isinstance(limit_value, int | float) or limit_value < 0:
+            if limit_value < 0:
                 raise ConfigurationError(
                     f"コスト制限 '{limit_key}' の値が無効です: {limit_value}",
                     "正の数値を指定してください",
@@ -623,18 +637,14 @@ class Config:
 
         # パターン認識設定の検証
         pattern_confidence_threshold = self.get_pattern_confidence_threshold()
-        if not isinstance(pattern_confidence_threshold, int | float) or not (
-            0.0 <= pattern_confidence_threshold <= 1.0
-        ):
+        if not (0.0 <= pattern_confidence_threshold <= 1.0):
             raise ConfigurationError(
                 f"パターン信頼度閾値が無効です: {pattern_confidence_threshold}",
                 "0.0から1.0の間の数値を指定してください",
             )
 
         auto_fix_confidence_threshold = self.get_auto_fix_confidence_threshold()
-        if not isinstance(auto_fix_confidence_threshold, int | float) or not (
-            0.0 <= auto_fix_confidence_threshold <= 1.0
-        ):
+        if not (0.0 <= auto_fix_confidence_threshold <= 1.0):
             raise ConfigurationError(
                 f"自動修正信頼度閾値が無効です: {auto_fix_confidence_threshold}",
                 "0.0から1.0の間の数値を指定してください",
@@ -649,14 +659,14 @@ class Config:
             )
 
         backup_retention_days = self.get_backup_retention_days()
-        if not isinstance(backup_retention_days, int) or backup_retention_days < 0:
+        if backup_retention_days < 0:
             raise ConfigurationError(
                 f"バックアップ保持日数が無効です: {backup_retention_days}",
                 "0以上の整数を指定してください",
             )
 
         min_pattern_occurrences = self.get_min_pattern_occurrences()
-        if not isinstance(min_pattern_occurrences, int) or min_pattern_occurrences < 1:
+        if min_pattern_occurrences < 1:
             raise ConfigurationError(
                 f"パターン認識最小出現回数が無効です: {min_pattern_occurrences}",
                 "1以上の整数を指定してください",
@@ -670,6 +680,7 @@ class Config:
 
         Returns:
             APIキー（存在しない場合はNone）
+
         """
         # プロバイダー別の環境変数名マッピング
         env_key_mappings = {
@@ -692,6 +703,7 @@ class Config:
 
         Returns:
             プロバイダー設定（APIキーが設定されていない場合はNone）
+
         """
         provider_config = self.get_ai_provider_config(provider_name)
         if not provider_config:
@@ -718,6 +730,7 @@ class Config:
 
         Returns:
             パターン認識が有効かどうか
+
         """
         return self.get_ai_config("pattern_recognition_enabled", True)
 
@@ -726,6 +739,7 @@ class Config:
 
         Returns:
             パターン信頼度閾値
+
         """
         return self.get_ai_config("pattern_confidence_threshold", 0.7)
 
@@ -734,6 +748,7 @@ class Config:
 
         Returns:
             パターンデータベースの絶対パス
+
         """
         path_str = self.get_ai_config("pattern_database_path", "data/patterns")
         path = Path(path_str)
@@ -746,6 +761,7 @@ class Config:
 
         Returns:
             カスタムパターンが有効かどうか
+
         """
         return self.get_ai_config("custom_patterns_enabled", True)
 
@@ -754,9 +770,11 @@ class Config:
 
         Returns:
             有効なパターンカテゴリのリスト
+
         """
         return self.get_ai_config(
-            "enabled_pattern_categories", ["permission", "network", "config", "dependency", "build", "test"]
+            "enabled_pattern_categories",
+            ["permission", "network", "config", "dependency", "build", "test"],
         )
 
     def is_pattern_category_enabled(self, category: str) -> bool:
@@ -767,6 +785,7 @@ class Config:
 
         Returns:
             カテゴリが有効かどうか
+
         """
         enabled_categories = self.get_enabled_pattern_categories()
         return category in enabled_categories
@@ -777,6 +796,7 @@ class Config:
 
         Returns:
             自動修正が有効かどうか
+
         """
         return self.get_ai_config("auto_fix_enabled", False)
 
@@ -785,6 +805,7 @@ class Config:
 
         Returns:
             自動修正信頼度閾値
+
         """
         return self.get_ai_config("auto_fix_confidence_threshold", 0.8)
 
@@ -793,6 +814,7 @@ class Config:
 
         Returns:
             リスク許容度 (low/medium/high)
+
         """
         return self.get_ai_config("auto_fix_risk_tolerance", "low")
 
@@ -801,6 +823,7 @@ class Config:
 
         Returns:
             バックアップ保持日数
+
         """
         return self.get_ai_config("backup_retention_days", 30)
 
@@ -809,6 +832,7 @@ class Config:
 
         Returns:
             修正前バックアップが有効かどうか
+
         """
         return self.get_ai_config("backup_before_fix", True)
 
@@ -818,6 +842,7 @@ class Config:
 
         Returns:
             学習機能が有効かどうか
+
         """
         return self.get_ai_config("learning_enabled", True)
 
@@ -826,6 +851,7 @@ class Config:
 
         Returns:
             フィードバック収集が有効かどうか
+
         """
         return self.get_ai_config("feedback_collection_enabled", True)
 
@@ -834,6 +860,7 @@ class Config:
 
         Returns:
             パターン発見が有効かどうか
+
         """
         return self.get_ai_config("pattern_discovery_enabled", True)
 
@@ -842,5 +869,6 @@ class Config:
 
         Returns:
             パターン認識最小出現回数
+
         """
         return self.get_ai_config("min_pattern_occurrences", 3)

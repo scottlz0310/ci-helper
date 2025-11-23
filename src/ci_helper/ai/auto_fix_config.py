@@ -126,7 +126,7 @@ class AutoFixConfigManager:
             検証結果の辞書
 
         """
-        validation_result = {
+        validation_result: dict[str, Any] = {
             "valid": True,
             "can_auto_apply": False,
             "requires_approval": False,
@@ -215,7 +215,7 @@ class AutoFixConfigManager:
                 f"エラー: {', '.join(validation_result['errors'])}",
             )
 
-        execution_plan = {
+        execution_plan: dict[str, Any] = {
             "fix_id": f"fix_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
             "created_at": datetime.now().isoformat(),
             "validation_result": validation_result,
@@ -311,7 +311,7 @@ class AutoFixConfigManager:
         retention_days = self.config.get_backup_retention_days()
         cutoff_date = datetime.now() - timedelta(days=retention_days)
 
-        cleanup_result = {
+        cleanup_result: dict[str, Any] = {
             "cleaned_files": 0,
             "freed_space_mb": 0.0,
             "errors": [],
@@ -413,7 +413,7 @@ class AutoFixConfigManager:
             実行ステップのリスト
 
         """
-        steps = []
+        steps: list[dict[str, Any]] = []
 
         # 1. 事前チェック
         steps.append(

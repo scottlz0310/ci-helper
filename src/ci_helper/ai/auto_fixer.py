@@ -1,5 +1,4 @@
-"""
-自動修正エンジン
+"""自動修正エンジン
 
 パターンベースの修正提案を自動適用し、バックアップとロールバック機能を提供します。
 """
@@ -36,6 +35,7 @@ class AutoFixer:
             config: 設定オブジェクト
             interactive: 対話モード
             auto_approve_low_risk: 低リスク修正の自動承認
+
         """
         self.config = config
         self.project_root = Path.cwd()
@@ -51,7 +51,10 @@ class AutoFixer:
         self.fix_history: list[dict[str, Any]] = []
 
     async def apply_fix(
-        self, fix_suggestion: FixSuggestion, auto_approve: bool = False, approval_callback: Callable | None = None
+        self,
+        fix_suggestion: FixSuggestion,
+        auto_approve: bool = False,
+        approval_callback: Callable | None = None,
     ) -> FixResult:
         """修正提案を適用
 
@@ -62,6 +65,7 @@ class AutoFixer:
 
         Returns:
             修正結果
+
         """
         logger.info("修正提案の適用を開始: %s", fix_suggestion.title)
 
@@ -72,15 +76,17 @@ class AutoFixer:
 
                 if approval_result.decision == ApprovalDecision.REJECTED:
                     return FixResult(
-                        success=False, applied_steps=[], error_message=f"修正が拒否されました: {approval_result.reason}"
+                        success=False,
+                        applied_steps=[],
+                        error_message=f"修正が拒否されました: {approval_result.reason}",
                     )
-                elif approval_result.decision == ApprovalDecision.SKIPPED:
+                if approval_result.decision == ApprovalDecision.SKIPPED:
                     return FixResult(
                         success=False,
                         applied_steps=[],
                         error_message=f"修正がスキップされました: {approval_result.reason}",
                     )
-                elif approval_result.decision == ApprovalDecision.QUIT:
+                if approval_result.decision == ApprovalDecision.QUIT:
                     raise FixApplicationError(f"修正プロセスが中断されました: {approval_result.reason}")
 
             # バックアップを作成
@@ -139,9 +145,10 @@ class AutoFixer:
 
         Returns:
             バックアップ情報（バックアップが不要な場合はNone）
+
         """
         # 変更対象ファイルを特定
-        files_to_backup = set()
+        files_to_backup: set[str] = set()
         for change in fix_suggestion.code_changes:
             if change.file_path:
                 files_to_backup.add(change.file_path)
@@ -154,8 +161,8 @@ class AutoFixer:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_id = f"fix_{timestamp}_{hashlib.sha256(fix_suggestion.title.encode()).hexdigest()[:8]}"
 
-        backup_files = []
-        nonexistent_files = []
+        backup_files: list[BackupFile] = []
+        nonexistent_files: list[BackupFile] = []
 
         for file_path in files_to_backup:
             # ファイルパスを正規化（絶対パスと相対パスの両方に対応）
@@ -179,7 +186,7 @@ class AutoFixer:
                         original_path=original_path_for_backup,
                         backup_path="",  # 空のパス（ファイルが存在しなかったことを示す）
                         checksum="",  # 空のチェックサム
-                    )
+                    ),
                 )
                 continue
 
@@ -196,8 +203,10 @@ class AutoFixer:
 
                 backup_files.append(
                     BackupFile(
-                        original_path=original_path_for_backup, backup_path=str(backup_file_path), checksum=checksum
-                    )
+                        original_path=original_path_for_backup,
+                        backup_path=str(backup_file_path),
+                        checksum=checksum,
+                    ),
                 )
 
                 logger.debug("ファイルをバックアップ: %s -> %s", file_path, backup_file_path)
@@ -244,6 +253,7 @@ class AutoFixer:
 
         Returns:
             ロールバック成功フラグ
+
         """
         logger.info("ロールバックを開始: %s", backup_info.backup_id)
 
@@ -303,7 +313,10 @@ class AutoFixer:
             logger.info("ロールバックが完了: %s", backup_info.backup_id)
         else:
             logger.error(
-                "ロールバックが部分的に失敗: %s (%d/%d ファイル成功)", backup_info.backup_id, success_count, total_count
+                "ロールバックが部分的に失敗: %s (%d/%d ファイル成功)",
+                backup_info.backup_id,
+                success_count,
+                total_count,
             )
 
         return success
@@ -316,6 +329,7 @@ class AutoFixer:
 
         Returns:
             検証結果の詳細辞書
+
         """
         logger.info("修正適用後の検証を開始: %s", fix_suggestion.title)
 
@@ -413,6 +427,7 @@ class AutoFixer:
 
         Returns:
             承認が必要かどうか
+
         """
         # 信頼度が低い場合は承認が必要
         if fix_suggestion.confidence < 0.8:
@@ -445,6 +460,7 @@ class AutoFixer:
 
         Returns:
             修正ステップ
+
         """
         return FixStep(
             type="file_modification",
@@ -459,6 +475,7 @@ class AutoFixer:
 
         Args:
             fix_step: 修正ステップ
+
         """
         if fix_step.type == "file_modification":
             self._apply_file_modification(fix_step)
@@ -474,6 +491,7 @@ class AutoFixer:
 
         Args:
             fix_step: 修正ステップ
+
         """
         if not fix_step.file_path:
             raise FixApplicationError("ファイルパスが指定されていません")
@@ -513,6 +531,7 @@ class AutoFixer:
 
         Args:
             fix_step: 修正ステップ
+
         """
         # セキュリティ上の理由で、現在はコマンド実行を無効化
         logger.warning("コマンド実行は現在サポートされていません: %s", fix_step.command)
@@ -523,6 +542,7 @@ class AutoFixer:
 
         Args:
             fix_step: 修正ステップ
+
         """
         # 設定ファイルの変更として処理
         self._apply_file_modification(fix_step)
@@ -535,6 +555,7 @@ class AutoFixer:
 
         Returns:
             SHA256チェックサム
+
         """
         sha256_hash = hashlib.sha256()
         with open(file_path, "rb") as f:
@@ -550,6 +571,7 @@ class AutoFixer:
 
         Returns:
             構文が正しいかどうか
+
         """
         try:
             content = file_path.read_text(encoding="utf-8")
@@ -568,6 +590,7 @@ class AutoFixer:
         Args:
             fix_suggestion: 修正提案
             result: 修正結果
+
         """
         history_entry = {
             "timestamp": datetime.now(),
@@ -588,6 +611,7 @@ class AutoFixer:
 
         Returns:
             修正履歴のリスト
+
         """
         return self.fix_history.copy()
 
@@ -596,6 +620,7 @@ class AutoFixer:
 
         Args:
             keep_days: 保持日数
+
         """
         cutoff_time = datetime.now().timestamp() - (keep_days * 24 * 60 * 60)
 
@@ -622,6 +647,7 @@ class AutoFixer:
 
         Returns:
             検証結果
+
         """
         result = {"success": True, "message": ""}
 
@@ -688,6 +714,7 @@ class AutoFixer:
 
         Returns:
             警告メッセージのリスト
+
         """
         warnings = []
 
@@ -729,6 +756,7 @@ class AutoFixer:
 
         Returns:
             整合性チェック結果のリスト
+
         """
         checks = []
 
@@ -776,6 +804,7 @@ class AutoFixer:
 
         Returns:
             バックアップ情報のリスト
+
         """
         backups = []
 
@@ -806,6 +835,7 @@ class AutoFixer:
 
         Returns:
             ロールバック結果
+
         """
         backup_path = self.backup_dir / backup_id
 
@@ -874,6 +904,7 @@ class AutoFixer:
 
         Returns:
             修正結果
+
         """
         logger.info("パターンベース修正提案の適用を開始: %s", fix_suggestion.title)
 
@@ -881,7 +912,9 @@ class AutoFixer:
             # パターン情報を含む承認チェック
             if not auto_approve:
                 approval_result = await self.approval_system.request_approval(
-                    fix_suggestion, pattern_match, fix_template
+                    fix_suggestion,
+                    pattern_match,
+                    fix_template,
                 )
 
                 if approval_result.decision == ApprovalDecision.REJECTED:
@@ -890,13 +923,13 @@ class AutoFixer:
                         applied_steps=[],
                         error_message=f"パターンベース修正が拒否されました: {approval_result.reason}",
                     )
-                elif approval_result.decision == ApprovalDecision.SKIPPED:
+                if approval_result.decision == ApprovalDecision.SKIPPED:
                     return FixResult(
                         success=False,
                         applied_steps=[],
                         error_message=f"パターンベース修正がスキップされました: {approval_result.reason}",
                     )
-                elif approval_result.decision == ApprovalDecision.QUIT:
+                if approval_result.decision == ApprovalDecision.QUIT:
                     raise FixApplicationError(f"パターンベース修正プロセスが中断されました: {approval_result.reason}")
 
             # 通常の修正適用フローを実行
@@ -911,6 +944,7 @@ class AutoFixer:
 
         Returns:
             承認サマリー
+
         """
         return self.approval_system.get_approval_summary()
 
@@ -919,5 +953,6 @@ class AutoFixer:
 
         Args:
             auto_approve_low_risk: 低リスク修正の自動承認
+
         """
         self.approval_system.set_auto_approve_policy(low_risk=auto_approve_low_risk)

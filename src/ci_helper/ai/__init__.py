@@ -1,5 +1,4 @@
-"""
-AI統合モジュール
+"""AI統合モジュール
 
 ci-helperのAI分析機能を提供するモジュールです。
 複数のAIプロバイダーに対応し、セキュアで効率的なAI統合を実現します。
@@ -10,9 +9,6 @@ from __future__ import annotations
 __version__ = "1.0.0"
 
 # 主要クラスのエクスポート
-# プロバイダーを自動登録
-# プロバイダーを自動登録
-from . import provider_registry  # noqa: F401
 from .cache import ResponseCache
 from .cache_manager import CacheManager
 from .config_manager import AIConfigManager, PatternRecognitionConfigManager
