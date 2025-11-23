@@ -181,7 +181,7 @@ class InteractiveSessionManager:
         # 最新のメッセージを取得
         recent_messages = session.conversation_history[-max_messages:]
 
-        context_lines = []
+        context_lines: list[str] = []
         for msg in recent_messages:
             role = msg["role"]
             content = msg["content"]
@@ -307,7 +307,7 @@ class InteractiveSessionManager:
 
         """
         current_time = datetime.now()
-        expired_sessions = []
+        expired_sessions: list[str] = []
 
         for session_id, session in self.active_sessions.items():
             time_since_activity = current_time - session.last_activity
