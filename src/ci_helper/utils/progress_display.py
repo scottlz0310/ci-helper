@@ -12,7 +12,7 @@ from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+from rich.progress import BarColumn, Progress, ProgressColumn, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.prompt import Confirm
 
 
@@ -133,7 +133,7 @@ class ProgressDisplayManager:
             Progress インスタンス
 
         """
-        columns = [
+        columns: list[ProgressColumn] = [
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
         ]
@@ -196,6 +196,8 @@ class ProgressDisplayManager:
             ]
 
             start_time = time.time()
+
+            result: Any = None
 
             try:
                 # 各段階を表示しながら実行

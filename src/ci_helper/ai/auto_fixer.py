@@ -13,10 +13,31 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Python <3.11 fallback
+    tomllib = None  # type: ignore[assignment]
+
+try:
+    import yaml
+except ImportError:  # pragma: no cover - optional dependency
+    yaml = None  # type: ignore[assignment]
+
 from ..utils.config import Config
 from .approval_system import ApprovalDecision, UserApprovalSystem
 from .exceptions import FixApplicationError
-from .models import BackupFile, BackupInfo, FixResult, FixStep, FixSuggestion, FixTemplate, PatternMatch
+from .models import (
+    BackupFile,
+    BackupInfo,
+    CodeChange,
+    FixResult,
+    FixStep,
+    FixSuggestion,
+    FixTemplate,
+    PatternMatch,
+)
+
+ApprovalCallback = Callable[[FixSuggestion, FixResult], None]
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +75,7 @@ class AutoFixer:
         self,
         fix_suggestion: FixSuggestion,
         auto_approve: bool = False,
-        approval_callback: Callable | None = None,
+        approval_callback: ApprovalCallback | None = None,
     ) -> FixResult:
         """修正提案を適用
 
@@ -333,11 +354,15 @@ class AutoFixer:
         """
         logger.info("修正適用後の検証を開始: %s", fix_suggestion.title)
 
+        checks_passed: list[str] = []
+        checks_failed: list[str] = []
+        warnings_list: list[str] = []
+
         verification_result: dict[str, Any] = {
             "success": True,
-            "checks_passed": [],
-            "checks_failed": [],
-            "warnings": [],
+            "checks_passed": checks_passed,
+            "checks_failed": checks_failed,
+            "warnings": warnings_list,
             "total_checks": 0,
             "passed_checks": 0,
         }
@@ -452,7 +477,7 @@ class AutoFixer:
 
         return False
 
-    def _convert_code_change_to_fix_step(self, code_change) -> FixStep:
+    def _convert_code_change_to_fix_step(self, code_change: CodeChange) -> FixStep:
         """CodeChangeをFixStepに変換
 
         Args:
@@ -673,27 +698,27 @@ class AutoFixer:
 
             elif file_path.suffix in [".yml", ".yaml"]:
                 # YAML ファイルの構文チェック
-                try:
-                    import yaml
-
-                    yaml.safe_load(content)
-                    result["message"] = f"YAML 構文チェック OK: {file_path.name}"
-                except yaml.YAMLError as e:
-                    result["success"] = False
-                    result["message"] = f"YAML 構文エラー: {file_path.name} - {e}"
-                except ImportError:
+                if yaml is None:
                     result["message"] = f"YAML チェックスキップ (PyYAML未インストール): {file_path.name}"
+                else:
+                    try:
+                        yaml.safe_load(content)
+                        result["message"] = f"YAML 構文チェック OK: {file_path.name}"
+                    except yaml.YAMLError as e:  # type: ignore[union-attr]
+                        result["success"] = False
+                        result["message"] = f"YAML 構文エラー: {file_path.name} - {e}"
 
             elif file_path.suffix == ".toml":
                 # TOML ファイルの構文チェック
-                try:
-                    import tomllib
-
-                    tomllib.loads(content)
-                    result["message"] = f"TOML 構文チェック OK: {file_path.name}"
-                except tomllib.TOMLDecodeError as e:
-                    result["success"] = False
-                    result["message"] = f"TOML 構文エラー: {file_path.name} - {e}"
+                if tomllib is None:
+                    result["message"] = f"TOML チェックスキップ (tomllib未インストール): {file_path.name}"
+                else:
+                    try:
+                        tomllib.loads(content)
+                        result["message"] = f"TOML 構文チェック OK: {file_path.name}"
+                    except tomllib.TOMLDecodeError as e:
+                        result["success"] = False
+                        result["message"] = f"TOML 構文エラー: {file_path.name} - {e}"
 
             else:
                 # その他のファイルは基本的な文字エンコーディングチェックのみ
@@ -716,7 +741,7 @@ class AutoFixer:
             警告メッセージのリスト
 
         """
-        warnings = []
+        warnings: list[str] = []
 
         try:
             # 大きすぎるファイルの警告
@@ -758,7 +783,7 @@ class AutoFixer:
             整合性チェック結果のリスト
 
         """
-        checks = []
+        checks: list[dict[str, Any]] = []
 
         try:
             # 重要ファイルの存在チェック
@@ -780,19 +805,20 @@ class AutoFixer:
             # Python プロジェクトの場合の追加チェック
             pyproject_path = self.project_root / "pyproject.toml"
             if pyproject_path.exists():
-                try:
-                    import tomllib
+                if tomllib is None:
+                    checks.append({"success": False, "message": "pyproject.toml を検証できません (tomllib未インストール)"})
+                else:
+                    try:
+                        content = pyproject_path.read_text(encoding="utf-8")
+                        config = tomllib.loads(content)
 
-                    content = pyproject_path.read_text(encoding="utf-8")
-                    config = tomllib.loads(content)
+                        if "project" in config or "tool" in config:
+                            checks.append({"success": True, "message": "Python プロジェクト設定 OK"})
+                        else:
+                            checks.append({"success": False, "message": "pyproject.toml の設定が不完全"})
 
-                    if "project" in config or "tool" in config:
-                        checks.append({"success": True, "message": "Python プロジェクト設定 OK"})
-                    else:
-                        checks.append({"success": False, "message": "pyproject.toml の設定が不完全"})
-
-                except Exception as e:
-                    checks.append({"success": False, "message": f"pyproject.toml の検証に失敗: {e}"})
+                    except Exception as e:
+                        checks.append({"success": False, "message": f"pyproject.toml の検証に失敗: {e}"})
 
         except Exception as e:
             checks.append({"success": False, "message": f"プロジェクト整合性チェック失敗: {e}"})
@@ -806,7 +832,7 @@ class AutoFixer:
             バックアップ情報のリスト
 
         """
-        backups = []
+        backups: list[dict[str, Any]] = []
 
         try:
             for backup_dir in self.backup_dir.iterdir():
@@ -840,14 +866,23 @@ class AutoFixer:
         backup_path = self.backup_dir / backup_id
 
         if not backup_path.exists():
+            empty_restored: list[str] = []
+            empty_failed: list[dict[str, str]] = []
             return {
                 "success": False,
                 "error": f"バックアップが見つかりません: {backup_id}",
-                "restored_files": [],
-                "failed_files": [],
+                "restored_files": empty_restored,
+                "failed_files": empty_failed,
             }
 
-        result = {"success": True, "restored_files": [], "failed_files": [], "backup_id": backup_id}
+        restored_files: list[str] = []
+        failed_files: list[dict[str, str]] = []
+        result: dict[str, Any] = {
+            "success": True,
+            "restored_files": restored_files,
+            "failed_files": failed_files,
+            "backup_id": backup_id,
+        }
 
         try:
             # バックアップディレクトリ内のすべてのファイルを復元

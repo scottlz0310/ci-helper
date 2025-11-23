@@ -10,9 +10,27 @@ from __future__ import annotations
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING, TypedDict
 
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
+
+if TYPE_CHECKING:
+    from ..core.security import SecurityValidator
+
+
+class BaseValidationResult(TypedDict):
+    """必須フィールドを持つ検証結果"""
+
+    valid: bool
+    error: str | None
+    recommendations: list[str]
+
+
+class PathValidationResult(BaseValidationResult, total=False):
+    """セキュリティレベル情報を含む検証結果"""
+
+    security_level: str
 
 
 class FileSaveManager:
@@ -31,7 +49,7 @@ class FileSaveManager:
         """
         self.console = console or Console()
         self.enable_security = enable_security
-        self.security_validator = None
+        self.security_validator: SecurityValidator | None = None
 
         if enable_security:
             try:
@@ -254,7 +272,7 @@ class FileSaveManager:
         result = self.validate_output_path_security(Path(output_file))
         return result["valid"], result.get("error")
 
-    def validate_output_path_security(self, output_path: Path) -> dict[str, Any]:
+    def validate_output_path_security(self, output_path: Path) -> PathValidationResult:
         """出力ファイルパスのセキュリティ検証
 
         Args:
@@ -280,10 +298,11 @@ class FileSaveManager:
             if not permission_validation["valid"]:
                 return permission_validation
 
+            empty_recommendations: list[str] = []
             return {
                 "valid": True,
                 "error": None,
-                "recommendations": [],
+                "recommendations": empty_recommendations,
                 "security_level": "high" if self.enable_security else "basic",
             }
 
@@ -298,7 +317,7 @@ class FileSaveManager:
                 "security_level": "error",
             }
 
-    def _validate_basic_path_security(self, output_path: Path) -> dict[str, Any]:
+    def _validate_basic_path_security(self, output_path: Path) -> PathValidationResult:
         """基本的なパスセキュリティ検証"""
         # 上位ディレクトリへの書き込み防止チェック
         if self._is_dangerous_path(output_path):
@@ -323,11 +342,16 @@ class FileSaveManager:
                 ],
             }
 
-        return {"valid": True, "error": None, "recommendations": []}
+        empty_recommendations: list[str] = []
+        return {"valid": True, "error": None, "recommendations": empty_recommendations}
 
-    def _validate_enhanced_path_security(self, output_path: Path) -> dict[str, Any]:
+    def _validate_enhanced_path_security(self, output_path: Path) -> PathValidationResult:
         """SecurityValidator統合による拡張セキュリティ検証"""
         try:
+            if not self.security_validator:
+                fallback_recommendations: list[str] = []
+                return {"valid": True, "error": None, "recommendations": fallback_recommendations}
+
             # パス文字列をセキュリティ検証
             path_str = str(output_path)
 
@@ -363,7 +387,8 @@ class FileSaveManager:
                         ],
                     }
 
-            return {"valid": True, "error": None, "recommendations": []}
+            success_recommendations: list[str] = []
+            return {"valid": True, "error": None, "recommendations": success_recommendations}
 
         except Exception as e:
             return {
@@ -372,7 +397,7 @@ class FileSaveManager:
                 "recommendations": ["基本的なパス検証のみ実行されます"],
             }
 
-    def _validate_write_permissions(self, output_path: Path) -> dict[str, Any]:
+    def _validate_write_permissions(self, output_path: Path) -> PathValidationResult:
         """書き込み権限の検証"""
         try:
             # 親ディレクトリの存在チェック（作成可能かどうか）
@@ -423,7 +448,8 @@ class FileSaveManager:
                         ],
                     }
 
-            return {"valid": True, "error": None, "recommendations": []}
+            empty_recommendations: list[str] = []
+            return {"valid": True, "error": None, "recommendations": empty_recommendations}
 
         except Exception as e:
             return {
@@ -602,7 +628,7 @@ class FileSaveManager:
                 return 0
 
             # ファイル一覧を取得（更新日時順）
-            files = []
+            files: list[tuple[Path, float]] = []
             for file_path in dir_path.iterdir():
                 if file_path.is_file():
                     files.append((file_path, file_path.stat().st_mtime))

@@ -12,12 +12,30 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict, cast
 
 import aiofiles  # type: ignore[import-untyped]
 
 from .exceptions import CacheError
 from .models import AnalysisResult, AnalysisStatus
+
+
+class CacheEntry(TypedDict, total=False):
+    created: float
+    last_accessed: float
+    access_count: int
+    size: int
+    prompt_hash: str
+    context_hash: str
+    provider: str
+    model: str
+
+
+class CacheMetadata(TypedDict):
+    entries: dict[str, CacheEntry]
+    total_size: int
+    created: float
+    last_cleanup: float
 
 
 class ResponseCache:
@@ -48,32 +66,28 @@ class ResponseCache:
 
         # メタデータファイル
         self.metadata_file = self.cache_dir / "cache_metadata.json"
-        self.metadata = self._load_metadata()
+        self.metadata: CacheMetadata = self._load_metadata()
 
         # 最後のクリーンアップ時刻
         self.last_cleanup = time.time()
 
-    def _load_metadata(self) -> dict[str, Any]:
+    def _load_metadata(self) -> CacheMetadata:
         """キャッシュメタデータを読み込み"""
         if not self.metadata_file.exists():
-            return {
-                "entries": {},
-                "total_size": 0,
-                "created": time.time(),
-                "last_cleanup": time.time(),
-            }
+            return self._create_default_metadata()
 
         try:
             with open(self.metadata_file, encoding="utf-8") as f:
-                return json.load(f)
+                raw_metadata = json.load(f)
         except Exception:
             # メタデータファイルが破損している場合は新規作成
-            return {
-                "entries": {},
-                "total_size": 0,
-                "created": time.time(),
-                "last_cleanup": time.time(),
-            }
+            raw_metadata = None
+
+        if isinstance(raw_metadata, dict):
+            parsed_metadata = cast(dict[str, Any], raw_metadata)
+            return self._normalize_metadata(parsed_metadata)
+
+        return self._create_default_metadata()
 
     async def _save_metadata(self) -> None:
         """キャッシュメタデータを保存"""
@@ -82,6 +96,72 @@ class ResponseCache:
                 await f.write(json.dumps(self.metadata, indent=2, ensure_ascii=False))
         except Exception as e:
             raise CacheError(f"メタデータの保存に失敗しました: {e}")
+
+    def _create_default_metadata(self) -> CacheMetadata:
+        """空のメタデータを生成"""
+        current_time = time.time()
+        return {
+            "entries": {},
+            "total_size": 0,
+            "created": current_time,
+            "last_cleanup": current_time,
+        }
+
+    def _normalize_metadata(self, raw_metadata: dict[str, Any]) -> CacheMetadata:
+        """JSONから読み込んだメタデータを正規化"""
+        entries_field = raw_metadata.get("entries", {})
+        entries: dict[str, CacheEntry] = {}
+
+        if isinstance(entries_field, dict):
+            entries_mapping = cast(dict[Any, Any], entries_field)
+            for key_obj, entry_obj in entries_mapping.items():
+                if not isinstance(key_obj, str) or not isinstance(entry_obj, dict):
+                    continue
+                key: str = key_obj
+                entry_dict = cast(dict[str, Any], entry_obj)
+                entries[key] = self._normalize_entry(entry_dict)
+
+        created = float(raw_metadata.get("created", time.time()))
+        last_cleanup = float(raw_metadata.get("last_cleanup", created))
+        total_size = int(raw_metadata.get("total_size", 0))
+
+        return {
+            "entries": entries,
+            "total_size": total_size,
+            "created": created,
+            "last_cleanup": last_cleanup,
+        }
+
+    def _normalize_entry(self, entry_data: dict[str, Any]) -> CacheEntry:
+        """エントリーデータを CacheEntry に変換"""
+        current_time = time.time()
+        created = float(entry_data.get("created", current_time))
+        last_accessed = float(entry_data.get("last_accessed", created))
+
+        normalized: CacheEntry = {
+            "created": created,
+            "last_accessed": last_accessed,
+            "access_count": int(entry_data.get("access_count", 0)),
+            "size": int(entry_data.get("size", 0)),
+        }
+
+        prompt_hash = entry_data.get("prompt_hash")
+        if isinstance(prompt_hash, str):
+            normalized["prompt_hash"] = prompt_hash
+
+        context_hash = entry_data.get("context_hash")
+        if isinstance(context_hash, str):
+            normalized["context_hash"] = context_hash
+
+        provider = entry_data.get("provider")
+        if isinstance(provider, str):
+            normalized["provider"] = provider
+
+        model = entry_data.get("model")
+        if isinstance(model, str):
+            normalized["model"] = model
+
+        return normalized
 
     def get_cache_key(self, prompt: str, context: str, model: str, provider: str = "") -> str:
         """キャッシュキーを生成
@@ -242,11 +322,11 @@ class ResponseCache:
         total_size_mb = self.metadata["total_size"] / (1024 * 1024)
 
         # アクセス統計
-        access_counts = [entry.get("access_count", 0) for entry in self.metadata["entries"].values()]
+        access_counts: list[int] = [entry.get("access_count", 0) for entry in self.metadata["entries"].values()]
         avg_access = sum(access_counts) / len(access_counts) if access_counts else 0
 
         # プロバイダー別統計
-        provider_stats = {}
+        provider_stats: dict[str, int] = {}
         for entry in self.metadata["entries"].values():
             provider = entry.get("provider", "unknown")
             provider_stats[provider] = provider_stats.get(provider, 0) + 1
@@ -275,7 +355,7 @@ class ResponseCache:
             削除されたエントリ数
         """
         current_time = time.time()
-        expired_keys = []
+        expired_keys: list[str] = []
 
         # 期限切れエントリを特定
         for cache_key, entry in self.metadata["entries"].items():
@@ -318,7 +398,7 @@ class ResponseCache:
         if not self.metadata["entries"]:
             return None
 
-        oldest_key = None
+        oldest_key: str | None = None
         oldest_time = float("inf")
 
         for cache_key, entry in self.metadata["entries"].items():
@@ -349,7 +429,7 @@ class ResponseCache:
         except Exception:
             return False
 
-    def _is_expired(self, entry: dict[str, Any], current_time: float | None = None) -> bool:
+    def _is_expired(self, entry: CacheEntry, current_time: float | None = None) -> bool:
         """エントリが期限切れかどうかをチェック"""
         if current_time is None:
             current_time = time.time()
@@ -418,7 +498,7 @@ class ResponseCache:
         from .models import CodeChange, FixSuggestion, Priority, RootCause, Severity, TokenUsage
 
         # RootCauseを復元
-        root_causes = []
+        root_causes: list[RootCause] = []
         for cause_data in data.get("root_causes", []):
             root_causes.append(
                 RootCause(
@@ -432,9 +512,9 @@ class ResponseCache:
             )
 
         # FixSuggestionを復元
-        fix_suggestions = []
+        fix_suggestions: list[FixSuggestion] = []
         for fix_data in data.get("fix_suggestions", []):
-            code_changes = []
+            code_changes: list[CodeChange] = []
             for change_data in fix_data.get("code_changes", []):
                 code_changes.append(
                     CodeChange(
@@ -462,7 +542,7 @@ class ResponseCache:
         # TokenUsageを復元
         tokens_used = None
         if data.get("tokens_used"):
-            token_data = data["tokens_used"]
+            token_data = cast(dict[str, Any], data["tokens_used"])
             tokens_used = TokenUsage(
                 input_tokens=token_data["input_tokens"],
                 output_tokens=token_data["output_tokens"],

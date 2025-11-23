@@ -8,10 +8,25 @@ from __future__ import annotations
 import hashlib
 import json
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict, cast
+
+
+class CacheEntry(TypedDict, total=False):
+    created: str
+    last_access: str
+    size: int
+    hit_count: int
+    access_count: int
+    metadata: dict[str, Any]
+
+
+class CacheIndex(TypedDict):
+    version: str
+    created: str
+    entries: dict[str, CacheEntry]
 
 
 class MemoryLimiter:
@@ -348,7 +363,7 @@ class FormatResultCache:
 
         """
         index_data = self._load_cache_index()
-        entries = index_data.get("entries", {})
+        entries = index_data["entries"]
 
         total_size = sum(entry.get("size", 0) for entry in entries.values())
         total_entries = len(entries)
@@ -365,7 +380,7 @@ class FormatResultCache:
             "cache_dir": str(self.cache_dir),
         }
 
-    def _load_cache_index(self) -> dict[str, Any]:
+    def _load_cache_index(self) -> CacheIndex:
         """キャッシュインデックスを読み込み
 
         Returns:
@@ -373,28 +388,34 @@ class FormatResultCache:
 
         """
         if not self.index_file.exists():
-            default_index = {
-                "version": "1.0",
-                "created": datetime.now().isoformat(),
-                "entries": {},
-            }
+            default_index = self._create_default_index()
             self._save_cache_index(default_index)
             return default_index
 
         try:
             with open(self.index_file, encoding="utf-8") as f:
-                return json.load(f)
+                raw_data = json.load(f)
         except Exception:
-            # 破損したインデックスファイルは再作成
-            default_index = {
-                "version": "1.0",
-                "created": datetime.now().isoformat(),
-                "entries": {},
-            }
-            self._save_cache_index(default_index)
-            return default_index
+            raw_data = None
 
-    def _save_cache_index(self, index_data: dict[str, Any]) -> None:
+        if isinstance(raw_data, dict):
+            raw_mapping = cast(dict[str, Any], raw_data)
+            entries_field = raw_mapping.get("entries")
+            if isinstance(entries_field, Mapping):
+                typed_entries_field = cast(Mapping[str, Any], entries_field)
+                entries = self._normalize_entries(typed_entries_field)
+                return {
+                    "version": str(raw_mapping.get("version", "1.0")),
+                    "created": str(raw_mapping.get("created", datetime.now().isoformat())),
+                    "entries": entries,
+                }
+
+        # 破損したインデックスファイルは再作成
+        default_index = self._create_default_index()
+        self._save_cache_index(default_index)
+        return default_index
+
+    def _save_cache_index(self, index_data: CacheIndex) -> None:
         """キャッシュインデックスを保存
 
         Args:
@@ -418,13 +439,14 @@ class FormatResultCache:
         """
         index_data = self._load_cache_index()
 
-        entry = {
+        entry_metadata: dict[str, Any] = metadata or {}
+        entry: CacheEntry = {
             "created": datetime.now().isoformat(),
             "last_access": datetime.now().isoformat(),
             "size": size,
             "hit_count": 0,
             "access_count": 0,
-            "metadata": metadata or {},
+            "metadata": entry_metadata,
         }
 
         index_data["entries"][cache_key] = entry
@@ -485,7 +507,11 @@ class FormatResultCache:
             return True
 
         entry = index_data["entries"][cache_key]
-        created_time = datetime.fromisoformat(entry["created"])
+        created_str = entry.get("created")
+        if not isinstance(created_str, str):
+            return True
+
+        created_time = datetime.fromisoformat(created_str)
 
         return datetime.now() - created_time > timedelta(hours=max_age_hours)
 
@@ -513,6 +539,44 @@ class FormatResultCache:
 
             self._remove_cache_entry(cache_key)
             current_size -= entry.get("size", 0)
+
+    def _create_default_index(self) -> CacheIndex:
+        """空のキャッシュインデックスを生成"""
+        entries: dict[str, CacheEntry] = {}
+        return {
+            "version": "1.0",
+            "created": datetime.now().isoformat(),
+            "entries": entries,
+        }
+
+    def _normalize_entries(self, entries_field: Mapping[str, Any]) -> dict[str, CacheEntry]:
+        """JSONから読み込んだエントリを型安全に正規化"""
+        normalized: dict[str, CacheEntry] = {}
+
+        for cache_key, entry_data in entries_field.items():
+            if isinstance(entry_data, Mapping):
+                normalized[cache_key] = self._coerce_cache_entry(cast(Mapping[str, Any], entry_data))
+
+        return normalized
+
+    def _coerce_cache_entry(self, entry_data: Mapping[str, Any]) -> CacheEntry:
+        """任意のマッピングを CacheEntry に変換"""
+        metadata_field = entry_data.get("metadata")
+        if isinstance(metadata_field, dict):
+            metadata: dict[str, Any] = cast(dict[str, Any], metadata_field)
+        else:
+            metadata = {}
+
+        normalized_entry: CacheEntry = {
+            "created": str(entry_data.get("created", datetime.now().isoformat())),
+            "last_access": str(entry_data.get("last_access", datetime.now().isoformat())),
+            "size": int(entry_data.get("size", 0)),
+            "hit_count": int(entry_data.get("hit_count", 0)),
+            "access_count": int(entry_data.get("access_count", 0)),
+            "metadata": metadata,
+        }
+
+        return normalized_entry
 
 
 class DuplicateProcessingPreventer:

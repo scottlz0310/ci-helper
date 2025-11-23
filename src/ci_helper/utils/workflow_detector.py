@@ -6,10 +6,15 @@ GitHub Actionsワークフローファイルを検出・解析する機能を提
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any, cast
 
 import yaml
 from rich.console import Console
+
+
+WorkflowData = dict[str, Any]
 
 
 class WorkflowInfo:
@@ -96,16 +101,17 @@ class WorkflowDetector:
             if not isinstance(workflow_data, dict):
                 return None
 
+            workflow_dict: WorkflowData = cast(WorkflowData, workflow_data)
+
             # ワークフロー名を取得
-            name = workflow_data.get("name", file_path.stem)
+            name_value = workflow_dict.get("name")
+            name = name_value if isinstance(name_value, str) else file_path.stem
 
             # 説明を生成
-            description = self._generate_description(workflow_data)
+            description = self._generate_description(workflow_dict)
 
             # ジョブ一覧を取得
-            jobs: list[str] = []
-            if "jobs" in workflow_data and isinstance(workflow_data["jobs"], dict):
-                jobs = list(workflow_data["jobs"].keys())
+            jobs = self._extract_job_names(workflow_dict)
 
             return WorkflowInfo(file_path=file_path, name=name, description=description, jobs=jobs)
 
@@ -147,7 +153,7 @@ class WorkflowDetector:
 
         return WorkflowInfo(file_path=file_path, name=name, description=description, jobs=jobs)
 
-    def _generate_description(self, workflow_data: dict[str, object]) -> str:
+    def _generate_description(self, workflow_data: Mapping[str, Any]) -> str:
         """ワークフローの説明を生成
 
         Args:
@@ -160,7 +166,7 @@ class WorkflowDetector:
         description_parts: list[str] = []
 
         # トリガー情報
-        on_data = workflow_data.get("on", {})
+        on_data = workflow_data.get("on")
         if isinstance(on_data, str):
             description_parts.append(f"{on_data}時実行")
         elif isinstance(on_data, dict):
@@ -177,15 +183,29 @@ class WorkflowDetector:
             if triggers:
                 description_parts.append(f"{'/'.join(triggers)}時実行")
         elif isinstance(on_data, list):
-            description_parts.append(f"{'/'.join(on_data)}時実行")
+            on_list = cast(list[Any], on_data)
+            trigger_values = [str(trigger) for trigger in on_list]
+            if trigger_values:
+                description_parts.append(f"{'/'.join(trigger_values)}時実行")
 
         # ジョブ数
-        jobs = workflow_data.get("jobs", {})
-        if isinstance(jobs, dict) and jobs:
-            job_count = len(jobs)
+        jobs_field = workflow_data.get("jobs")
+        if isinstance(jobs_field, dict) and jobs_field:
+            typed_jobs = cast(dict[str, Any], jobs_field)
+            job_count = len(typed_jobs)
             description_parts.append(f"{job_count}個のジョブ")
 
         return " | ".join(description_parts) if description_parts else "GitHub Actions ワークフロー"
+
+    def _extract_job_names(self, workflow_data: WorkflowData) -> list[str]:
+        """ジョブ名一覧を抽出"""
+        jobs_field = workflow_data.get("jobs")
+
+        if not isinstance(jobs_field, dict):
+            return []
+
+        typed_jobs = cast(dict[str, Any], jobs_field)
+        return [str(job_name) for job_name in typed_jobs.keys()]
 
     def get_workflow_choices(self, workflows: list[WorkflowInfo]) -> dict[str, WorkflowInfo]:
         """ワークフロー選択肢を生成

@@ -49,7 +49,7 @@ class PerformanceMonitor:
             process = psutil.Process()
             memory_info = process.memory_info()
             self.start_memory = memory_info.rss / (1024 * 1024)  # MB
-            self.peak_memory = self.start_memory
+            self.peak_memory = self.start_memory or 0.0
         except Exception:
             self.start_memory = 0.0
             self.peak_memory = 0.0
