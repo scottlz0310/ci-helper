@@ -1,7 +1,6 @@
-"""
-パターンマッチングエンジン
+"""パターンマッチングエンジン.
 
-正規表現とキーワードベースのパターンマッチング機能を提供します。
+正規表現とキーワードベースのパターンマッチング機能を提供します.
 """
 
 from __future__ import annotations
@@ -14,24 +13,40 @@ from .models import Match, Pattern
 
 logger = logging.getLogger(__name__)
 
+# Constants for match strength calculation
+DEFAULT_CONTEXT_WINDOW = 100
+BASE_MATCH_STRENGTH = 0.7
+MATCH_LENGTH_BONUS_THRESHOLD = 20
+MATCH_LENGTH_PENALTY_THRESHOLD = 5
+MATCH_LENGTH_BONUS = 0.1
+MATCH_LENGTH_PENALTY = 0.1
+GROUP_MATCH_BONUS = 0.1
+CONTEXT_SCORE_WEIGHT = 0.5
+KEYWORD_SCORE_WEIGHT = 0.3
+KEYWORD_BASE_SCORE = 0.5
+KEYWORD_BOUNDARY_BONUS = 0.2
+KEYWORD_LENGTH_BONUS = 0.1
+KEYWORD_LENGTH_THRESHOLD = 5
+
 
 class PatternMatcher:
-    """パターンマッチング処理クラス
+    """パターンマッチング処理クラス.
 
-    正規表現とキーワードベースのパターンマッチングを実行します。
+    正規表現とキーワードベースのパターンマッチングを実行します.
     """
 
-    def __init__(self, context_window: int = 100):
-        """パターンマッチャーを初期化
+    def __init__(self, context_window: int = DEFAULT_CONTEXT_WINDOW) -> None:
+        """パターンマッチャーを初期化.
 
         Args:
             context_window: コンテキスト抽出の文字数
+
         """
         self.context_window = context_window
-        self._compiled_patterns: dict[str, list[re.Pattern]] = {}
+        self._compiled_patterns: dict[str, list[re.Pattern[str]]] = {}
 
     def match_regex_patterns(self, text: str, patterns: list[Pattern]) -> list[Match]:
-        """正規表現パターンでマッチング
+        """正規表現パターンでマッチング.
 
         Args:
             text: 検索対象のテキスト
@@ -39,14 +54,15 @@ class PatternMatcher:
 
         Returns:
             マッチ結果のリスト
+
         """
-        matches = []
+        matches: list[Match] = []
 
         for pattern in patterns:
             if not pattern.regex_patterns:
                 continue
 
-            # パターンをコンパイル（キャッシュ）
+            # パターンのコンパイルとキャッシュ
             compiled_patterns = self._get_compiled_patterns(pattern)
 
             for regex_pattern in compiled_patterns:
@@ -72,7 +88,7 @@ class PatternMatcher:
                                 confidence=match_strength,
                                 context_before=context_before,
                                 context_after=context_after,
-                            )
+                            ),
                         )
 
                 except re.error as e:
@@ -82,7 +98,7 @@ class PatternMatcher:
         return matches
 
     def match_keyword_patterns(self, text: str, patterns: list[Pattern]) -> list[Match]:
-        """キーワードパターンでマッチング
+        """キーワードパターンでマッチング.
 
         Args:
             text: 検索対象のテキスト
@@ -90,8 +106,9 @@ class PatternMatcher:
 
         Returns:
             マッチ結果のリスト
+
         """
-        matches = []
+        matches: list[Match] = []
         text_lower = text.lower()
 
         for pattern in patterns:
@@ -118,13 +135,13 @@ class PatternMatcher:
                         confidence=best_match["score"],
                         context_before=context_before,
                         context_after=context_after,
-                    )
+                    ),
                 )
 
         return matches
 
     def extract_error_context(self, text: str, match_position: int) -> tuple[str, str]:
-        """エラーコンテキストを抽出
+        """エラーコンテキストを抽出.
 
         Args:
             text: 元のテキスト
@@ -132,6 +149,7 @@ class PatternMatcher:
 
         Returns:
             前後のコンテキストのタプル
+
         """
         # 前のコンテキスト
         start_pos = max(0, match_position - self.context_window)
@@ -143,34 +161,33 @@ class PatternMatcher:
 
         return context_before, context_after
 
-    def calculate_match_strength(self, match: Match, pattern: Pattern) -> float:
-        """マッチ強度を計算
+    def calculate_match_strength(self, match: Match) -> float:
+        """マッチ強度を計算.
 
         Args:
             match: マッチ結果
-            pattern: パターン
 
         Returns:
-            マッチ強度（0.0-1.0）
-        """
-        if match.match_type == "regex":
-            return match.confidence  # 既に計算済み
-        elif match.match_type == "keyword":
-            return match.confidence  # 既に計算済み
-        else:
-            return 0.0
+            マッチ強度(0.0-1.0)
 
-    def _get_compiled_patterns(self, pattern: Pattern) -> list[re.Pattern]:
-        """正規表現パターンをコンパイル（キャッシュ付き）
+        """
+        if match.match_type in {"regex", "keyword"}:
+            return match.confidence  # 既に計算済み
+
+        return 0.0
+
+    def _get_compiled_patterns(self, pattern: Pattern) -> list[re.Pattern[str]]:
+        """正規表現パターンをコンパイル(キャッシュ付き).
 
         Args:
             pattern: パターン
 
         Returns:
             コンパイル済み正規表現のリスト
+
         """
         if pattern.id not in self._compiled_patterns:
-            compiled = []
+            compiled: list[re.Pattern[str]] = []
             for regex_str in pattern.regex_patterns:
                 try:
                     # 大文字小文字を区別しない、複数行対応
@@ -178,15 +195,18 @@ class PatternMatcher:
                     compiled.append(compiled_pattern)
                 except re.error as e:
                     logger.warning(
-                        "正規表現のコンパイルに失敗 (パターン: %s, 正規表現: %s): %s", pattern.id, regex_str, e
+                        "正規表現のコンパイルに失敗 (パターン: %s, 正規表現: %s): %s",
+                        pattern.id,
+                        regex_str,
+                        e,
                     )
                     continue
             self._compiled_patterns[pattern.id] = compiled
 
         return self._compiled_patterns[pattern.id]
 
-    def _calculate_regex_match_strength(self, match: re.Match, pattern: Pattern, full_text: str) -> float:
-        """正規表現マッチの強度を計算
+    def _calculate_regex_match_strength(self, match: re.Match[str], pattern: Pattern, full_text: str) -> float:
+        """正規表現マッチの強度を計算.
 
         Args:
             match: 正規表現マッチオブジェクト
@@ -194,35 +214,36 @@ class PatternMatcher:
             full_text: 全体のテキスト
 
         Returns:
-            マッチ強度（0.0-1.0）
+            マッチ強度(0.0-1.0)
+
         """
-        base_strength = 0.7  # 基本強度
+        base_strength = BASE_MATCH_STRENGTH  # 基本強度
 
         # マッチした文字列の長さによる調整
         match_length = len(match.group())
-        if match_length > 20:
-            base_strength += 0.1
-        elif match_length < 5:
-            base_strength -= 0.1
+        if match_length > MATCH_LENGTH_BONUS_THRESHOLD:
+            base_strength += MATCH_LENGTH_BONUS
+        elif match_length < MATCH_LENGTH_PENALTY_THRESHOLD:
+            base_strength -= MATCH_LENGTH_PENALTY
 
         # グループマッチがある場合は強度を上げる
         if match.groups():
-            base_strength += 0.1
+            base_strength += GROUP_MATCH_BONUS
 
         # コンテキスト要件のチェック
         if pattern.context_requirements:
             context_score = self._check_context_requirements(match, pattern, full_text)
-            base_strength = base_strength * (0.5 + 0.5 * context_score)
+            base_strength = base_strength * (CONTEXT_SCORE_WEIGHT + (1 - CONTEXT_SCORE_WEIGHT) * context_score)
 
         # キーワードとの組み合わせチェック
         if pattern.keywords:
             keyword_score = self._check_keyword_presence(match, pattern, full_text)
-            base_strength = base_strength * (0.7 + 0.3 * keyword_score)
+            base_strength = base_strength * (1 - KEYWORD_SCORE_WEIGHT) + KEYWORD_SCORE_WEIGHT * keyword_score
 
         return min(1.0, max(0.0, base_strength))
 
     def _find_keyword_matches(self, text_lower: str, keywords: list[str]) -> list[dict[str, Any]]:
-        """キーワードマッチを検索
+        """キーワードマッチを検索.
 
         Args:
             text_lower: 小文字に変換されたテキスト
@@ -230,8 +251,9 @@ class PatternMatcher:
 
         Returns:
             マッチ情報のリスト
+
         """
-        matches = []
+        matches: list[dict[str, Any]] = []
 
         for keyword in keywords:
             keyword_lower = keyword.lower()
@@ -242,11 +264,11 @@ class PatternMatcher:
                 is_word_boundary = self._check_word_boundary(text_lower, position, len(keyword_lower))
 
                 # スコア計算
-                score = 0.5  # 基本スコア
+                score = KEYWORD_BASE_SCORE  # 基本スコア
                 if is_word_boundary:
-                    score += 0.2
-                if len(keyword) > 5:
-                    score += 0.1
+                    score += KEYWORD_BOUNDARY_BONUS
+                if len(keyword) > KEYWORD_LENGTH_THRESHOLD:
+                    score += KEYWORD_LENGTH_BONUS
 
                 matches.append(
                     {
@@ -254,13 +276,13 @@ class PatternMatcher:
                         "position": position,
                         "score": min(1.0, score),
                         "is_word_boundary": is_word_boundary,
-                    }
+                    },
                 )
 
         return matches
 
     def _check_word_boundary(self, text: str, position: int, length: int) -> bool:
-        """単語境界をチェック
+        """単語境界をチェック.
 
         Args:
             text: テキスト
@@ -269,6 +291,7 @@ class PatternMatcher:
 
         Returns:
             単語境界の場合True
+
         """
         # 前の文字をチェック
         if position > 0:
@@ -285,8 +308,8 @@ class PatternMatcher:
 
         return True
 
-    def _check_context_requirements(self, match: re.Match, pattern: Pattern, full_text: str) -> float:
-        """コンテキスト要件をチェック
+    def _check_context_requirements(self, match: re.Match[str], pattern: Pattern, full_text: str) -> float:
+        """コンテキスト要件をチェック.
 
         Args:
             match: 正規表現マッチオブジェクト
@@ -294,7 +317,8 @@ class PatternMatcher:
             full_text: 全体のテキスト
 
         Returns:
-            コンテキストスコア（0.0-1.0）
+            コンテキストスコア(0.0-1.0)
+
         """
         if not pattern.context_requirements:
             return 1.0
@@ -312,8 +336,8 @@ class PatternMatcher:
 
         return satisfied_requirements / len(pattern.context_requirements)
 
-    def _check_keyword_presence(self, match: re.Match, pattern: Pattern, full_text: str) -> float:
-        """キーワードの存在をチェック
+    def _check_keyword_presence(self, match: re.Match[str], pattern: Pattern, full_text: str) -> float:
+        """キーワードの存在をチェック.
 
         Args:
             match: 正規表現マッチオブジェクト
@@ -321,7 +345,8 @@ class PatternMatcher:
             full_text: 全体のテキスト
 
         Returns:
-            キーワードスコア（0.0-1.0）
+            キーワードスコア(0.0-1.0)
+
         """
         if not pattern.keywords:
             return 1.0
@@ -340,13 +365,14 @@ class PatternMatcher:
         return found_keywords / len(pattern.keywords)
 
     def get_match_summary(self, matches: list[Match]) -> dict[str, Any]:
-        """マッチ結果のサマリーを取得
+        """マッチ結果のサマリーを取得.
 
         Args:
             matches: マッチ結果のリスト
 
         Returns:
             サマリー情報
+
         """
         if not matches:
             return {
@@ -378,6 +404,6 @@ class PatternMatcher:
         }
 
     def clear_cache(self) -> None:
-        """コンパイル済みパターンのキャッシュをクリア"""
+        """コンパイル済みパターンのキャッシュをクリア."""
         self._compiled_patterns.clear()
         logger.info("パターンマッチャーのキャッシュをクリアしました")

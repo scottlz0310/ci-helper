@@ -1,5 +1,4 @@
-"""
-パターン認識フォールバック機能
+"""パターン認識フォールバック機能
 
 パターン認識が失敗した場合の代替手段を提供し、
 未知のエラーに対する適切な処理とトラブルシューティングガイダンスを実装します。
@@ -40,6 +39,7 @@ class UnknownErrorDetector:
 
         Args:
             data_directory: 学習データディレクトリ
+
         """
         self.data_directory = Path(data_directory)
         self.data_directory.mkdir(parents=True, exist_ok=True)
@@ -55,6 +55,7 @@ class UnknownErrorDetector:
 
         Returns:
             未知エラーの情報
+
         """
         logger.info("未知エラーの検出を開始...")
 
@@ -100,8 +101,9 @@ class UnknownErrorDetector:
 
         Returns:
             エラーの特徴
+
         """
-        features = {
+        features: dict[str, list[Any]] = {
             "error_keywords": [],
             "file_paths": [],
             "line_numbers": [],
@@ -170,8 +172,8 @@ class UnknownErrorDetector:
 
         # 重複を除去
         for key in features:
-            if isinstance(features[key], list):
-                features[key] = list(set(features[key]))
+            # features[key] is already typed as list[Any], so we can just iterate
+            features[key] = list(set(features[key]))
 
         return features
 
@@ -184,6 +186,7 @@ class UnknownErrorDetector:
 
         Returns:
             推測されたエラーカテゴリ
+
         """
         log_lower = log_content.lower()
         keywords = error_features.get("error_keywords", [])
@@ -214,19 +217,22 @@ class UnknownErrorDetector:
         if exit_codes:
             if 1 in exit_codes:
                 return "general_error"
-            elif 2 in exit_codes:
+            if 2 in exit_codes:
                 return "usage_error"
-            elif 126 in exit_codes:
+            if 126 in exit_codes:
                 return "permission_error"
-            elif 127 in exit_codes:
+            if 127 in exit_codes:
                 return "command_not_found"
-            elif 130 in exit_codes:
+            if 130 in exit_codes:
                 return "interrupted_error"
 
         return "unknown_error"
 
     def _generate_potential_pattern(
-        self, log_content: str, error_features: dict[str, Any], error_category: str
+        self,
+        log_content: str,
+        error_features: dict[str, Any],
+        error_category: str,
     ) -> dict[str, Any]:
         """潜在的なパターンを生成
 
@@ -237,16 +243,17 @@ class UnknownErrorDetector:
 
         Returns:
             潜在的なパターン情報
+
         """
         # エラーメッセージを抽出
-        error_lines = []
+        error_lines: list[str] = []
         for line in log_content.split("\n"):
             line_lower = line.lower()
             if any(keyword in line_lower for keyword in error_features.get("error_keywords", [])):
                 error_lines.append(line.strip())
 
         # 正規表現パターンを生成
-        regex_patterns = []
+        regex_patterns: list[str] = []
         for line in error_lines[:3]:  # 最初の3つのエラー行のみ
             # 特殊文字をエスケープし、変数部分を正規表現に変換
             escaped_line = re.escape(line)
@@ -279,6 +286,7 @@ class UnknownErrorDetector:
 
         Returns:
             類似のエラー情報、見つからない場合はNone
+
         """
         if not self.unknown_errors_file.exists():
             return None
@@ -316,9 +324,10 @@ class UnknownErrorDetector:
 
         Args:
             unknown_error_info: 未知エラー情報
+
         """
         try:
-            existing_errors = []
+            existing_errors: list[dict[str, Any]] = []
             if self.unknown_errors_file.exists():
                 try:
                     with self.unknown_errors_file.open("r", encoding="utf-8") as f:
@@ -350,6 +359,7 @@ class UnknownErrorDetector:
 
         Returns:
             頻繁な未知エラーのリスト
+
         """
         if not self.unknown_errors_file.exists():
             return []
@@ -376,12 +386,13 @@ class PatternFallbackHandler:
     トラブルシューティングガイダンスと未知エラーの学習機能を実装します。
     """
 
-    def __init__(self, data_directory: Path | str = "data/learning", learning_engine=None):
+    def __init__(self, data_directory: Path | str = "data/learning", learning_engine: Any | None = None):
         """パターンフォールバック機能を初期化
 
         Args:
             data_directory: 学習データディレクトリ
             learning_engine: 学習エンジン（オプション）
+
         """
         self.data_directory = Path(data_directory)
         self.unknown_error_detector = UnknownErrorDetector(data_directory)
@@ -405,6 +416,7 @@ class PatternFallbackHandler:
 
         Returns:
             フォールバック分析結果
+
         """
         logger.info("パターン認識フォールバック処理を開始...")
 
@@ -437,7 +449,7 @@ class PatternFallbackHandler:
                     category=unknown_error_info["error_category"],
                     description="未知のエラーパターンが検出されました",
                     confidence=0.3,
-                )
+                ),
             ],
             fix_suggestions=fallback_suggestions,
             related_errors=unknown_error_info["error_features"]["error_keywords"],
@@ -456,7 +468,10 @@ class PatternFallbackHandler:
         )
 
     def handle_low_confidence_patterns(
-        self, pattern_matches: list[PatternMatch], confidence_threshold: float, log_content: str
+        self,
+        pattern_matches: list[PatternMatch],
+        confidence_threshold: float,
+        log_content: str,
     ) -> AnalysisResult:
         """信頼度が閾値を下回る場合の処理
 
@@ -467,6 +482,7 @@ class PatternFallbackHandler:
 
         Returns:
             低信頼度パターンの分析結果
+
         """
         logger.info("低信頼度パターンの処理を開始...")
 
@@ -490,7 +506,7 @@ class PatternFallbackHandler:
                     category=best_match.pattern.category,
                     description=best_match.pattern.name,
                     confidence=best_match.confidence,
-                )
+                ),
             ],
             fix_suggestions=confidence_improvement_suggestions,
             related_errors=[best_match.extracted_context],
@@ -516,6 +532,7 @@ class PatternFallbackHandler:
 
         Returns:
             堅牢な処理結果
+
         """
         logger.info("不正な形式のログファイルの処理を開始...")
 
@@ -535,7 +552,7 @@ class PatternFallbackHandler:
                     category="log_format_error",
                     description="ログファイルの形式が不正です",
                     confidence=0.9,
-                )
+                ),
             ],
             fix_suggestions=repair_suggestions,
             related_errors=[str(error)],
@@ -553,7 +570,9 @@ class PatternFallbackHandler:
         )
 
     def _generate_fallback_suggestions(
-        self, unknown_error_info: dict[str, Any], log_content: str
+        self,
+        unknown_error_info: dict[str, Any],
+        log_content: str,
     ) -> list[FixSuggestion]:
         """エラーカテゴリに基づくフォールバック提案を生成
 
@@ -563,9 +582,10 @@ class PatternFallbackHandler:
 
         Returns:
             フォールバック修正提案のリスト
+
         """
         category = unknown_error_info["error_category"]
-        suggestions = []
+        suggestions: list[FixSuggestion] = []
 
         # カテゴリ別の一般的な修正提案
         category_suggestions = {
@@ -580,7 +600,7 @@ class PatternFallbackHandler:
                     ],
                     "risk_level": "low",
                     "time_estimate": "5分",
-                }
+                },
             ],
             "network_error": [
                 {
@@ -593,7 +613,7 @@ class PatternFallbackHandler:
                     ],
                     "risk_level": "low",
                     "time_estimate": "10分",
-                }
+                },
             ],
             "dependency_error": [
                 {
@@ -606,7 +626,7 @@ class PatternFallbackHandler:
                     ],
                     "risk_level": "medium",
                     "time_estimate": "15分",
-                }
+                },
             ],
         }
 
@@ -615,12 +635,12 @@ class PatternFallbackHandler:
 
         for fix_data in category_fixes:
             suggestion = FixSuggestion(
-                title=fix_data["title"],
-                description=fix_data["description"],
-                risk_level=fix_data["risk_level"],
-                estimated_effort=fix_data["time_estimate"],
+                title=str(fix_data["title"]),
+                description=str(fix_data["description"]),
+                risk_level=str(fix_data["risk_level"]),
+                estimated_effort=str(fix_data["time_estimate"]),
                 confidence=0.4,  # フォールバック提案の信頼度
-                validation_steps=fix_data["steps"],
+                validation_steps=list(fix_data["steps"]),  # type: ignore
             )
             suggestions.append(suggestion)
 
@@ -651,6 +671,7 @@ class PatternFallbackHandler:
 
         Returns:
             トラブルシューティングステップのリスト
+
         """
         category = unknown_error_info["error_category"]
         keywords = unknown_error_info["error_features"]["error_keywords"]
@@ -688,7 +709,7 @@ class PatternFallbackHandler:
             [
                 f"{len(steps) + 1}. 問題が解決しない場合は、コミュニティフォーラムで質問してください",
                 f"{len(steps) + 2}. 必要に応じて専門家に相談してください",
-            ]
+            ],
         )
 
         return steps
@@ -702,6 +723,7 @@ class PatternFallbackHandler:
 
         Returns:
             手動調査ステップのリスト
+
         """
         steps = [
             "1. ログファイル全体を確認し、エラーの前後の文脈を把握してください",
@@ -727,13 +749,15 @@ class PatternFallbackHandler:
                 f"{len(steps) + 1}. 環境変数や設定ファイルに問題がないか確認してください",
                 f"{len(steps) + 2}. 最小限の再現手順を作成してください",
                 f"{len(steps) + 3}. 公式ドキュメントやIssueトラッカーで類似の問題を検索してください",
-            ]
+            ],
         )
 
         return steps
 
     def _generate_manual_investigation_steps_for_pattern(
-        self, pattern_match: PatternMatch, log_content: str
+        self,
+        pattern_match: PatternMatch,
+        log_content: str,
     ) -> list[str]:
         """特定のパターンに対する手動調査ステップを生成
 
@@ -743,6 +767,7 @@ class PatternFallbackHandler:
 
         Returns:
             手動調査ステップのリスト
+
         """
         pattern = pattern_match.pattern
 
@@ -761,13 +786,15 @@ class PatternFallbackHandler:
                 f"{len(steps) + 1}. パターンの前提条件が満たされているか確認してください",
                 f"{len(steps) + 2}. 類似のパターンと比較してください",
                 f"{len(steps) + 3}. 追加のコンテキスト情報を収集してください",
-            ]
+            ],
         )
 
         return steps
 
     def _generate_confidence_improvement_suggestions(
-        self, pattern_match: PatternMatch, log_content: str
+        self,
+        pattern_match: PatternMatch,
+        log_content: str,
     ) -> list[FixSuggestion]:
         """信頼度向上のための提案を生成
 
@@ -777,8 +804,9 @@ class PatternFallbackHandler:
 
         Returns:
             信頼度向上提案のリスト
+
         """
-        suggestions = []
+        suggestions: list[FixSuggestion] = []
 
         # 追加情報収集の提案
         info_gathering = FixSuggestion(
@@ -822,6 +850,7 @@ class PatternFallbackHandler:
 
         Returns:
             ログ構造の分析結果
+
         """
         lines = log_content.split("\n")
 
@@ -845,8 +874,9 @@ class PatternFallbackHandler:
 
         Returns:
             検出された問題のリスト
+
         """
-        issues = []
+        issues: list[str] = []
 
         # 不正な文字を検出
         if "�" in log_content:
@@ -867,6 +897,7 @@ class PatternFallbackHandler:
 
         Returns:
             切り詰められている可能性があるかどうか
+
         """
         if not lines:
             return False
@@ -892,6 +923,7 @@ class PatternFallbackHandler:
 
         Returns:
             形式一貫性の分析結果
+
         """
         # タイムスタンプパターンを検出
         timestamp_patterns = [
@@ -919,6 +951,7 @@ class PatternFallbackHandler:
 
         Returns:
             推測されたログ形式
+
         """
         formats = {
             "github_actions": ["##[", "::"],
@@ -945,8 +978,9 @@ class PatternFallbackHandler:
 
         Returns:
             ログ修復提案のリスト
+
         """
-        suggestions = []
+        suggestions: list[FixSuggestion] = []
 
         # エンコーディング問題の修復
         if log_info.get("encoding_issues"):
@@ -990,6 +1024,7 @@ class PatternFallbackHandler:
 
         Returns:
             代替分析方法のリスト
+
         """
         methods = [
             "1. ログファイルを手動で確認",
@@ -1005,7 +1040,7 @@ class PatternFallbackHandler:
             [
                 "5. 元のCI実行環境で直接確認",
                 "6. 関連するドキュメントを参照",
-            ]
+            ],
         )
 
         return methods
@@ -1015,6 +1050,7 @@ class PatternFallbackHandler:
 
         Returns:
             トラブルシューティングガイド
+
         """
         # 基本的なトラブルシューティングガイドを定義
         # 実際の実装では外部ファイルから読み込むことも可能
@@ -1041,6 +1077,7 @@ class PatternFallbackHandler:
 
         Returns:
             統計情報
+
         """
         return {
             "total_unknown_errors": len(self.unknown_error_detector.get_frequent_unknown_errors(min_occurrences=1)),

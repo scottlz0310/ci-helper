@@ -1,5 +1,4 @@
-"""
-test コマンドの実装
+"""test コマンドの実装
 
 CI/CDワークフローをローカルで実行し、結果を分析・フォーマットします。
 """
@@ -88,7 +87,7 @@ def test(
     diff: bool,
     save: bool,
     sanitize: bool,
-) -> None:
+) -> ExecutionResult | None:
     """CI/CDワークフローをローカルで実行
 
     actを使用してGitHub Actionsワークフローをローカルで実行し、
@@ -113,12 +112,12 @@ def test(
         # ドライラン時のログファイル解析
         if dry_run and log_file:
             _analyze_existing_log(log_file, output_format, verbose)
-            return
+            return None
 
         ci_runner = CIRunner(config)
 
         if not dry_run:
-            ci_runner._check_lock_file()
+            ci_runner.check_lock_file()
             _check_dependencies(config.project_root, verbose)
 
         # CI実行
@@ -155,8 +154,7 @@ def test(
             if hasattr(ctx, "obj") and ctx.obj and ctx.obj.get("from_menu", False):
                 _display_failure_summary(execution_result)
                 return execution_result
-            else:
-                ctx.exit(1)
+            ctx.exit(1)
 
     except CIHelperError as e:
         ErrorHandler.handle_error(e, verbose)
@@ -322,7 +320,7 @@ def _display_diff_summary(comparison: LogComparisonResult, verbose: bool) -> Non
     error_counts = summary["error_counts"]
     performance = summary["performance"]
 
-    panel_lines = []
+    panel_lines: list[str] = []
     panel_lines.append(f"**前回実行**: {'✅ 成功' if summary['previous_status'] == 'success' else '❌ 失敗'}")
     panel_lines.append(f"**今回実行**: {'✅ 成功' if summary['current_status'] == 'success' else '❌ 失敗'}")
     panel_lines.append("")
@@ -392,7 +390,10 @@ def _display_results(
 
 
 def _display_json_results(
-    execution_result: ExecutionResult, verbose: bool, dry_run: bool, sanitize: bool = True
+    execution_result: ExecutionResult,
+    verbose: bool,
+    dry_run: bool,
+    sanitize: bool = True,
 ) -> None:
     """JSON形式で結果を表示（AI最適化）"""
     formatter = AIFormatter(sanitize_secrets=sanitize)
@@ -405,7 +406,7 @@ def _display_json_results(
         security_result = formatter.validate_output_security(json_output)
         if security_result["has_secrets"]:
             console.print(
-                f"[yellow]警告: {security_result['secret_count']}件のシークレットが検出され、サニタイズされました[/yellow]"
+                f"[yellow]警告: {security_result['secret_count']}件のシークレットが検出され、サニタイズされました[/yellow]",
             )
 
     # トークン情報を表示（verbose時）
@@ -413,7 +414,7 @@ def _display_json_results(
         try:
             token_info = formatter.check_token_limits(json_output)
             console.print(
-                f"[dim]トークン数: {token_info['token_count']} / {token_info['token_limit']} ({token_info['usage_percentage']:.1f}%)[/dim]"
+                f"[dim]トークン数: {token_info['token_count']} / {token_info['token_limit']} ({token_info['usage_percentage']:.1f}%)[/dim]",
             )
 
             if token_info["warning_level"] != "none":
@@ -426,7 +427,10 @@ def _display_json_results(
 
 
 def _display_markdown_results(
-    execution_result: ExecutionResult, verbose: bool, dry_run: bool, sanitize: bool = True
+    execution_result: ExecutionResult,
+    verbose: bool,
+    dry_run: bool,
+    sanitize: bool = True,
 ) -> None:
     """Markdown形式で結果を表示（AI最適化）"""
     formatter = AIFormatter(sanitize_secrets=sanitize)
@@ -439,7 +443,7 @@ def _display_markdown_results(
         security_result = formatter.validate_output_security(markdown_output)
         if security_result["has_secrets"]:
             console.print(
-                f"[yellow]警告: {security_result['secret_count']}件のシークレットが検出され、サニタイズされました[/yellow]"
+                f"[yellow]警告: {security_result['secret_count']}件のシークレットが検出され、サニタイズされました[/yellow]",
             )
 
     # ドライラン情報を追加
@@ -451,7 +455,7 @@ def _display_markdown_results(
         try:
             token_info = formatter.check_token_limits(markdown_output)
             console.print(
-                f"[dim]トークン数: {token_info['token_count']} / {token_info['token_limit']} ({token_info['usage_percentage']:.1f}%)[/dim]"
+                f"[dim]トークン数: {token_info['token_count']} / {token_info['token_limit']} ({token_info['usage_percentage']:.1f}%)[/dim]",
             )
 
             if token_info["warning_level"] != "none":

@@ -1,5 +1,4 @@
-"""
-cache コマンド実装
+"""cache コマンド実装
 
 Dockerイメージの事前プルとキャッシュ管理を行います。
 """
@@ -95,7 +94,7 @@ def cache(ctx: click.Context, pull: bool, list_images: bool, clean: bool, image:
 def _check_docker_available() -> bool:
     """Dockerが利用可能かチェック"""
     try:
-        result = subprocess.run(["docker", "info"], capture_output=True, text=True, timeout=10)
+        result = subprocess.run(["docker", "info"], check=False, capture_output=True, text=True, timeout=10)
         return result.returncode == 0
     except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
         return False
@@ -107,7 +106,7 @@ def _pull_images(images: tuple[str, ...] | list[str], timeout: int = 1800) -> No
     console.print(f"[dim]タイムアウト: {timeout // 60}分 | 対象イメージ: {len(images)}個[/dim]\n")
 
     success_count = 0
-    failed_images = []
+    failed_images: list[str] = []
 
     with Progress(
         SpinnerColumn(),
@@ -120,6 +119,7 @@ def _pull_images(images: tuple[str, ...] | list[str], timeout: int = 1800) -> No
             try:
                 result = subprocess.run(
                     ["docker", "pull", image],
+                    check=False,
                     capture_output=True,
                     text=True,
                     timeout=timeout,
@@ -134,7 +134,8 @@ def _pull_images(images: tuple[str, ...] | list[str], timeout: int = 1800) -> No
 
             except subprocess.TimeoutExpired:
                 progress.update(
-                    task, description=f"[red]✗[/red] [{i}/{len(images)}] タイムアウト ({timeout // 60}分): {image}"
+                    task,
+                    description=f"[red]✗[/red] [{i}/{len(images)}] タイムアウト ({timeout // 60}分): {image}",
                 )
                 failed_images.append(image)
             except Exception:
@@ -155,6 +156,7 @@ def _list_cached_images() -> None:
     try:
         result = subprocess.run(
             ["docker", "images", "--format", "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"],
+            check=False,
             capture_output=True,
             text=True,
             timeout=30,
@@ -176,7 +178,9 @@ def _clean_unused_images() -> None:
 
     try:
         # 未使用イメージを削除
-        result = subprocess.run(["docker", "image", "prune", "-f"], capture_output=True, text=True, timeout=60)
+        result = subprocess.run(
+            ["docker", "image", "prune", "-f"], check=False, capture_output=True, text=True, timeout=60
+        )
 
         if result.returncode == 0:
             console.print("[green]✓[/green] 未使用イメージの削除が完了しました")
@@ -198,6 +202,7 @@ def _show_cache_status() -> None:
         # 全イメージの情報を取得
         result = subprocess.run(
             ["docker", "images", "--format", "{{.Repository}}:{{.Tag}}\t{{.Size}}"],
+            check=False,
             capture_output=True,
             text=True,
             timeout=30,
@@ -208,8 +213,8 @@ def _show_cache_status() -> None:
             return
 
         # act関連のイメージをフィルタ
-        act_images = []
-        other_images = []
+        act_images: list[tuple[str, str]] = []
+        other_images: list[tuple[str, str]] = []
 
         for line in result.stdout.strip().split("\n"):
             if line:

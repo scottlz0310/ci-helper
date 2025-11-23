@@ -1,15 +1,11 @@
-"""
-clean コマンド
+"""clean コマンド
 
 キャッシュとログファイルのクリーンアップ機能を提供します。
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    pass
+from typing import Any, cast
 
 import click
 from rich.console import Console
@@ -100,6 +96,7 @@ def _display_cache_status(console: Console, cache_manager: CacheManager) -> None
     Args:
         console: Rich コンソール
         cache_manager: キャッシュマネージャー
+
     """
     console.print("\n[bold blue]現在のキャッシュ状況[/bold blue]")
 
@@ -148,6 +145,7 @@ def _clean_all(console: Console, cache_manager: CacheManager, dry_run: bool, for
 
     Returns:
         クリーンアップ結果
+
     """
     if not dry_run and not force:
         console.print("\n[bold red]警告: すべてのキャッシュとログが削除されます！[/bold red]")
@@ -160,9 +158,8 @@ def _clean_all(console: Console, cache_manager: CacheManager, dry_run: bool, for
     if dry_run:
         console.print("\n[bold yellow]ドライラン: すべてのキャッシュ削除[/bold yellow]")
         return cache_manager.cleanup_all(dry_run=True)
-    else:
-        console.print("\n[bold red]すべてのキャッシュを削除中...[/bold red]")
-        return cache_manager.reset_all_cache(confirm=True)
+    console.print("\n[bold red]すべてのキャッシュを削除中...[/bold red]")
+    return cache_manager.reset_all_cache(confirm=True)
 
 
 def _clean_logs_only(console: Console, cache_manager: CacheManager, dry_run: bool, force: bool) -> dict[str, Any]:
@@ -176,6 +173,7 @@ def _clean_logs_only(console: Console, cache_manager: CacheManager, dry_run: boo
 
     Returns:
         クリーンアップ結果
+
     """
     if not dry_run and not force:
         stats = cache_manager.get_cache_statistics()
@@ -183,7 +181,7 @@ def _clean_logs_only(console: Console, cache_manager: CacheManager, dry_run: boo
 
         if log_stats["files"] > 0:
             console.print(
-                f"\n[yellow]ログファイル {log_stats['files']} 個 ({log_stats['size_mb']:.2f}MB) を削除します。[/yellow]"
+                f"\n[yellow]ログファイル {log_stats['files']} 個 ({log_stats['size_mb']:.2f}MB) を削除します。[/yellow]",
             )
 
             if not click.confirm("続行しますか？"):
@@ -209,6 +207,7 @@ def _clean_default(console: Console, cache_manager: CacheManager, dry_run: bool,
 
     Returns:
         クリーンアップ結果
+
     """
     if not dry_run and not force:
         # 推奨事項を表示
@@ -244,6 +243,7 @@ def _display_cleanup_result(console: Console, result: dict[str, Any], dry_run: b
         result: クリーンアップ結果
         dry_run: ドライラン実行
         verbose: 詳細表示
+
     """
     console.print()
 
@@ -290,11 +290,12 @@ def _display_cleanup_result(console: Console, result: dict[str, Any], dry_run: b
                     f"[bold]{data['errors']}[/bold]",
                 )
             elif isinstance(data, dict) and "deleted_files" in data:
+                data_dict = cast("dict[str, Any]", data)
                 table.add_row(
                     category.capitalize(),
-                    str(data["deleted_files"]),
-                    f"{data['freed_size_mb']:.2f}",
-                    str(len(data.get("errors", []))),
+                    str(data_dict["deleted_files"]),
+                    f"{data_dict['freed_size_mb']:.2f}",
+                    str(len(cast("list[Any]", data_dict.get("errors", [])))),
                 )
 
         console.print(table)
@@ -307,13 +308,14 @@ def _display_cleanup_result(console: Console, result: dict[str, Any], dry_run: b
 
     # エラーの詳細表示
     if verbose:
-        all_errors = []
+        all_errors: list[str] = []
         if "errors" in result:
-            all_errors.extend(result["errors"])
+            all_errors.extend(cast("list[str]", result["errors"]))
         elif "total" in result:
             for key, category_result in result.items():
                 if key != "total" and isinstance(category_result, dict) and "errors" in category_result:
-                    all_errors.extend(category_result["errors"])
+                    category_dict = cast("dict[str, Any]", category_result)
+                    all_errors.extend(cast("list[str]", category_dict["errors"]))
 
         if all_errors:
             console.print("\n[red]エラー詳細:[/red]")
@@ -338,6 +340,7 @@ def _display_recommendations(console: Console, cache_manager: CacheManager) -> N
     Args:
         console: Rich コンソール
         cache_manager: キャッシュマネージャー
+
     """
     recommendations = cache_manager.get_cleanup_recommendations()
 

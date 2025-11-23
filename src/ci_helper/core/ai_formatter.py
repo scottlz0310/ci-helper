@@ -1,5 +1,4 @@
-"""
-AI用出力フォーマッター
+"""AI用出力フォーマッター
 
 CI実行結果をAI消費用のMarkdownおよびJSON形式でフォーマットします。
 """
@@ -7,14 +6,22 @@ CI実行結果をAI消費用のMarkdownおよびJSON形式でフォーマット�
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    pass
+from ci_helper.core.models import (
+    AnalysisMetrics,
+    ExecutionResult,
+    Failure,
+    FailureType,
+    JobResult,
+    StepResult,
+    WorkflowResult,
+)
+from ci_helper.core.security import SecurityValidator
 
-from ..core.models import AnalysisMetrics, ExecutionResult, Failure, FailureType, JobResult, WorkflowResult
-from ..core.security import SecurityValidator
+logger = logging.getLogger(__name__)
 
 _tiktoken: Any | None
 try:
@@ -26,6 +33,15 @@ else:
 
 tiktoken: Any | None = _tiktoken
 
+# 定数
+TOKEN_USAGE_WARNING_THRESHOLD = 0.8
+TOKEN_USAGE_CRITICAL_THRESHOLD = 1.0
+TOKEN_USAGE_INFO_THRESHOLD = 0.5
+MAX_FAILURES_FOR_COMPRESSION = 10
+MAX_CONTEXT_LINES = 6
+MAX_WORKFLOWS_FOR_COMPRESSION = 5
+MAX_JOBS_FOR_COMPRESSION = 10
+
 
 class AIFormatter:
     """AI消費用の出力フォーマッター"""
@@ -35,6 +51,7 @@ class AIFormatter:
 
         Args:
             sanitize_secrets: シークレットのサニタイズを有効にするかどうか
+
         """
         self.failure_type_icons = {
             FailureType.ERROR: "🚨",
@@ -45,6 +62,7 @@ class AIFormatter:
             FailureType.UNKNOWN: "❓",
         }
         self.sanitize_secrets = sanitize_secrets
+        self.security_validator: SecurityValidator | None = None
         if sanitize_secrets:
             self.security_validator = SecurityValidator()
 
@@ -56,8 +74,9 @@ class AIFormatter:
 
         Returns:
             Markdown形式の文字列
+
         """
-        sections = []
+        sections: list[str] = []
 
         # ヘッダー
         sections.append(self._format_markdown_header(execution_result))
@@ -85,7 +104,7 @@ class AIFormatter:
         return markdown_content
 
     def _format_markdown_header(self, execution_result: ExecutionResult) -> str:
-        """Markdownヘッダーを生成"""
+        """Markdownヘッダーを生成."""
         status_icon = "✅" if execution_result.success else "❌"
         status_text = "成功" if execution_result.success else "失敗"
         timestamp_text = self._format_timestamp_for_display(execution_result.timestamp)
@@ -98,12 +117,12 @@ class AIFormatter:
 **ワークフロー数**: {len(execution_result.workflows)}"""
 
     def _format_markdown_summary(self, execution_result: ExecutionResult) -> str:
-        """実行サマリーをMarkdown形式で生成"""
+        """実行サマリーをMarkdown形式で生成."""
         total_jobs = sum(len(w.jobs) for w in execution_result.workflows)
         successful_jobs = sum(1 for w in execution_result.workflows for j in w.jobs if j.success)
         total_failures = execution_result.total_failures
 
-        summary = f"""## 📊 実行サマリー
+        return f"""## 📊 実行サマリー
 
 - **総ジョブ数**: {total_jobs}
 - **成功ジョブ**: {successful_jobs}
@@ -111,14 +130,12 @@ class AIFormatter:
 - **総失敗数**: {total_failures}
 - **成功率**: {(successful_jobs / total_jobs * 100) if total_jobs > 0 else 100:.1f}%"""
 
-        return summary
-
     def _format_markdown_failures(self, execution_result: ExecutionResult) -> str:
-        """失敗詳細をMarkdown形式で生成"""
+        """失敗詳細をMarkdown形式で生成."""
         if execution_result.success:
             return ""
 
-        sections = ["## 🚨 失敗詳細"]
+        sections: list[str] = ["## 🚨 失敗詳細"]
 
         # 失敗タイプ別の集計
         failure_counts: dict[FailureType, int] = {}
@@ -141,19 +158,23 @@ class AIFormatter:
                     if not job.success:
                         for failure in job.failures:
                             sections.append(
-                                self._format_single_failure_markdown(failure, failure_num, workflow.name, job.name)
+                                self._format_single_failure_markdown(failure, failure_num, workflow.name, job.name),
                             )
                             failure_num += 1
 
         return "\n\n".join(sections)
 
     def _format_single_failure_markdown(
-        self, failure: Failure, failure_num: int, workflow_name: str, job_name: str
+        self,
+        failure: Failure,
+        failure_num: int,
+        workflow_name: str,
+        job_name: str,
     ) -> str:
-        """単一の失敗をMarkdown形式でフォーマット"""
+        """単一の失敗をMarkdown形式でフォーマット."""
         icon = self.failure_type_icons.get(failure.type, "❓")
 
-        sections = [f"#### {failure_num}. {icon} {failure.type.value.upper()}"]
+        sections: list[str] = [f"#### {failure_num}. {icon} {failure.type.value.upper()}"]
 
         # 基本情報
         sections.append(f"**ワークフロー**: {workflow_name}")
@@ -170,21 +191,19 @@ class AIFormatter:
         sections.append("**エラーメッセージ**:")
         sections.append(f"```\n{failure.message}\n```")
 
-        # コンテキスト（前後の行）
+        # コンテキスト情報
         if failure.context_before or failure.context_after:
             sections.append("**コンテキスト**:")
-            context_lines = []
+            context_lines: list[str] = []
 
             # 前のコンテキスト
-            for line in failure.context_before:
-                context_lines.append(f"  {line}")
+            context_lines.extend([f"  {line}" for line in failure.context_before])
 
-            # エラー行（推定）
+            # エラー発生行
             context_lines.append(f"> {failure.message}")
 
             # 後のコンテキスト
-            for line in failure.context_after:
-                context_lines.append(f"  {line}")
+            context_lines.extend([f"  {line}" for line in failure.context_after])
 
             sections.append("```\n" + "\n".join(context_lines) + "\n```")
 
@@ -196,8 +215,8 @@ class AIFormatter:
         return "\n".join(sections)
 
     def _format_markdown_workflows(self, execution_result: ExecutionResult) -> str:
-        """ワークフロー詳細をMarkdown形式で生成"""
-        sections = ["## 📋 ワークフロー詳細"]
+        """ワークフロー詳細をMarkdown形式で生成."""
+        sections: list[str] = ["## 📋 ワークフロー詳細"]
 
         for workflow in execution_result.workflows:
             workflow_icon = "✅" if workflow.success else "❌"
@@ -220,7 +239,7 @@ class AIFormatter:
         return "\n\n".join(sections)
 
     def _format_markdown_metrics(self, metrics: AnalysisMetrics) -> str:
-        """メトリクスをMarkdown形式で生成"""
+        """メトリクスをMarkdown形式で生成."""
         sections = ["## 📈 メトリクス"]
 
         sections.append(f"- **総ワークフロー数**: {metrics.total_workflows}")
@@ -239,13 +258,14 @@ class AIFormatter:
         return "\n".join(sections)
 
     def format_json(self, execution_result: ExecutionResult) -> str:
-        """実行結果をJSON形式でフォーマット
+        """実行結果をJSON形式でフォーマット.
 
         Args:
             execution_result: CI実行結果
 
         Returns:
             JSON形式の文字列
+
         """
         # メトリクスを生成
         metrics = AnalysisMetrics.from_execution_result(execution_result)
@@ -300,57 +320,59 @@ class AIFormatter:
             "steps": [self._step_to_dict(step) for step in job.steps],
         }
 
-    def _step_to_dict(self, step: Any) -> dict[str, Any]:
-        """ステップをdict形式に変換"""
+    def _step_to_dict(self, step: StepResult) -> dict[str, Any]:
+        """ステップをdict形式に変換."""
         return {
             "name": step.name,
             "success": step.success,
             "duration": step.duration,
-            "output": step.output,
+            "output": self._sanitize_content(step.output) if self.sanitize_secrets else step.output,
         }
 
     def _failure_to_dict(self, failure: Failure) -> dict[str, Any]:
-        """失敗をdict形式に変換"""
+        """失敗をdict形式に変換."""
         return {
             "type": failure.type.value,
-            "message": failure.message,
+            "message": self._sanitize_content(failure.message) if self.sanitize_secrets else failure.message,
             "file_path": failure.file_path,
             "line_number": failure.line_number,
-            "context_before": list(failure.context_before),
-            "context_after": list(failure.context_after),
-            "stack_trace": failure.stack_trace,
+            "context_before": failure.context_before,
+            "context_after": failure.context_after,
+            "stack_trace": self._sanitize_content(failure.stack_trace)
+            if failure.stack_trace and self.sanitize_secrets
+            else failure.stack_trace,
         }
 
     @staticmethod
-    def _to_datetime(value: Any) -> datetime | None:
-        """timestampフィールドをdatetimeに変換"""
+    def _to_datetime(value: datetime | str | None) -> datetime | None:
+        """timestampフィールドをdatetimeに変換."""
+        if value is None:
+            return None
         if isinstance(value, datetime):
             return value
-        if isinstance(value, str):
-            try:
-                return datetime.fromisoformat(value)
-            except ValueError:
-                return None
-        return None
+        try:
+            return datetime.fromisoformat(value)
+        except (ValueError, TypeError):
+            return None
 
     @classmethod
-    def _format_timestamp_for_display(cls, value: Any) -> str:
-        """表示用のタイムスタンプ文字列を生成"""
+    def _format_timestamp_for_display(cls, value: datetime | str | None) -> str:
+        """表示用のタイムスタンプ文字列を生成."""
         dt = cls._to_datetime(value)
-        if dt is not None:
-            return dt.strftime("%Y-%m-%d %H:%M:%S")
-        return str(value)
+        if dt is None:
+            return "不明"
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
 
     @classmethod
-    def _format_timestamp_iso(cls, value: Any) -> str:
-        """ISO形式のタイムスタンプ文字列を生成"""
+    def _format_timestamp_iso(cls, value: datetime | str | None) -> str:
+        """ISO形式のタイムスタンプ文字列を生成."""
         dt = cls._to_datetime(value)
-        if dt is not None:
-            return dt.isoformat()
-        return str(value)
+        if dt is None:
+            return ""
+        return dt.isoformat()
 
     def count_tokens(self, content: str, model: str = "gpt-4") -> int:
-        """コンテンツのトークン数をカウント
+        """コンテンツのトークン数をカウント.
 
         Args:
             content: トークン数をカウントするコンテンツ
@@ -361,12 +383,14 @@ class AIFormatter:
 
         Raises:
             ImportError: tiktokenがインストールされていない場合
+
         """
         if tiktoken is None:
-            raise ImportError(
+            msg = (
                 "tiktokenがインストールされていません。"
                 "pip install tiktoken または uv add tiktoken でインストールしてください。"
             )
+            raise ImportError(msg)
 
         try:
             # モデルに対応するエンコーダーを取得
@@ -380,7 +404,7 @@ class AIFormatter:
         return len(tokens)
 
     def check_token_limits(self, content: str, model: str = "gpt-4") -> dict[str, Any]:
-        """トークン制限をチェックし、警告情報を返す
+        """トークン制限をチェックし、警告情報を返す.
 
         Args:
             content: チェック対象のコンテンツ
@@ -388,6 +412,7 @@ class AIFormatter:
 
         Returns:
             トークン情報と警告を含む辞書
+
         """
         # モデル別のトークン制限
         model_limits = {
@@ -406,9 +431,9 @@ class AIFormatter:
             token_count = self.count_tokens(content, model)
         except ImportError:
             # tiktokenが利用できない場合は文字数ベースで推定
-            token_count = len(content) // 4  # 大まかな推定（1トークン≈4文字）
+            token_count = len(content) // 4  # 大まかな推定(1トークン≈4文字)
 
-        # モデルの制限を取得（デフォルトは8192）
+        # モデルの制限を取得(デフォルト: 8192)
         limit = model_limits.get(model, 8192)
 
         # 使用率を計算
@@ -418,13 +443,13 @@ class AIFormatter:
         warning_level = "none"
         warning_message = ""
 
-        if usage_ratio >= 0.9:
+        if usage_ratio >= TOKEN_USAGE_CRITICAL_THRESHOLD:
             warning_level = "critical"
             warning_message = "トークン数が制限の90%を超えています。コンテンツの圧縮を検討してください。"
-        elif usage_ratio >= 0.7:
+        elif usage_ratio >= TOKEN_USAGE_WARNING_THRESHOLD:
             warning_level = "warning"
             warning_message = "トークン数が制限の70%を超えています。"
-        elif usage_ratio >= 0.5:
+        elif usage_ratio >= TOKEN_USAGE_INFO_THRESHOLD:
             warning_level = "info"
             warning_message = "トークン数が制限の50%を超えています。"
 
@@ -439,17 +464,21 @@ class AIFormatter:
         }
 
     def format_with_token_info(
-        self, execution_result: ExecutionResult, format_type: str = "markdown", model: str = "gpt-4"
+        self,
+        execution_result: ExecutionResult,
+        format_type: str = "markdown",
+        model: str = "gpt-4",
     ) -> dict[str, Any]:
-        """フォーマット結果とトークン情報を含む辞書を返す
+        """フォーマット結果とトークン情報を含む辞書を返す.
 
         Args:
             execution_result: CI実行結果
-            format_type: 出力形式（"markdown" または "json"）
+            format_type: 出力形式("markdown" または "json")
             model: 対象のAIモデル名
 
         Returns:
             フォーマット結果とトークン情報を含む辞書
+
         """
         # フォーマット実行
         if format_type.lower() == "json":
@@ -467,23 +496,25 @@ class AIFormatter:
         }
 
     def suggest_compression_options(self, execution_result: ExecutionResult) -> list[str]:
-        """コンテンツ圧縮のオプションを提案
+        """コンテンツ圧縮のオプションを提案.
 
         Args:
             execution_result: CI実行結果
 
         Returns:
             圧縮オプションのリスト
+
         """
-        suggestions = []
+        suggestions: list[str] = []
 
         # 失敗数が多い場合
-        if execution_result.total_failures > 10:
+        if execution_result.total_failures > MAX_FAILURES_FOR_COMPRESSION:
             suggestions.append("失敗数が多いため、最も重要な失敗のみに絞り込む")
 
         # コンテキスト行が多い場合
         has_long_context = any(
-            len(failure.context_before) + len(failure.context_after) > 6 for failure in execution_result.all_failures
+            len(failure.context_before) + len(failure.context_after) > MAX_CONTEXT_LINES
+            for failure in execution_result.all_failures
         )
         if has_long_context:
             suggestions.append("エラーのコンテキスト行数を削減する")
@@ -494,12 +525,12 @@ class AIFormatter:
             suggestions.append("スタックトレースを要約または除外する")
 
         # ワークフロー数が多い場合
-        if len(execution_result.workflows) > 5:
+        if len(execution_result.workflows) > MAX_WORKFLOWS_FOR_COMPRESSION:
             suggestions.append("失敗したワークフローのみに絞り込む")
 
         # ジョブ数が多い場合
         total_jobs = sum(len(w.jobs) for w in execution_result.workflows)
-        if total_jobs > 10:
+        if total_jobs > MAX_JOBS_FOR_COMPRESSION:
             suggestions.append("失敗したジョブのみに絞り込む")
 
         # デフォルトの提案
@@ -509,44 +540,45 @@ class AIFormatter:
                     "JSON形式を使用してより簡潔な出力にする",
                     "成功したワークフローの詳細を除外する",
                     "メトリクス情報のみに絞り込む",
-                ]
+                ],
             )
 
         return suggestions
 
     def _sanitize_content(self, content: str) -> str:
-        """コンテンツ内のシークレットをサニタイズ
+        """コンテンツからシークレットを削除.
 
         Args:
-            content: サニタイズ対象のコンテンツ
+            content: 対象文字列
 
         Returns:
-            サニタイズされたコンテンツ
+            サニタイズされた文字列
+
         """
-        if not self.sanitize_secrets or not hasattr(self, "security_validator"):
+        if not self.sanitize_secrets or self.security_validator is None:
             return content
 
         try:
             return self.security_validator.secret_detector.sanitize_content(content)
-        except Exception:
-            # サニタイズに失敗した場合は元のコンテンツを返す
+        except Exception as e:
+            logger.warning("シークレットのサニタイズに失敗しました: %s", e)
             return content
 
     def validate_output_security(self, content: str) -> dict[str, Any]:
-        """出力コンテンツのセキュリティを検証
+        """出力コンテンツのセキュリティ検証.
 
         Args:
             content: 検証対象のコンテンツ
 
         Returns:
-            セキュリティ検証結果
+            検証結果の辞書
+
         """
-        if not hasattr(self, "security_validator"):
+        if self.security_validator is None:
             return {
-                "has_secrets": False,
-                "secret_count": 0,
-                "detected_secrets": [],
-                "recommendations": ["セキュリティ検証が無効になっています"],
+                "is_safe": True,
+                "issues": [],
+                "risk_level": "low",
             }
 
         return self.security_validator.validate_log_content(content)

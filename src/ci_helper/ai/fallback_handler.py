@@ -1,5 +1,4 @@
-"""
-AI統合フォールバック機能
+"""AI統合フォールバック機能
 
 AI分析が失敗した場合の代替手段を提供し、部分的な結果の保存、
 自動リトライ、従来のログ表示などのフォールバック機能を実装します。
@@ -32,6 +31,7 @@ class FallbackHandler:
 
         Args:
             config: メイン設定オブジェクト
+
         """
         self.config = config
         self.fallback_dir = config.get_path("cache_dir") / "ai" / "fallback"
@@ -40,7 +40,11 @@ class FallbackHandler:
         self.partial_results: dict[str, dict[str, Any]] = {}
 
     async def handle_analysis_failure(
-        self, error: Exception, log_content: str, options: AnalyzeOptions, operation_id: str | None = None
+        self,
+        error: Exception,
+        log_content: str,
+        options: AnalyzeOptions,
+        operation_id: str | None = None,
     ) -> AnalysisResult:
         """AI分析失敗時のフォールバック処理
 
@@ -52,6 +56,7 @@ class FallbackHandler:
 
         Returns:
             フォールバック分析結果
+
         """
         logger.info("AI分析失敗のフォールバック処理を開始: %s", type(error).__name__)
 
@@ -62,15 +67,18 @@ class FallbackHandler:
         # エラータイプに応じた処理
         if isinstance(error, RateLimitError):
             return await self._handle_rate_limit_fallback(error, log_content, options, operation_id)
-        elif isinstance(error, NetworkError):
+        if isinstance(error, NetworkError):
             return await self._handle_network_fallback(error, log_content, options, operation_id)
-        elif isinstance(error, ProviderError):
+        if isinstance(error, ProviderError):
             return await self._handle_provider_fallback(error, log_content, options, operation_id)
-        else:
-            return await self._handle_generic_fallback(error, log_content, options, operation_id)
+        return await self._handle_generic_fallback(error, log_content, options, operation_id)
 
     async def _handle_rate_limit_fallback(
-        self, error: RateLimitError, log_content: str, options: AnalyzeOptions, operation_id: str
+        self,
+        error: RateLimitError,
+        log_content: str,
+        options: AnalyzeOptions,
+        operation_id: str,
     ) -> AnalysisResult:
         """レート制限エラーのフォールバック処理
 
@@ -82,11 +90,12 @@ class FallbackHandler:
 
         Returns:
             フォールバック結果
+
         """
         logger.info("レート制限フォールバック処理: %s", error.provider)
 
         # 部分的な結果を保存
-        await self._save_partial_result(
+        await self.save_partial_result(
             operation_id,
             {
                 "error_type": "rate_limit",
@@ -121,7 +130,11 @@ class FallbackHandler:
         )
 
     async def _handle_network_fallback(
-        self, error: NetworkError, log_content: str, options: AnalyzeOptions, operation_id: str
+        self,
+        error: NetworkError,
+        log_content: str,
+        options: AnalyzeOptions,
+        operation_id: str,
     ) -> AnalysisResult:
         """ネットワークエラーのフォールバック処理
 
@@ -133,6 +146,7 @@ class FallbackHandler:
 
         Returns:
             フォールバック結果
+
         """
         logger.info("ネットワークエラーフォールバック処理 (試行回数: %d)", error.retry_count)
 
@@ -144,7 +158,7 @@ class FallbackHandler:
                 return retry_result
 
         # 部分的な結果を保存
-        await self._save_partial_result(
+        await self.save_partial_result(
             operation_id,
             {
                 "error_type": "network",
@@ -176,7 +190,11 @@ class FallbackHandler:
         )
 
     async def _handle_provider_fallback(
-        self, error: ProviderError, log_content: str, options: AnalyzeOptions, operation_id: str
+        self,
+        error: ProviderError,
+        log_content: str,
+        options: AnalyzeOptions,
+        operation_id: str,
     ) -> AnalysisResult:
         """プロバイダーエラーのフォールバック処理
 
@@ -188,6 +206,7 @@ class FallbackHandler:
 
         Returns:
             フォールバック結果
+
         """
         logger.info("プロバイダーエラーフォールバック処理: %s", error.provider)
 
@@ -195,7 +214,7 @@ class FallbackHandler:
         alternative_providers = self._suggest_alternative_providers(error.provider)
 
         # 部分的な結果を保存
-        await self._save_partial_result(
+        await self.save_partial_result(
             operation_id,
             {
                 "error_type": "provider",
@@ -232,7 +251,11 @@ class FallbackHandler:
         )
 
     async def _handle_generic_fallback(
-        self, error: Exception, log_content: str, options: AnalyzeOptions, operation_id: str
+        self,
+        error: Exception,
+        log_content: str,
+        options: AnalyzeOptions,
+        operation_id: str,
     ) -> AnalysisResult:
         """汎用エラーのフォールバック処理
 
@@ -244,11 +267,12 @@ class FallbackHandler:
 
         Returns:
             フォールバック結果
+
         """
         logger.info("汎用エラーフォールバック処理: %s", type(error).__name__)
 
         # 部分的な結果を保存
-        await self._save_partial_result(
+        await self.save_partial_result(
             operation_id,
             {
                 "error_type": "generic",
@@ -280,7 +304,11 @@ class FallbackHandler:
         )
 
     async def _attempt_auto_retry(
-        self, error: NetworkError, log_content: str, options: AnalyzeOptions, operation_id: str
+        self,
+        error: NetworkError,
+        log_content: str,
+        options: AnalyzeOptions,
+        operation_id: str,
     ) -> AnalysisResult | None:
         """自動リトライを実行
 
@@ -292,6 +320,7 @@ class FallbackHandler:
 
         Returns:
             リトライ成功時の結果、失敗時はNone
+
         """
         # リトライ回数を初期化
         if operation_id not in self.retry_attempts:
@@ -329,6 +358,7 @@ class FallbackHandler:
 
         Returns:
             従来の分析結果
+
         """
         logger.info("従来のログ分析を実行中...")
 
@@ -389,7 +419,7 @@ class FallbackHandler:
                         "file_path": failure.file_path,
                         "line_number": failure.line_number,
                         "severity": "high" if failure.type in [FailureType.ERROR, FailureType.ASSERTION] else "medium",
-                    }
+                    },
                 )
 
                 # Add context from before and after
@@ -425,19 +455,20 @@ class FallbackHandler:
                         "file_path": None,
                         "line_number": None,
                         "severity": "medium",
-                    }
+                    },
                 ],
                 "related_errors": [],
                 "failure_count": 0,
                 "analysis_method": "error",
             }
 
-    async def _save_partial_result(self, operation_id: str, data: dict[str, Any]) -> None:
+    async def save_partial_result(self, operation_id: str, data: dict[str, Any]) -> None:
         """部分的な結果を保存
 
         Args:
             operation_id: 操作ID
             data: 保存するデータ
+
         """
         try:
             result_file = self.fallback_dir / f"{operation_id}.json"
@@ -466,6 +497,7 @@ class FallbackHandler:
 
         Returns:
             代替プロバイダーのリスト
+
         """
         all_providers = ["openai", "anthropic", "local"]
         alternatives = [p for p in all_providers if p != failed_provider]
@@ -488,6 +520,7 @@ class FallbackHandler:
 
         Returns:
             保存された部分的な結果、存在しない場合はNone
+
         """
         # メモリから確認
         if operation_id in self.partial_results:
@@ -514,6 +547,7 @@ class FallbackHandler:
 
         Returns:
             リトライ情報、存在しない場合はNone
+
         """
         partial_result = await self.load_partial_result(operation_id)
         if not partial_result:
@@ -538,6 +572,7 @@ class FallbackHandler:
 
         Returns:
             削除されたファイル数
+
         """
         try:
             deleted_count = 0
@@ -565,6 +600,7 @@ class FallbackHandler:
 
         Returns:
             フォールバック統計情報
+
         """
         try:
             total_files = len(list(self.fallback_dir.glob("*.json")))

@@ -1,5 +1,4 @@
-"""
-対話的AIセッション管理
+"""対話的AIセッション管理
 
 AI分析との対話的なデバッグセッションを管理し、会話履歴の保持、
 コンテキストの維持、セッション状態の管理を行います。
@@ -33,14 +32,37 @@ class InteractiveSessionManager:
         Args:
             prompt_manager: プロンプト管理インスタンス
             session_timeout: セッションタイムアウト時間（秒）
+
         """
         self.prompt_manager = prompt_manager
         self.session_timeout = session_timeout
         self.active_sessions: dict[str, InteractiveSession] = {}
+        self.active_sessions: dict[str, InteractiveSession] = {}
         self.session_contexts: dict[str, dict[str, Any]] = {}
+        self.command_processor: Any = None
+
+    async def process_input(self, session_id: str, user_input: str, options: AnalyzeOptions | None = None) -> str:
+        """ユーザー入力を処理
+
+        Args:
+            session_id: セッションID
+            user_input: ユーザー入力
+            options: 分析オプション
+
+        Returns:
+            処理結果
+
+        """
+        if self.command_processor:
+            return await self.command_processor.process_command(session_id, user_input)
+        return ""
 
     def create_session(
-        self, provider: str, model: str, initial_context: str = "", options: AnalyzeOptions | None = None
+        self,
+        provider: str,
+        model: str,
+        initial_context: str = "",
+        options: AnalyzeOptions | None = None,
     ) -> InteractiveSession:
         """新しい対話セッションを作成
 
@@ -52,6 +74,7 @@ class InteractiveSessionManager:
 
         Returns:
             作成された対話セッション
+
         """
         session_id = str(uuid.uuid4())
 
@@ -95,6 +118,7 @@ class InteractiveSessionManager:
 
         Returns:
             セッション（存在しない場合はNone）
+
         """
         return self.active_sessions.get(session_id)
 
@@ -103,12 +127,18 @@ class InteractiveSessionManager:
 
         Args:
             session_id: セッションID
+
         """
         if session_id in self.active_sessions:
             self.active_sessions[session_id].last_activity = datetime.now()
 
     def add_message_to_session(
-        self, session_id: str, role: str, content: str, tokens: int = 0, cost: float = 0.0
+        self,
+        session_id: str,
+        role: str,
+        content: str,
+        tokens: int = 0,
+        cost: float = 0.0,
     ) -> bool:
         """セッションにメッセージを追加
 
@@ -121,6 +151,7 @@ class InteractiveSessionManager:
 
         Returns:
             成功した場合True
+
         """
         session = self.get_session(session_id)
         if not session:
@@ -141,6 +172,7 @@ class InteractiveSessionManager:
 
         Returns:
             フォーマットされた会話履歴
+
         """
         session = self.get_session(session_id)
         if not session:
@@ -172,6 +204,7 @@ class InteractiveSessionManager:
 
         Returns:
             セッションコンテキスト
+
         """
         return self.session_contexts.get(session_id, {})
 
@@ -185,6 +218,7 @@ class InteractiveSessionManager:
 
         Returns:
             成功した場合True
+
         """
         if session_id not in self.session_contexts:
             return False
@@ -204,6 +238,7 @@ class InteractiveSessionManager:
 
         Returns:
             生成されたプロンプト
+
         """
         session = self.get_session(session_id)
         if not session:
@@ -228,7 +263,8 @@ class InteractiveSessionManager:
 
         # プロンプトマネージャーを使用してプロンプトを生成
         return self.prompt_manager.get_interactive_prompt(
-            conversation_history=[conversation_history], context=current_context
+            conversation_history=[conversation_history],
+            context=current_context,
         )
 
     def close_session(self, session_id: str) -> bool:
@@ -239,6 +275,7 @@ class InteractiveSessionManager:
 
         Returns:
             成功した場合True
+
         """
         if session_id not in self.active_sessions:
             return False
@@ -248,7 +285,10 @@ class InteractiveSessionManager:
 
         # セッション終了メッセージを追加
         session.add_message(
-            role="system", content=f"セッション終了。継続時間: {session.duration_minutes:.1f}分", tokens=0, cost=0.0
+            role="system",
+            content=f"セッション終了。継続時間: {session.duration_minutes:.1f}分",
+            tokens=0,
+            cost=0.0,
         )
 
         # セッションを削除
@@ -264,6 +304,7 @@ class InteractiveSessionManager:
 
         Returns:
             削除されたセッション数
+
         """
         current_time = datetime.now()
         expired_sessions = []
@@ -287,6 +328,7 @@ class InteractiveSessionManager:
 
         Returns:
             アクティブなセッションのリスト
+
         """
         return list(self.active_sessions.values())
 
@@ -298,6 +340,7 @@ class InteractiveSessionManager:
 
         Returns:
             セッション統計情報
+
         """
         session = self.get_session(session_id)
         if not session:

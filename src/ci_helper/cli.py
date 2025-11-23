@@ -1,5 +1,4 @@
-"""
-ci-helper CLIエントリーポイント
+"""ci-helper CLIエントリーポイント
 
 Clickを使用したマルチコマンドCLIインターフェースを提供します。
 """
@@ -7,6 +6,8 @@ Clickを使用したマルチコマンドCLIインターフェースを提供し
 from __future__ import annotations
 
 import sys
+import traceback
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -170,10 +171,11 @@ def _start_menu_mode(ctx: click.Context) -> None:
 
     Args:
         ctx: Click コンテキスト
-    """
-    try:
-        console = ctx.obj["console"]
 
+    """
+    console = _get_console(ctx)
+
+    try:
         # コマンドハンドラーを作成
         command_handlers = _create_command_handlers(ctx)
 
@@ -191,259 +193,240 @@ def _start_menu_mode(ctx: click.Context) -> None:
         console.print(f"[red]メニューモードでエラーが発生しました: {e}[/red]")
 
 
-def _create_command_handlers(ctx: click.Context) -> dict[str, Any]:
-    """コマンドハンドラーを作成
+def _get_console(ctx: click.Context) -> Console:
+    """Get console from context or create a new one."""
+    try:
+        if ctx.obj and hasattr(ctx.obj, "get"):
+            console = ctx.obj.get("console")
+            if console:
+                return console  # type: ignore
+    except Exception:
+        pass
+    return Console()
 
-    Args:
-        ctx: Click コンテキスト
 
-    Returns:
-        コマンド名とハンドラー関数のマッピング
-    """
-    console = ctx.obj["console"]
+def _invoke_command(ctx: click.Context, command_func: click.Command, *args: object, **kwargs: object) -> object:
+    """Safely invoke a command function."""
+    console = _get_console(ctx)
 
-    def invoke_command(command_func, *args, **kwargs):
-        """コマンド関数を安全に呼び出す"""
-        try:
-            # メニューから呼び出されたことを示すフラグを設定
-            if hasattr(ctx, "obj") and ctx.obj:
-                ctx.obj["from_menu"] = True
+    try:
+        # メニューから呼び出されたことを示すフラグを設定
+        if hasattr(ctx, "obj") and ctx.obj:
+            ctx.obj["from_menu"] = True
 
-            # コマンド関数を直接呼び出し
-            result = command_func.callback(*args, **kwargs)
-
-            # CI失敗の場合でも成功として扱う（ExecutionResultが返された場合）
-            if hasattr(result, "success") and not result.success:
-                console.print("[green]✓[/green] CI実行が完了しました（失敗ログを収集）")
-                return True
-
-            return result if result is not None else True
-
-        except SystemExit as e:
-            # CI失敗による終了コード1は正常な結果として扱う
-            if e.code == 1:
-                console.print("[green]✓[/green] CI実行が完了しました（失敗ログを収集）")
-                return True
-            else:
-                console.print(f"[red]コマンドが終了コード {e.code} で終了しました[/red]")
-                return False
-        except Exception as e:
-            console.print(f"[red]コマンド実行エラー: {e}[/red]")
-            import traceback
-
-            if ctx.obj.get("verbose", False):
-                traceback.print_exc()
+        # コマンド関数を直接呼び出し
+        if command_func.callback is None:
             return False
 
-    # 基本コマンドハンドラー
-    handlers = {}
+        result = command_func.callback(*args, **kwargs)
 
-    # init コマンド
-    def init_handler():
-        return invoke_command(init, force=False, interactive=False)
+        # CI失敗の場合でも成功として扱う(ExecutionResultが返された場合)
+        if result is not None and getattr(result, "success", True) is False:
+            console.print("[green]✓[/green] CI実行が完了しました(失敗ログを収集)")
+            return True
 
-    handlers["init"] = init_handler
+        return result if result is not None else True
 
-    # 対話的 init コマンド
-    def init_interactive_handler():
-        return invoke_command(init, force=False, interactive=True)
+    except SystemExit as e:
+        # CI失敗による終了コード1は正常な結果として扱う
+        if e.code == 1:
+            console.print("[green]✓[/green] CI実行が完了しました(失敗ログを収集)")
+            return True
 
-    handlers["init_interactive"] = init_interactive_handler
+        console.print(f"[red]コマンドが終了コード {e.code} で終了しました[/red]")
+        return False
+    except Exception as e:
+        console.print(f"[red]コマンド実行エラー: {e}[/red]")
+        if ctx.obj.get("verbose", False):
+            traceback.print_exc()
+        return False
 
-    # setup コマンド
-    def setup_handler():
-        return invoke_command(setup, force=False)
 
-    handlers["setup"] = setup_handler
+def _test_workflow_handler(ctx: click.Context, workflow: str) -> object:
+    """Test specific workflow handler."""
+    return _invoke_command(
+        ctx,
+        test,
+        workflow=(workflow,),
+        verbose=False,
+        output_format="markdown",
+        dry_run=False,
+        log_file=None,
+        diff=False,
+        save=True,
+        sanitize=True,
+    )
 
-    # doctor コマンド
-    def doctor_handler():
-        return invoke_command(doctor, verbose=False, guide=None)
 
-    handlers["doctor"] = doctor_handler
+def _test_job_handler(ctx: click.Context, job: str) -> bool:
+    """Test specific job handler."""
+    console = ctx.obj["console"]
+    console.print(f"[yellow]ジョブ '{job}' の実行は現在開発中です[/yellow]")
+    console.print("[dim]代わりに全ワークフローまたは特定ワークフローを実行してください[/dim]")
+    return True
 
-    # test コマンド
-    def test_handler():
-        return invoke_command(
-            test,
-            workflow=(),
-            verbose=False,
-            output_format="markdown",
-            dry_run=False,
-            log_file=None,
-            diff=False,
-            save=True,
-            sanitize=True,
-        )
 
-    handlers["test"] = test_handler
-
-    # logs コマンド
-    def logs_handler():
-        return invoke_command(logs)
-
-    handlers["logs"] = logs_handler
-
-    # secrets コマンド
-    def secrets_handler():
-        return invoke_command(secrets)
-
-    handlers["secrets"] = secrets_handler
-
-    # cache コマンド
-    def cache_handler():
-        return invoke_command(cache)
-
-    handlers["cache"] = cache_handler
-
-    # clean コマンド
-    def clean_handler():
-        return invoke_command(clean)
-
-    handlers["clean"] = clean_handler
-
-    # analyze コマンド（AI統合が利用可能な場合のみ）
+def _analyze_interactive_handler(ctx: click.Context) -> object:
+    """Interactive AI analysis handler."""
+    console = ctx.obj["console"]
     try:
+        from .commands.analyze import analyze
 
-        def analyze_handler():
-            return invoke_command(
-                analyze,
-                log_file=None,
-                provider=None,
-                model=None,
-                custom_prompt=None,
-                fix=False,
-                interactive=False,
-                streaming=None,
-                cache=True,
-                stats=False,
-                output_format="markdown",
-                verbose=False,
-                retry_operation_id=None,
-            )
+        return _invoke_command(
+            ctx,
+            analyze,
+            log_file=None,
+            provider=None,
+            model=None,
+            custom_prompt=None,
+            fix=False,
+            interactive=True,
+            streaming=None,
+            cache=True,
+            stats=False,
+            output_format="markdown",
+            verbose=False,
+            retry_operation_id=None,
+        )
+    except (ImportError, NameError):
+        console.print("[red]AI分析機能は利用できません。[/red]")
+        return False
 
-        handlers["analyze"] = analyze_handler
+
+def _analyze_file_handler(ctx: click.Context, log_file: str) -> object:
+    """Specific file analysis handler."""
+    console = ctx.obj["console"]
+    try:
+        from .commands.analyze import analyze
+
+        return _invoke_command(
+            ctx,
+            analyze,
+            log_file=Path(log_file),
+            provider=None,
+            model=None,
+            custom_prompt=None,
+            fix=False,
+            interactive=False,
+            streaming=None,
+            cache=True,
+            stats=False,
+            output_format="markdown",
+            verbose=False,
+            retry_operation_id=None,
+        )
     except NameError:
-        # AI統合が利用できない場合
-        def analyze_unavailable():
+        console.print("[red]AI分析機能は利用できません。[/red]")
+        return False
+
+
+def _cache_pull_handler(ctx: click.Context, images: tuple[str, ...] | None = None, timeout: int = 3600) -> object:
+    """Cache pull handler."""
+    if images:
+        return _invoke_command(ctx, cache, pull=True, image=images, timeout=timeout)
+    return _invoke_command(ctx, cache, pull=True, timeout=timeout)
+
+
+def _create_command_handlers(ctx: click.Context) -> dict[str, Callable[..., object]]:
+    """Create command handlers.
+
+    Args:
+        ctx: Click context.
+
+    Returns:
+        Mapping of command names to handler functions.
+
+    """
+    console = ctx.obj["console"]
+    handlers: dict[str, Callable[..., Any]] = {}
+
+    handlers["init"] = lambda: _invoke_command(ctx, init, force=False, interactive=False)
+    handlers["init_interactive"] = lambda: _invoke_command(ctx, init, force=False, interactive=True)
+    handlers["setup"] = lambda: _invoke_command(ctx, setup, force=False)
+    handlers["doctor"] = lambda: _invoke_command(ctx, doctor, verbose=False, guide=None)
+
+    handlers["test"] = lambda: _invoke_command(
+        ctx,
+        test,
+        workflow=(),
+        verbose=False,
+        output_format="markdown",
+        dry_run=False,
+        log_file=None,
+        diff=False,
+        save=True,
+        sanitize=True,
+    )
+
+    handlers["logs"] = lambda: _invoke_command(ctx, logs)
+    handlers["secrets"] = lambda: _invoke_command(ctx, secrets)
+    handlers["cache"] = lambda: _invoke_command(ctx, cache)
+    handlers["clean"] = lambda: _invoke_command(ctx, clean)
+
+    # analyze command
+    try:
+        from .commands.analyze import analyze
+
+        handlers["analyze"] = lambda: _invoke_command(
+            ctx,
+            analyze,
+            log_file=None,
+            provider=None,
+            model=None,
+            custom_prompt=None,
+            fix=False,
+            interactive=False,
+            streaming=None,
+            cache=True,
+            stats=False,
+            output_format="markdown",
+            verbose=False,
+            retry_operation_id=None,
+        )
+    except (ImportError, NameError):
+
+        def analyze_unavailable() -> bool:
             console.print("[red]AI分析機能は利用できません。必要な依存関係を確認してください。[/red]")
             return False
 
         handlers["analyze"] = analyze_unavailable
 
-    # 拡張コマンドハンドラー（パラメータ付き）
-    def test_workflow_handler(workflow: str):
-        """特定ワークフローテストハンドラー"""
-        return invoke_command(
-            test,
-            workflow=(workflow,),
-            verbose=False,
-            output_format="markdown",
-            dry_run=False,
-            log_file=None,
-            diff=False,
-            save=True,
-            sanitize=True,
-        )
+    def test_workflow_wrapper(workflow: str) -> object:
+        return _test_workflow_handler(ctx, workflow)
 
-    handlers["test_workflow"] = test_workflow_handler
+    handlers["test_workflow"] = test_workflow_wrapper
 
-    def test_job_handler(job: str):
-        """特定ジョブテストハンドラー"""
-        # ジョブ指定の場合は、testコマンドに適切なオプションを渡す
-        # 実際の実装では、testコマンドがjobオプションをサポートする必要がある
-        console.print(f"[yellow]ジョブ '{job}' の実行は現在開発中です[/yellow]")
-        console.print("[dim]代わりに全ワークフローまたは特定ワークフローを実行してください[/dim]")
-        return True
+    def test_job_wrapper(job: str) -> bool:
+        return _test_job_handler(ctx, job)
 
-    handlers["test_job"] = test_job_handler
+    handlers["test_job"] = test_job_wrapper
 
-    def analyze_interactive_handler():
-        """対話的AI分析ハンドラー"""
-        try:
-            return invoke_command(
-                analyze,
-                log_file=None,
-                provider=None,
-                model=None,
-                custom_prompt=None,
-                fix=False,
-                interactive=True,
-                streaming=None,
-                cache=True,
-                stats=False,
-                output_format="markdown",
-                verbose=False,
-                retry_operation_id=None,
-            )
-        except NameError:
-            console.print("[red]AI分析機能は利用できません。[/red]")
-            return False
+    def analyze_interactive_wrapper() -> object:
+        return _analyze_interactive_handler(ctx)
 
-    handlers["analyze_interactive"] = analyze_interactive_handler
+    handlers["analyze_interactive"] = analyze_interactive_wrapper
 
-    def analyze_file_handler(log_file: str):
-        """特定ファイル分析ハンドラー"""
-        try:
-            from pathlib import Path
+    def analyze_file_wrapper(log_file: str) -> object:
+        return _analyze_file_handler(ctx, log_file)
 
-            return invoke_command(
-                analyze,
-                log_file=Path(log_file),
-                provider=None,
-                model=None,
-                custom_prompt=None,
-                fix=False,
-                interactive=False,
-                streaming=None,
-                cache=True,
-                stats=False,
-                output_format="markdown",
-                verbose=False,
-                retry_operation_id=None,
-            )
-        except NameError:
-            console.print("[red]AI分析機能は利用できません。[/red]")
-            return False
+    handlers["analyze_file"] = analyze_file_wrapper
 
-    handlers["analyze_file"] = analyze_file_handler
+    handlers["logs_latest"] = lambda: _invoke_command(ctx, logs, latest=True)
 
-    def logs_latest_handler():
-        """最新ログ表示ハンドラー"""
-        return invoke_command(logs, latest=True)
+    def logs_compare_wrapper(log1: str, log2: str) -> object:
+        return _invoke_command(ctx, logs, compare=[log1, log2])
 
-    handlers["logs_latest"] = logs_latest_handler
+    handlers["logs_compare"] = logs_compare_wrapper
 
-    def logs_compare_handler(log1: str, log2: str):
-        """ログ比較ハンドラー"""
-        return invoke_command(logs, compare=[log1, log2])
+    handlers["secrets_list"] = lambda: _invoke_command(ctx, secrets, list_secrets=True)
 
-    handlers["logs_compare"] = logs_compare_handler
+    def cache_pull_wrapper(images: tuple[str, ...] | None = None, timeout: int = 3600) -> object:
+        return _cache_pull_handler(ctx, images, timeout)
 
-    def secrets_list_handler():
-        """シークレット一覧ハンドラー"""
-        return invoke_command(secrets, list_secrets=True)
+    handlers["cache_pull"] = cache_pull_wrapper
 
-    handlers["secrets_list"] = secrets_list_handler
+    handlers["cache_clear"] = lambda: _invoke_command(ctx, cache, clear=True)
 
-    def cache_pull_handler(images=None, timeout=3600):
-        """キャッシュプルハンドラー"""
-        if images:
-            # 特定のイメージとタイムアウトを指定
-            return invoke_command(cache, pull=True, image=images, timeout=timeout)
-        else:
-            # デフォルト設定でプル
-            return invoke_command(cache, pull=True, timeout=timeout)
-
-    handlers["cache_pull"] = cache_pull_handler
-
-    def cache_clear_handler():
-        """キャッシュクリアハンドラー"""
-        return invoke_command(cache, clear=True)
-
-    handlers["cache_clear"] = cache_clear_handler
-
-    # format_logs コマンドハンドラー（メニューシステム用）
     handlers["format_logs"] = format_logs_handler
     handlers["format_logs_custom"] = format_logs_custom_handler
 
@@ -451,20 +434,17 @@ def _create_command_handlers(ctx: click.Context) -> dict[str, Any]:
 
 
 def main() -> None:
-    """メインエントリーポイント
-
-    例外処理とエラーハンドリングを含む安全なCLI実行を提供します。
-    """
+    """Run the CLI."""
     try:
         cli(obj={})
     except KeyboardInterrupt:
         console.print("\n[yellow]操作がキャンセルされました。[/yellow]")
         sys.exit(130)
     except CIHelperError as e:
-        ErrorHandler.handle_error(e, False)  # メインレベルでは詳細表示しない
+        ErrorHandler.handle_error(e, verbose=False)  # メインレベルでは詳細表示しない
         sys.exit(1)
     except Exception as e:
-        ErrorHandler.handle_error(e, False)
+        ErrorHandler.handle_error(e, verbose=False)
         sys.exit(1)
 
 

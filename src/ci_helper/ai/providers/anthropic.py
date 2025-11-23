@@ -1,5 +1,4 @@
-"""
-Anthropic プロバイダー実装
+"""Anthropic プロバイダー実装
 
 Anthropic Claude APIを使用したAI分析機能を提供します。
 Claude 3.5 Sonnet、Claude 3.5 Haikuなどのモデルに対応し、ストリーミングとコスト管理をサポートします。
@@ -14,6 +13,7 @@ from typing import ClassVar
 import aiohttp
 import anthropic
 from anthropic import AsyncAnthropic
+from anthropic.types import TextBlock
 
 from ..exceptions import APIKeyError, NetworkError, ProviderError, RateLimitError, TokenLimitError
 from ..models import AnalysisResult, AnalyzeOptions, ProviderConfig
@@ -46,6 +46,7 @@ class AnthropicProvider(AIProvider):
 
         Args:
             config: プロバイダー設定
+
         """
         super().__init__(config)
         self._client: AsyncAnthropic | None = None
@@ -57,6 +58,7 @@ class AnthropicProvider(AIProvider):
             ConfigurationError: APIキーが設定されていない場合
             APIKeyError: APIキーが無効な場合
             ProviderError: 初期化に失敗した場合
+
         """
         from ..exceptions import ConfigurationError
 
@@ -88,18 +90,19 @@ class AnthropicProvider(AIProvider):
 
         Raises:
             ProviderError: 接続検証に失敗した場合
+
         """
         if not self._client:
             raise ProviderError("anthropic", "Anthropic クライアントが初期化されていません")
 
         try:
             # 簡単なテストリクエストを送信
-            response = await self._client.messages.create(
+            _ = await self._client.messages.create(
                 model=self.config.default_model,
                 max_tokens=1,
                 messages=[{"role": "user", "content": "Hello"}],
             )
-            return response is not None
+            return True
 
         except anthropic.AuthenticationError as e:
             raise APIKeyError("anthropic", f"Anthropic APIキーが無効です: {e}") from e
@@ -123,6 +126,7 @@ class AnthropicProvider(AIProvider):
             ProviderError: 分析に失敗した場合
             TokenLimitError: トークン制限を超過した場合
             RateLimitError: レート制限に達した場合
+
         """
         if not self._client:
             await self.initialize()
@@ -154,7 +158,7 @@ class AnthropicProvider(AIProvider):
 
             # レスポンスからテキストを抽出
             for content_block in response.content:
-                if hasattr(content_block, "text"):
+                if isinstance(content_block, TextBlock):
                     content += content_block.text
 
             # トークン使用量を取得
@@ -205,6 +209,7 @@ class AnthropicProvider(AIProvider):
             ProviderError: 分析に失敗した場合
             TokenLimitError: トークン制限を超過した場合
             RateLimitError: レート制限に達した場合
+
         """
         if not self._client:
             await self.initialize()
@@ -259,6 +264,7 @@ class AnthropicProvider(AIProvider):
 
         Returns:
             推定コスト（USD）
+
         """
         model_name = model or self.config.default_model
         costs = self.MODEL_COSTS.get(model_name, {"input": 0.003, "output": 0.015})
@@ -277,6 +283,7 @@ class AnthropicProvider(AIProvider):
 
         Returns:
             トークン数
+
         """
         # Anthropicは独自のトークナイザーを使用するが、
         # 簡易的にtiktokenで推定（Claude 3はGPT-4と似たトークナイザー）
@@ -296,6 +303,7 @@ class AnthropicProvider(AIProvider):
 
         Returns:
             モデル名のリスト
+
         """
         return self.config.available_models
 
@@ -307,6 +315,7 @@ class AnthropicProvider(AIProvider):
 
         Returns:
             パースされた分析結果
+
         """
         import re
 

@@ -1,5 +1,4 @@
-"""
-AI統合メインロジック
+"""AI統合メインロジック
 
 ci-helperのAI分析機能の中核となるクラスです。
 複数のAIプロバイダーを統合し、ログ分析、修正提案、対話モードを提供します。
@@ -50,20 +49,21 @@ class AIIntegration:
     複数のAIプロバイダーを統合し、ログ分析、修正提案、対話モードを提供します。
     """
 
-    def __init__(self, config: Config | dict | AIConfig):
+    def __init__(self, config: Config | dict[str, Any] | AIConfig):
         """AI統合を初期化
 
         Args:
             config: 設定オブジェクト（Config、dict、またはAIConfig）
+
         """
         # 設定オブジェクトの型に応じて処理
         if isinstance(config, dict):
             # 辞書の場合はAIConfigオブジェクトに変換
+            config_dict: dict[str, Any] = config
+            ai_section: dict[str, Any] = config_dict.get("ai", {})
+            providers_data: dict[str, dict[str, Any]] = ai_section.get("providers", {})
 
-            ai_section = config.get("ai", {})
-            providers_data = ai_section.get("providers", {})
-
-            providers = {}
+            providers: dict[str, ProviderConfig] = {}
             for name, provider_data in providers_data.items():
                 providers[name] = ProviderConfig(
                     name=name,
@@ -142,6 +142,7 @@ class AIIntegration:
         Raises:
             ConfigurationError: 設定が無効な場合
             ProviderError: プロバイダーの初期化に失敗した場合
+
         """
         if self._initialized:
             return
@@ -215,8 +216,7 @@ class AIIntegration:
             if self.error_handler:
                 error_info = self.error_handler.process_error(e)
                 raise ConfigurationError(f"AI統合システムの初期化に失敗しました: {error_info['message']}") from e
-            else:
-                raise ConfigurationError(f"AI統合システムの初期化に失敗しました: {e}") from e
+            raise ConfigurationError(f"AI統合システムの初期化に失敗しました: {e}") from e
 
     async def _initialize_providers(self) -> None:
         """利用可能なプロバイダーを初期化"""
@@ -263,13 +263,12 @@ class AIIntegration:
             # 全てのプロバイダーが失敗した場合、最初のエラーを再発生
             if first_error:
                 raise first_error
-            elif self.ai_config.default_provider:
+            if self.ai_config.default_provider:
                 raise ProviderError(
                     self.ai_config.default_provider,
                     f"デフォルトプロバイダー '{self.ai_config.default_provider}' が設定されていないか、初期化に失敗しました",
                 )
-            else:
-                raise ProviderError("", "利用可能なAIプロバイダーがありません")
+            raise ProviderError("", "利用可能なAIプロバイダーがありません")
 
     async def analyze_log(self, log_content: str, options: AnalyzeOptions) -> AnalysisResult:
         """ログを分析してAI結果を返す
@@ -284,6 +283,7 @@ class AIIntegration:
         Raises:
             AIError: 分析に失敗した場合
             ConfigurationError: 設定が無効な場合
+
         """
         if not self._initialized:
             await self.initialize()
@@ -304,7 +304,8 @@ class AIIntegration:
                     pattern_analysis_result = await self.pattern_engine.analyze_with_fallback(formatted_log)
                     if pattern_analysis_result.pattern_matches:
                         logger.info(
-                            "パターン認識で %d 個のパターンを検出", len(pattern_analysis_result.pattern_matches)
+                            "パターン認識で %d 個のパターンを検出",
+                            len(pattern_analysis_result.pattern_matches),
                         )
                     elif pattern_analysis_result.status == AnalysisStatus.FALLBACK:
                         logger.info("パターン認識フォールバック処理を実行")
@@ -368,7 +369,7 @@ class AIIntegration:
                 result.pattern_matches = pattern_analysis_result.pattern_matches
 
                 # パターン情報をサマリーに追加
-                pattern_info = []
+                pattern_info: list[str] = []
                 for match in pattern_analysis_result.pattern_matches:
                     pattern_info.append(f"- {match.pattern.name} (信頼度: {match.confidence:.1%})")
 
@@ -426,14 +427,13 @@ class AIIntegration:
 
             # その他の場合はエラー結果を作成
             if self.error_handler:
-                return self.error_handler.create_fallback_result(error_info["message"], start_time)
-            else:
-                # 簡易的なフォールバック結果
-                return AnalysisResult(
-                    summary=f"エラーが発生しました: {error_info['message']}",
-                    status=AnalysisStatus.FAILED,
-                    analysis_time=(datetime.now() - start_time).total_seconds(),
-                )
+                return self.error_handler.create_fallback_result(str(error_info["message"]), start_time)
+            # 簡易的なフォールバック結果
+            return AnalysisResult(
+                summary=f"エラーが発生しました: {error_info['message']}",
+                status=AnalysisStatus.FAILED,
+                analysis_time=(datetime.now() - start_time).total_seconds(),
+            )
 
     async def stream_analyze(self, log_content: str, options: AnalyzeOptions) -> AsyncIterator[str]:
         """ストリーミング分析を実行
@@ -447,6 +447,7 @@ class AIIntegration:
 
         Raises:
             AIError: 分析に失敗した場合
+
         """
         if not self._initialized:
             await self.initialize()
@@ -499,6 +500,7 @@ class AIIntegration:
 
         Raises:
             AIError: セッション開始に失敗した場合
+
         """
         try:
             if not self._initialized:
@@ -523,7 +525,7 @@ class AIIntegration:
             if initial_log:
                 if callable(getattr(self.session_manager, "process_input", None)):
                     try:
-                        await self.session_manager.process_input(session.session_id, initial_log)
+                        await self.session_manager.process_input(session.session_id, initial_log, options)
                     except (TimeoutError, MemoryError) as e:
                         # タイムアウトやメモリエラーは致命的なので AIError として再発生
                         raise AIError(f"セッション初期化中にエラーが発生しました: {e}") from e
@@ -539,11 +541,13 @@ class AIIntegration:
             if self.error_handler:
                 error_info = self.error_handler.process_error(e)
                 raise AIError(f"対話セッションの開始に失敗しました: {error_info['message']}") from e
-            else:
-                raise AIError(f"対話セッションの開始に失敗しました: {e}") from e
+            raise AIError(f"対話セッションの開始に失敗しました: {e}") from e
 
     async def generate_fix_suggestions(
-        self, analysis_result: AnalysisResult, log_content: str, project_context: dict[str, Any] | None = None
+        self,
+        analysis_result: AnalysisResult,
+        log_content: str,
+        project_context: dict[str, Any] | None = None,
     ) -> list[FixSuggestion]:
         """分析結果から修正提案を生成
 
@@ -557,6 +561,7 @@ class AIIntegration:
 
         Raises:
             AIError: 修正提案生成に失敗した場合
+
         """
         if not self._initialized:
             await self.initialize()
@@ -579,11 +584,13 @@ class AIIntegration:
             if self.error_handler:
                 error_info = self.error_handler.process_error(e)
                 raise AIError(f"修正提案の生成に失敗しました: {error_info['message']}") from e
-            else:
-                raise AIError(f"修正提案の生成に失敗しました: {e}") from e
+            raise AIError(f"修正提案の生成に失敗しました: {e}") from e
 
     async def apply_fix_suggestions(
-        self, fix_suggestions: list[FixSuggestion], auto_approve: bool = False, interactive: bool = True
+        self,
+        fix_suggestions: list[FixSuggestion],
+        auto_approve: bool = False,
+        interactive: bool = True,
     ) -> dict[str, Any]:
         """修正提案を適用
 
@@ -597,6 +604,7 @@ class AIIntegration:
 
         Raises:
             AIError: 修正適用に失敗した場合
+
         """
         if not self._initialized:
             await self.initialize()
@@ -638,11 +646,14 @@ class AIIntegration:
             if self.error_handler:
                 error_info = self.error_handler.process_error(e)
                 raise AIError(f"修正適用に失敗しました: {error_info['message']}") from e
-            else:
-                raise AIError(f"修正適用に失敗しました: {e}") from e
+            raise AIError(f"修正適用に失敗しました: {e}") from e
 
     async def analyze_and_fix(
-        self, log_content: str, options: AnalyzeOptions, apply_fixes: bool = False, auto_approve: bool = False
+        self,
+        log_content: str,
+        options: AnalyzeOptions,
+        apply_fixes: bool = False,
+        auto_approve: bool = False,
     ) -> dict[str, Any]:
         """ログ分析と修正提案生成・適用を一括実行
 
@@ -657,6 +668,7 @@ class AIIntegration:
 
         Raises:
             AIError: 処理に失敗した場合
+
         """
         if not self._initialized:
             await self.initialize()
@@ -670,12 +682,18 @@ class AIIntegration:
             # 2. 修正提案を生成
             fix_suggestions = await self.generate_fix_suggestions(analysis_result, log_content)
 
-            result = {"analysis": analysis_result, "fix_suggestions": fix_suggestions, "fix_application": None}
+            result: dict[str, Any] = {
+                "analysis": analysis_result,
+                "fix_suggestions": fix_suggestions,
+                "fix_application": None,
+            }
 
             # 3. 修正を適用（オプション）
             if apply_fixes and fix_suggestions:
                 application_result = await self.apply_fix_suggestions(
-                    fix_suggestions, auto_approve, interactive=not auto_approve
+                    fix_suggestions,
+                    auto_approve,
+                    interactive=not auto_approve,
                 )
                 result["fix_application"] = application_result
 
@@ -687,8 +705,7 @@ class AIIntegration:
             if self.error_handler:
                 error_info = self.error_handler.process_error(e)
                 raise AIError(f"ログ分析と修正処理に失敗しました: {error_info['message']}") from e
-            else:
-                raise AIError(f"ログ分析と修正処理に失敗しました: {e}") from e
+            raise AIError(f"ログ分析と修正処理に失敗しました: {e}") from e
 
     def rollback_fixes(self, backup_paths: list[str]) -> dict[str, Any]:
         """修正をロールバック
@@ -701,6 +718,7 @@ class AIIntegration:
 
         Raises:
             AIError: ロールバックに失敗した場合
+
         """
         if not self.fix_applier:
             raise ConfigurationError("修正適用器が初期化されていません")
@@ -716,8 +734,7 @@ class AIIntegration:
             if self.error_handler:
                 error_info = self.error_handler.process_error(e)
                 raise AIError(f"修正のロールバックに失敗しました: {error_info['message']}") from e
-            else:
-                raise AIError(f"修正のロールバックに失敗しました: {e}") from e
+            raise AIError(f"修正のロールバックに失敗しました: {e}") from e
 
     def _select_provider(self, provider_name: str | None = None) -> AIProvider:
         """使用するプロバイダーを選択
@@ -730,6 +747,7 @@ class AIIntegration:
 
         Raises:
             ProviderError: プロバイダーが見つからない場合
+
         """
         if not self.providers:
             raise ProviderError("", "利用可能なAIプロバイダーがありません")
@@ -760,6 +778,7 @@ class AIIntegration:
 
         Returns:
             前処理されたログ内容
+
         """
         # 簡単な前処理（実際のAIFormatterの実装に合わせて調整）
         # AIFormatterは ExecutionResult を期待するため、ここでは簡単な処理のみ
@@ -774,6 +793,7 @@ class AIIntegration:
 
         Returns:
             生成されたプロンプト
+
         """
         if not self.prompt_manager:
             raise ConfigurationError("プロンプト管理が初期化されていません")
@@ -811,6 +831,7 @@ class AIIntegration:
 
         Returns:
             検出されたエラータイプ
+
         """
         # 簡単なパターンマッチングでエラータイプを検出
         # より具体的なパターンを先にチェック
@@ -818,19 +839,22 @@ class AIIntegration:
 
         if "syntax" in log_lower or "syntaxerror" in log_lower:
             return "syntax_error"
-        elif "import" in log_lower and "error" in log_lower:
+        if "import" in log_lower and "error" in log_lower:
             return "import_error"
-        elif "timeout" in log_lower:
+        if "timeout" in log_lower:
             return "timeout_error"
-        elif "build" in log_lower and ("fail" in log_lower or "error" in log_lower):
+        if "build" in log_lower and ("fail" in log_lower or "error" in log_lower):
             return "build_failure"
-        elif "test" in log_lower and ("fail" in log_lower or "error" in log_lower):
+        if "test" in log_lower and ("fail" in log_lower or "error" in log_lower):
             return "test_failure"
-        else:
-            return "general_error"
+        return "general_error"
 
     async def _check_cost_limits(
-        self, provider: AIProvider, prompt: str, context: str, options: AnalyzeOptions
+        self,
+        provider: AIProvider,
+        prompt: str,
+        context: str,
+        options: AnalyzeOptions,
     ) -> None:
         """コスト制限をチェック
 
@@ -842,6 +866,7 @@ class AIIntegration:
 
         Raises:
             AIError: コスト制限を超過している場合
+
         """
         if not self.cost_manager:
             return
@@ -866,7 +891,11 @@ class AIIntegration:
             logger.warning("コスト制限に近づいています (使用率: %.1f%%)", limit_check.get("usage_percentage", 0))
 
     async def _execute_analysis(
-        self, provider: AIProvider, prompt: str, context: str, options: AnalyzeOptions
+        self,
+        provider: AIProvider,
+        prompt: str,
+        context: str,
+        options: AnalyzeOptions,
     ) -> AnalysisResult:
         """AI分析を実行
 
@@ -878,6 +907,7 @@ class AIIntegration:
 
         Returns:
             分析結果
+
         """
         try:
             result = await provider.analyze(prompt, context, options)
@@ -891,14 +921,14 @@ class AIIntegration:
             if self.error_handler:
                 error_info = self.error_handler.process_error(e)
                 raise AIError(f"AI分析の実行に失敗しました: {error_info['message']}") from e
-            else:
-                raise AIError(f"AI分析の実行に失敗しました: {e}") from e
+            raise AIError(f"AI分析の実行に失敗しました: {e}") from e
 
     async def get_usage_stats(self) -> dict[str, Any]:
         """使用統計を取得
 
         Returns:
             使用統計情報
+
         """
         if not self.cost_manager:
             return {}
@@ -925,6 +955,7 @@ class AIIntegration:
 
         Returns:
             リトライ結果、失敗時はNone
+
         """
         if not self._initialized:
             await self.initialize()
@@ -974,39 +1005,43 @@ class AIIntegration:
 
         Returns:
             提案のリスト
+
         """
-        suggestions = []
+        suggestion_lines: list[str] = []
 
         if isinstance(error, RateLimitError):
-            suggestions.extend(
+            suggestion_lines.extend(
                 [
                     f"{error.retry_after or 60}秒後に再試行してください",
                     "より低いレート制限のモデルを使用してください",
                     "プロバイダーのプランをアップグレードしてください",
-                ]
+                ],
             )
         elif isinstance(error, ProviderError):
-            alternatives = []
-            if self.fallback_handler:
-                alternatives = self.fallback_handler._suggest_alternative_providers(error.provider)
+            current_provider_name = error.provider
+            alternatives: list[str] = []
+            for name in self.providers.keys():  # Ensure type-safe iteration
+                if name != current_provider_name:
+                    alternatives.append(name)
+
             if alternatives:
-                suggestions.append(f"代替プロバイダーを試してください: {', '.join(alternatives)}")
-            suggestions.extend(
+                suggestion_lines.append(f"代替プロバイダーを試してください: {', '.join(alternatives)}")
+            suggestion_lines.extend(
                 [
                     "APIキーと設定を確認してください",
                     "プロバイダーのサービス状況を確認してください",
-                ]
+                ],
             )
         else:
-            suggestions.extend(
+            suggestion_lines.extend(
                 [
                     "コマンドを再実行してください",
                     "設定を確認してください",
                     "--verbose オプションで詳細ログを確認してください",
-                ]
+                ],
             )
 
-        return suggestions
+        return suggestion_lines
 
     async def cleanup(self) -> None:
         """リソースをクリーンアップ"""
@@ -1016,13 +1051,8 @@ class AIIntegration:
         for provider in self.providers.values():
             try:
                 # cleanupメソッドが存在し、コルーチン関数である場合のみ呼び出す
-                if hasattr(provider, "cleanup") and callable(provider.cleanup):
-                    import asyncio
-
-                    if asyncio.iscoroutinefunction(provider.cleanup):
-                        await provider.cleanup()
-                    else:
-                        provider.cleanup()
+                if hasattr(provider, "cleanup"):
+                    await provider.cleanup()
             except Exception as e:
                 logger.warning("プロバイダーのクリーンアップに失敗: %s", e)
 
@@ -1057,6 +1087,7 @@ class AIIntegration:
 
         Raises:
             AIError: セッションが見つからない場合
+
         """
         if session_id not in self.active_sessions:
             raise AIError(f"セッション {session_id} が見つかりません")
@@ -1079,7 +1110,7 @@ class AIIntegration:
                 prompt = self.session_manager.generate_interactive_prompt(session_id, user_input)
                 provider = self._select_provider(session.provider)
 
-                async for chunk in provider.stream_analyze(prompt, session.model):
+                async for chunk in provider.stream_analyze(prompt, session.model, options=AnalyzeOptions()):
                     yield chunk
 
         except Exception as e:
@@ -1098,6 +1129,7 @@ class AIIntegration:
 
         Returns:
             成功した場合True
+
         """
         if session_id not in self.active_sessions:
             return False
@@ -1113,7 +1145,7 @@ class AIIntegration:
         logger.info("対話セッション %s を終了しました", session_id)
         return True
 
-    async def apply_fix(self, fix_suggestion) -> None:
+    async def apply_fix(self, fix_suggestion: FixSuggestion) -> None:
         """修正提案を適用
 
         Args:
@@ -1121,18 +1153,18 @@ class AIIntegration:
 
         Raises:
             AIError: 修正適用に失敗した場合
+
         """
         if not self.fix_applier:
             raise AIError("修正適用器が初期化されていません")
 
         try:
-            await self.fix_applier.apply_fix(fix_suggestion)
+            self.fix_applier.apply_fix([fix_suggestion])
         except Exception as e:
             if self.error_handler:
                 error_info = self.error_handler.process_error(e)
                 raise AIError(f"修正の適用に失敗しました: {error_info['message']}") from e
-            else:
-                raise AIError(f"修正の適用に失敗しました: {e}") from e
+            raise AIError(f"修正の適用に失敗しました: {e}") from e
 
     def __str__(self) -> str:
         """文字列表現"""

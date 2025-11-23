@@ -1,5 +1,4 @@
-"""
-doctor コマンド実装
+"""doctor コマンド実装
 
 環境依存関係をチェックします。
 """
@@ -9,7 +8,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 from pathlib import Path
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 import click
 from rich.console import Console
@@ -22,7 +21,7 @@ from ..utils.recovery_guide import RecoveryGuide
 console = Console()
 
 
-class DoctorCheckResult(TypedDict, total=False):
+class DoctorCheckResult(TypedDict):
     """環境診断チェック結果"""
 
     name: str
@@ -30,8 +29,8 @@ class DoctorCheckResult(TypedDict, total=False):
     message: str
     suggestion: str | None
     details: str | None
-    missing_required: list[str]
-    missing_optional: list[str]
+    missing_required: NotRequired[list[str]]
+    missing_optional: NotRequired[list[str]]
 
 
 # Public wrapper functions for testing
@@ -154,7 +153,7 @@ def doctor(ctx: click.Context, verbose: bool, guide: str | None) -> None:
 
 
 def _check_act_command(verbose: bool) -> DoctorCheckResult:
-    """act コマンドのインストール状態をチェック"""
+    """Act コマンドのインストール状態をチェック"""
     check_name = "act コマンド"
 
     try:
@@ -219,6 +218,7 @@ def _check_docker_daemon(verbose: bool) -> DoctorCheckResult:
         # Docker デーモンの状態確認
         result = subprocess.run(
             ["docker", "info"],
+            check=False,
             capture_output=True,
             text=True,
             timeout=10,
@@ -308,8 +308,8 @@ def _check_configuration_files(config: Config, verbose: bool, strict: bool = Tru
         ".env": project_root / ".env",
     }
 
-    existing_files = []
-    missing_files = []
+    existing_files: list[str] = []
+    missing_files: list[str] = []
 
     for name, path in config_files.items():
         if path.exists():
@@ -326,7 +326,7 @@ def _check_configuration_files(config: Config, verbose: bool, strict: bool = Tru
             "details": f"不足ファイル: {missing_files}",
         }
 
-    message_parts = []
+    message_parts: list[str] = []
     if existing_files:
         message_parts.append(f"存在: {len(existing_files)} 個")
     if missing_files:
@@ -366,7 +366,7 @@ def _check_required_directories(config: Config, verbose: bool) -> DoctorCheckRes
         config.ensure_directories()
 
         directories = ["log_dir", "cache_dir", "reports_dir"]
-        created_dirs = []
+        created_dirs: list[str] = []
 
         for dir_key in directories:
             dir_path = config.get_path(dir_key)
@@ -399,12 +399,11 @@ def _get_act_install_instructions() -> str:
 
     if system == "darwin":  # macOS
         return "Homebrew: brew install act または GitHub Releases からダウンロード"
-    elif system == "linux":
+    if system == "linux":
         return "パッケージマネージャーまたは GitHub Releases からダウンロード: https://github.com/nektos/act"
-    elif system == "windows":
+    if system == "windows":
         return "Chocolatey: choco install act-cli または GitHub Releases からダウンロード"
-    else:
-        return "GitHub Releases からダウンロード: https://github.com/nektos/act"
+    return "GitHub Releases からダウンロード: https://github.com/nektos/act"
 
 
 def _check_disk_space(verbose: bool) -> DoctorCheckResult:
@@ -503,8 +502,8 @@ def _check_file_ownership(config: Config, verbose: bool) -> DoctorCheckResult:
             config.project_root / "ci-helper.toml",
         ]
 
-        docker_owned_files = []
-        permission_issues = []
+        docker_owned_files: list[str] = []
+        permission_issues: list[str] = []
 
         for path in important_paths:
             if not path.exists():
@@ -528,8 +527,8 @@ def _check_file_ownership(config: Config, verbose: bool) -> DoctorCheckResult:
 
         # 結果の判定
         if docker_owned_files or permission_issues:
-            details = []
-            suggestions = []
+            details: list[str] = []
+            suggestions: list[str] = []
 
             if docker_owned_files:
                 details.append(f"Dockerが所有するファイル: {len(docker_owned_files)}個")
@@ -556,16 +555,13 @@ def _check_file_ownership(config: Config, verbose: bool) -> DoctorCheckResult:
                 "suggestion": " または ".join(suggestions),
                 "details": "\n".join(details) if details else None,
             }
-        else:
-            return {
-                "name": check_name,
-                "passed": True,
-                "message": f"ファイル所有権は正常です（所有者: {current_user}）",
-                "suggestion": None,
-                "details": f"チェック対象: {len([p for p in important_paths if p.exists()])}個のパス"
-                if verbose
-                else None,
-            }
+        return {
+            "name": check_name,
+            "passed": True,
+            "message": f"ファイル所有権は正常です（所有者: {current_user}）",
+            "suggestion": None,
+            "details": f"チェック対象: {len([p for p in important_paths if p.exists()])}個のパス" if verbose else None,
+        }
 
     except Exception as e:
         return {
@@ -597,7 +593,7 @@ def _check_security_configuration(config: Config, verbose: bool) -> DoctorCheckR
                     "suggestion": "設定ファイルからシークレットを削除し、環境変数を使用してください",
                     "details": f"警告: {warning_issues}件" if verbose and warning_issues > 0 else None,
                 }
-            elif warning_issues > 0:
+            if warning_issues > 0:
                 return {
                     "name": check_name,
                     "passed": True,

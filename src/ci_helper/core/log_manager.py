@@ -55,6 +55,7 @@ class LogManager:
             ExecutionError: ログ保存に失敗した場合
 
         """
+        log_path: Path | None = None
         try:
             # タイムスタンプ付きのログファイル名を生成
             timestamp = execution_result.timestamp.strftime("%Y%m%d_%H%M%S")
@@ -74,8 +75,9 @@ class LogManager:
             return log_path
 
         except Exception as e:
+            path_str = str(log_path) if log_path else "unknown"
             raise ExecutionError(
-                f"ログの保存に失敗しました: {log_path}",
+                f"ログの保存に失敗しました: {path_str}",
                 f"ディスク容量やファイル権限を確認してください: {e}",
             ) from e
 
@@ -306,7 +308,7 @@ class LogManager:
             log_path = self.log_dir / log_entry["log_file"]
             if log_path.exists():
                 file_size = log_path.stat().st_size
-                if total_size + file_size > max_size_mb * 1024 * 1024:
+                if max_size_mb is not None and total_size + file_size > max_size_mb * 1024 * 1024:
                     # サイズ制限を超える場合は削除
                     log_path.unlink()
                     deleted_count += 1

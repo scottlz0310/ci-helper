@@ -1,5 +1,4 @@
-"""
-自動修正適用機能
+"""自動修正適用機能
 
 AI生成の修正提案を安全に適用し、バックアップ作成と検証を行います。
 """
@@ -49,6 +48,7 @@ class BackupManager:
 
         Raises:
             AIError: バックアップ作成に失敗した場合
+
         """
         if not file_path.exists():
             raise AIError(f"バックアップ対象ファイルが存在しません: {file_path}")
@@ -74,6 +74,7 @@ class BackupManager:
 
         Raises:
             AIError: 復元に失敗した場合
+
         """
         if not backup_path.exists():
             raise AIError(f"バックアップファイルが存在しません: {backup_path}")
@@ -92,17 +93,18 @@ class BackupManager:
 
         Returns:
             バックアップファイルパスのリスト
+
         """
         if file_pattern:
             return list(self.backup_dir.glob(f"{file_pattern}.*.backup"))
-        else:
-            return list(self.backup_dir.glob("*.backup"))
+        return list(self.backup_dir.glob("*.backup"))
 
     def cleanup_old_backups(self, keep_count: int = 10) -> None:
         """古いバックアップを削除
 
         Args:
             keep_count: 保持するバックアップ数
+
         """
         backups = sorted(self.backup_dir.glob("*.backup"), key=lambda p: p.stat().st_mtime, reverse=True)
 
@@ -126,6 +128,7 @@ class FixApplier:
         Args:
             config: 設定オブジェクト
             interactive: 対話モード（承認を求めるかどうか）
+
         """
         self.config = config
         self.interactive = interactive
@@ -148,6 +151,7 @@ class FixApplier:
 
         Returns:
             適用結果の辞書
+
         """
         logger.info("修正提案の適用を開始 (提案数: %d)", len(fix_suggestions))
 
@@ -200,6 +204,9 @@ class FixApplier:
 
         return results
 
+    # エイリアスを追加
+    apply_fix = apply_fix_suggestions
+
     def _request_approval(self, suggestion: FixSuggestion) -> FixApprovalResult:
         """修正提案の承認を要求
 
@@ -208,8 +215,8 @@ class FixApplier:
 
         Returns:
             承認結果
-        """
 
+        """
         if suggestion.code_changes:
             for _i, change in enumerate(suggestion.code_changes, 1):
                 # 変更内容のプレビュー
@@ -224,14 +231,12 @@ class FixApplier:
 
                 if response in ["y", "yes"]:
                     return FixApprovalResult(True, "ユーザーが承認")
-                elif response in ["n", "no"]:
+                if response in ["n", "no"]:
                     return FixApprovalResult(False, "ユーザーが拒否")
-                elif response in ["s", "skip"]:
+                if response in ["s", "skip"]:
                     return FixApprovalResult(False, "ユーザーがスキップ")
-                elif response in ["q", "quit"]:
+                if response in ["q", "quit"]:
                     raise KeyboardInterrupt("ユーザーが終了を選択")
-                else:
-                    pass
 
             except KeyboardInterrupt:
                 return FixApprovalResult(False, "ユーザーが中断")
@@ -246,6 +251,7 @@ class FixApplier:
 
         Returns:
             適用結果の辞書
+
         """
         result = {"suggestion": suggestion.title, "success": False, "backups": [], "applied_changes": [], "error": None}
 
@@ -286,6 +292,7 @@ class FixApplier:
 
         Returns:
             変更適用結果の辞書
+
         """
         result = {"file_path": change.file_path, "success": False, "backup_path": None, "error": None}
 
@@ -348,6 +355,7 @@ class FixApplier:
 
         Returns:
             検証結果の辞書
+
         """
         result = {"valid": True, "checks": [], "error": None}
 
@@ -398,6 +406,7 @@ class FixApplier:
 
         Returns:
             チェック結果メッセージ
+
         """
         try:
             full_path = self.project_root / file_path
@@ -420,6 +429,7 @@ class FixApplier:
 
         Returns:
             ロールバック結果の辞書
+
         """
         logger.info("修正のロールバックを開始 (バックアップ数: %d)", len(backup_paths))
 
@@ -465,6 +475,7 @@ class FixApplier:
 
         Returns:
             適用結果サマリーの辞書
+
         """
         return {
             "applied_fixes_count": len(self.applied_fixes),
@@ -484,7 +495,10 @@ class FixApplier:
         }
 
     def apply_pattern_based_fixes(
-        self, pattern_matches: list[PatternMatch], fix_templates: dict[str, FixTemplate], auto_approve: bool = False
+        self,
+        pattern_matches: list[PatternMatch],
+        fix_templates: dict[str, FixTemplate],
+        auto_approve: bool = False,
     ) -> dict[str, Any]:
         """パターンベースの修正提案を適用
 
@@ -495,6 +509,7 @@ class FixApplier:
 
         Returns:
             適用結果の辞書
+
         """
         logger.info("パターンベースの修正適用を開始 (パターン数: %d)", len(pattern_matches))
 
@@ -561,7 +576,7 @@ class FixApplier:
                         "template": fix_template.name,
                         "error": str(e),
                         "success": False,
-                    }
+                    },
                 )
 
         logger.info(
@@ -582,6 +597,7 @@ class FixApplier:
 
         Returns:
             修正提案
+
         """
         # FixStepをCodeChangeに変換
         code_changes = []
@@ -617,6 +633,7 @@ class FixApplier:
 
         Returns:
             承認結果
+
         """
         console.print(f"\n[cyan]🔍 検出されたパターン:[/cyan] {pattern_match.pattern.name}")
         console.print(f"[yellow]📊 信頼度:[/yellow] {pattern_match.confidence:.1%}")
@@ -642,14 +659,13 @@ class FixApplier:
 
                 if response in ["y", "yes"]:
                     return FixApprovalResult(True, "ユーザーが承認")
-                elif response in ["n", "no"]:
+                if response in ["n", "no"]:
                     return FixApprovalResult(False, "ユーザーが拒否")
-                elif response in ["s", "skip"]:
+                if response in ["s", "skip"]:
                     return FixApprovalResult(False, "ユーザーがスキップ")
-                elif response in ["q", "quit"]:
+                if response in ["q", "quit"]:
                     raise KeyboardInterrupt("ユーザーが終了を選択")
-                else:
-                    console.print("[red]無効な入力です。y, n, s, q のいずれかを入力してください。[/red]")
+                console.print("[red]無効な入力です。y, n, s, q のいずれかを入力してください。[/red]")
 
             except KeyboardInterrupt:
                 return FixApprovalResult(False, "ユーザーが中断")
@@ -661,5 +677,6 @@ class FixApplier:
 
         Args:
             keep_count: 保持するバックアップ数
+
         """
         self.backup_manager.cleanup_old_backups(keep_count)

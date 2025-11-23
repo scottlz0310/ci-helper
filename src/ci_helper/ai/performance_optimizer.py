@@ -1,5 +1,4 @@
-"""
-パフォーマンス最適化モジュール
+"""パフォーマンス最適化モジュール
 
 大量ログファイルの処理速度改善、パターンマッチングアルゴリズムの最適化、
 メモリ使用量の削減を提供します。
@@ -12,6 +11,7 @@ import gc
 import logging
 import re
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any
@@ -36,10 +36,10 @@ class LogChunker:
     """ログファイルのチャンク分割処理"""
 
     def __init__(self, chunk_size_mb: float = 1.0, overlap_lines: int = 50):
-        """
-        Args:
-            chunk_size_mb: チャンクサイズ（MB）
-            overlap_lines: チャンク間のオーバーラップ行数
+        """Args:
+        chunk_size_mb: チャンクサイズ（MB）
+        overlap_lines: チャンク間のオーバーラップ行数
+
         """
         self.chunk_size_bytes = int(chunk_size_mb * 1024 * 1024)
         self.overlap_lines = overlap_lines
@@ -52,6 +52,7 @@ class LogChunker:
 
         Returns:
             (チャンク内容, 開始行, 終了行) のリスト
+
         """
         lines = log_content.splitlines()
         total_lines = len(lines)
@@ -60,12 +61,12 @@ class LogChunker:
             # 小さなファイルはそのまま返す
             return [(log_content, 0, total_lines)]
 
-        chunks = []
+        chunks: list[tuple[str, int, int]] = []
         current_pos = 0
 
         while current_pos < total_lines:
             # チャンクの終了位置を計算
-            chunk_lines = []
+            chunk_lines: list[str] = []
             chunk_size = 0
             end_pos = current_pos
 
@@ -93,7 +94,10 @@ class LogChunker:
         return chunks
 
     async def process_chunks_parallel(
-        self, chunks: list[tuple[str, int, int]], processor_func, max_workers: int = 4
+        self,
+        chunks: list[tuple[str, int, int]],
+        processor_func: Callable[[str], list[Any]],
+        max_workers: int = 4,
     ) -> list[Any]:
         """チャンクを並列処理
 
@@ -104,11 +108,12 @@ class LogChunker:
 
         Returns:
             処理結果のリスト
+
         """
         loop = asyncio.get_event_loop()
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            tasks = []
+            tasks: list[asyncio.Future[Any]] = []
             for chunk_content, _start_line, _end_line in chunks:
                 task = loop.run_in_executor(executor, processor_func, chunk_content)
                 tasks.append(task)
@@ -116,7 +121,7 @@ class LogChunker:
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # エラーハンドリング
-        successful_results = []
+        successful_results: list[Any] = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 logger.warning("チャンク %d の処理に失敗: %s", i, result)
@@ -130,7 +135,7 @@ class OptimizedPatternMatcher:
     """最適化されたパターンマッチャー"""
 
     def __init__(self):
-        self.compiled_patterns: dict[str, re.Pattern] = {}
+        self.compiled_patterns: dict[str, re.Pattern[str]] = {}
         self.pattern_cache: dict[str, list[Any]] = {}
         self.keyword_trie: KeywordTrie | None = None
 
@@ -139,6 +144,7 @@ class OptimizedPatternMatcher:
 
         Args:
             patterns: パターンのリスト
+
         """
         logger.info("パターンを事前コンパイル中... (%d パターン)", len(patterns))
 
@@ -153,7 +159,7 @@ class OptimizedPatternMatcher:
                     logger.warning("正規表現のコンパイルに失敗: %s - %s", regex_pattern, e)
 
         # キーワードトライを構築
-        all_keywords = []
+        all_keywords: list[str] = []
         for pattern in patterns:
             all_keywords.extend(pattern.keywords)
 
@@ -161,7 +167,9 @@ class OptimizedPatternMatcher:
             self.keyword_trie = KeywordTrie(all_keywords)
 
         logger.info(
-            "パターンコンパイル完了: %d 正規表現, %d キーワード", len(self.compiled_patterns), len(all_keywords)
+            "パターンコンパイル完了: %d 正規表現, %d キーワード",
+            len(self.compiled_patterns),
+            len(all_keywords),
         )
 
     def match_patterns_optimized(self, text: str, patterns: list[Any]) -> list[Any]:
@@ -173,6 +181,7 @@ class OptimizedPatternMatcher:
 
         Returns:
             マッチ結果のリスト
+
         """
         # キャッシュチェック
         text_hash = hash(text[:1000])  # 最初の1000文字でハッシュ化
@@ -181,7 +190,7 @@ class OptimizedPatternMatcher:
         if cache_key in self.pattern_cache:
             return self.pattern_cache[cache_key]
 
-        matches = []
+        matches: list[Any] = []
 
         # 1. 高速キーワード検索でフィルタリング
         candidate_patterns = self._filter_patterns_by_keywords(text, patterns)
@@ -206,6 +215,7 @@ class OptimizedPatternMatcher:
 
         Returns:
             候補パターンのリスト
+
         """
         if not self.keyword_trie:
             return patterns
@@ -214,7 +224,7 @@ class OptimizedPatternMatcher:
         found_keywords = self.keyword_trie.find_keywords(text.lower())
 
         # キーワードにマッチするパターンのみを返す
-        candidate_patterns = []
+        candidate_patterns: list[Any] = []
         for pattern in patterns:
             pattern_keywords = [kw.lower() for kw in pattern.keywords]
             if any(keyword in found_keywords for keyword in pattern_keywords):
@@ -233,8 +243,9 @@ class OptimizedPatternMatcher:
 
         Returns:
             マッチ結果のリスト
+
         """
-        matches = []
+        matches: list[Any] = []
 
         # 事前コンパイルされた正規表現を使用
         for regex_pattern in pattern.regex_patterns:
@@ -252,7 +263,7 @@ class OptimizedPatternMatcher:
 
         return matches
 
-    def _create_match_result(self, pattern: Any, regex_match: re.Match, text: str) -> Any:
+    def _create_match_result(self, pattern: Any, regex_match: re.Match[str], text: str) -> Any:
         """マッチ結果オブジェクトを作成
 
         Args:
@@ -262,6 +273,7 @@ class OptimizedPatternMatcher:
 
         Returns:
             マッチ結果オブジェクト
+
         """
         from .models import Match
 
@@ -291,7 +303,7 @@ class KeywordTrie:
     """キーワード検索用のトライ木"""
 
     def __init__(self, keywords: list[str]):
-        self.root = {}
+        self.root: dict[str, Any] = {}
         self.keywords = set(keywords)
         self._build_trie(keywords)
 
@@ -300,6 +312,7 @@ class KeywordTrie:
 
         Args:
             keywords: キーワードのリスト
+
         """
         for keyword in keywords:
             node = self.root
@@ -317,8 +330,9 @@ class KeywordTrie:
 
         Returns:
             見つかったキーワードのセット
+
         """
-        found_keywords = set()
+        found_keywords: set[str] = set()
         text_lower = text.lower()
 
         for i in range(len(text_lower)):
@@ -342,18 +356,19 @@ class MemoryOptimizer:
     """メモリ使用量最適化"""
 
     def __init__(self, max_memory_mb: float = 500.0):
-        """
-        Args:
-            max_memory_mb: 最大メモリ使用量（MB）
+        """Args:
+        max_memory_mb: 最大メモリ使用量（MB）
+
         """
         self.max_memory_bytes = int(max_memory_mb * 1024 * 1024)
-        self.memory_warnings = []
+        self.memory_warnings: list[str] = []
 
     def monitor_memory_usage(self) -> float:
         """現在のメモリ使用量を監視
 
         Returns:
             メモリ使用量（MB）
+
         """
         try:
             import os
@@ -390,6 +405,7 @@ class MemoryOptimizer:
 
         Returns:
             メモリ統計情報
+
         """
         try:
             import os
@@ -421,12 +437,12 @@ class PerformanceOptimizer:
         max_memory_mb: float = 500.0,
         enable_caching: bool = True,
     ):
-        """
-        Args:
-            chunk_size_mb: ログチャンクサイズ（MB）
-            max_workers: 最大並列ワーカー数
-            max_memory_mb: 最大メモリ使用量（MB）
-            enable_caching: キャッシュ有効フラグ
+        """Args:
+        chunk_size_mb: ログチャンクサイズ（MB）
+        max_workers: 最大並列ワーカー数
+        max_memory_mb: 最大メモリ使用量（MB）
+        enable_caching: キャッシュ有効フラグ
+
         """
         self.log_chunker = LogChunker(chunk_size_mb)
         self.pattern_matcher = OptimizedPatternMatcher()
@@ -445,7 +461,10 @@ class PerformanceOptimizer:
         )
 
     async def optimize_pattern_matching(
-        self, log_content: str, patterns: list[Any], force_chunking: bool = False
+        self,
+        log_content: str,
+        patterns: list[Any],
+        force_chunking: bool = False,
     ) -> tuple[list[Any], PerformanceMetrics]:
         """パターンマッチングを最適化実行
 
@@ -456,6 +475,7 @@ class PerformanceOptimizer:
 
         Returns:
             (マッチ結果, パフォーマンスメトリクス)
+
         """
         start_time = time.time()
         start_memory = self.memory_optimizer.monitor_memory_usage()
@@ -464,7 +484,7 @@ class PerformanceOptimizer:
         self.pattern_matcher.compile_patterns(patterns)
 
         log_size_mb = len(log_content.encode("utf-8")) / (1024 * 1024)
-        optimization_applied = []
+        optimization_applied: list[str] = []
 
         try:
             # ログサイズに応じて処理方法を決定
@@ -521,6 +541,7 @@ class PerformanceOptimizer:
 
         Returns:
             マッチ結果のリスト
+
         """
         # ログをチャンクに分割
         chunks = self.log_chunker.chunk_log_content(log_content)
@@ -534,8 +555,8 @@ class PerformanceOptimizer:
         chunk_results = await self.log_chunker.process_chunks_parallel(chunks, process_chunk, self.max_workers)
 
         # 結果をマージ（重複除去）
-        all_matches = []
-        seen_matches = set()
+        all_matches: list[Any] = []
+        seen_matches: set[tuple[str, int, str]] = set()
 
         for chunk_matches in chunk_results:
             for match in chunk_matches:
@@ -553,6 +574,7 @@ class PerformanceOptimizer:
 
         Returns:
             キャッシュヒット率（0.0-1.0）
+
         """
         if not self.enable_caching:
             return 0.0
@@ -569,6 +591,7 @@ class PerformanceOptimizer:
 
         Returns:
             パフォーマンスレポート
+
         """
         memory_stats = self.memory_optimizer.get_memory_statistics()
 
@@ -594,8 +617,9 @@ class PerformanceOptimizer:
 
         Returns:
             推奨事項のリスト
+
         """
-        recommendations = []
+        recommendations: list[str] = []
 
         # 処理時間の推奨事項
         if self.performance_metrics.processing_time > 10.0:
@@ -637,6 +661,7 @@ def estimate_processing_time(log_size_mb: float, patterns_count: int) -> float:
 
     Returns:
         推定処理時間（秒）
+
     """
     # 経験的な計算式（実際の環境に応じて調整が必要）
     base_time = log_size_mb * 0.1  # 基本処理時間
@@ -653,6 +678,7 @@ def recommend_chunk_size(log_size_mb: float, available_memory_mb: float) -> floa
 
     Returns:
         推奨チャンクサイズ（MB）
+
     """
     # メモリの20%をチャンクサイズの上限とする
     max_chunk_size = available_memory_mb * 0.2
@@ -660,10 +686,9 @@ def recommend_chunk_size(log_size_mb: float, available_memory_mb: float) -> floa
     # ログサイズに応じた推奨サイズ
     if log_size_mb < 5:
         return min(log_size_mb, max_chunk_size)
-    elif log_size_mb < 50:
+    if log_size_mb < 50:
         return min(2.0, max_chunk_size)
-    else:
-        return min(5.0, max_chunk_size)
+    return min(5.0, max_chunk_size)
 
 
 def optimize_regex_patterns(patterns: list[str]) -> list[str]:
@@ -674,8 +699,9 @@ def optimize_regex_patterns(patterns: list[str]) -> list[str]:
 
     Returns:
         最適化されたパターンのリスト
+
     """
-    optimized = []
+    optimized: list[str] = []
 
     for pattern in patterns:
         # 基本的な最適化

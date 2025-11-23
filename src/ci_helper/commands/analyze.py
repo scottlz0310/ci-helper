@@ -12,7 +12,7 @@ import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, Self, cast
 
 import click
 from rich.console import Console
@@ -32,6 +32,7 @@ from ci_helper.ai.exceptions import (
     NetworkError,
     ProviderError,
     RateLimitError,
+    SecurityError,
     TokenLimitError,
 )
 from ci_helper.ai.integration import AIIntegration
@@ -201,6 +202,9 @@ def analyze(
     try:
         # コンテキストから設定を取得
         config = ctx.obj["config"]
+        if config is None:
+            raise CIHelperError("設定が読み込まれていません")
+
         if "console" in ctx.obj:
             console = ctx.obj["console"]
 
@@ -315,16 +319,17 @@ def analyze(
                 }
 
                 # 復旧情報をファイルに保存
-                recovery_dir = config.get_path("cache_dir") / "recovery"
-                recovery_dir.mkdir(parents=True, exist_ok=True)
-                recovery_file = recovery_dir / "last_error.json"
+                if config:
+                    recovery_dir = config.get_path("cache_dir") / "recovery"
+                    recovery_dir.mkdir(parents=True, exist_ok=True)
+                    recovery_file = recovery_dir / "last_error.json"
 
-                import json
+                    import json
 
-                with recovery_file.open("w", encoding="utf-8") as f:
-                    json.dump(recovery_info, f, ensure_ascii=False, indent=2)
+                    with recovery_file.open("w", encoding="utf-8") as f:
+                        json.dump(recovery_info, f, ensure_ascii=False, indent=2)
 
-                console.print(f"[dim]復旧情報を保存しました: {recovery_file}[/dim]")
+                    console.print(f"[dim]復旧情報を保存しました: {recovery_file}[/dim]")
 
             except Exception as save_error:
                 console.print(f"[yellow]⚠️  復旧情報の保存に失敗: {save_error}[/yellow]")
@@ -388,7 +393,7 @@ async def _run_analysis(
         await ai_integration.initialize()
 
         # ログファイルの決定
-        if log_file is None:
+        if log_file is None and ai_integration.config:
             log_file = _get_latest_log_file(ai_integration.config)
 
         if log_file is None:
@@ -548,7 +553,9 @@ async def _run_interactive_mode(
 
 
 async def _process_interactive_turn(
-    ai_integration: AIIntegration, session: InteractiveSession, console: Console
+    ai_integration: AIIntegration,
+    session: InteractiveSession,
+    console: Console,
 ) -> None:
     """対話の1ターンを処理."""
     # ユーザー入力の取得
@@ -860,8 +867,9 @@ def _display_stats(config: Config, console: Console) -> None:
             console.print("[bold]プロバイダー別使用量:[/bold]")
             for provider, data in stats["provider_breakdown"].items():
                 if isinstance(data, dict):
+                    data_dict = cast("dict[str, Any]", data)
                     console.print(
-                        f"{provider}: {data.get('total_tokens', 0):,} トークン, ${data.get('total_cost', 0):.4f}",
+                        f"{provider}: {data_dict.get('total_tokens', 0):,} トークン, ${data_dict.get('total_cost', 0):.4f}",
                     )
                 else:
                     console.print(f"{provider}: {data:,} 回使用")
@@ -882,7 +890,7 @@ def _get_latest_log_file(config: Config) -> Path | None:
     """
     try:
         log_manager = LogManager(config)
-        logs = log_manager.list_logs()
+        logs: list[dict[str, Any]] = log_manager.list_logs()
         if logs:
             log_dir = config.get_path("log_dir")
             log_filename = logs[0].get("log_file") or logs[0].get("file_path")
@@ -994,7 +1002,7 @@ def _display_pattern_table(pattern_matches: list[Any], console: Console) -> None
         confidence_text = f"[{confidence_color}]{match.confidence:.1%}[/{confidence_color}]"
 
         # マッチ理由を構築
-        match_reasons = []
+        match_reasons: list[str] = []
         if hasattr(match, "supporting_evidence") and match.supporting_evidence:
             match_reasons.extend(match.supporting_evidence[:2])  # 最初の2つの証拠のみ
         if not match_reasons:
@@ -1110,10 +1118,6 @@ def _display_fix_details(fix: FixSuggestion, console: Console) -> None:
         for ref in fix.references[:2]:
             console.print(f"    • {ref}")
 
-    # 修正提案のランキング表示（効果と安全性による）
-    if len(fix_suggestions) > 1:
-        _display_fix_suggestions_ranking(fix_suggestions, console)
-
 
 def _display_risk_and_time_details(fix_suggestion: FixSuggestion, console: Console) -> None:
     """リスク評価と推定時間の詳細表示
@@ -1219,7 +1223,7 @@ def _display_fix_suggestions_ranking(fix_suggestions: list[FixSuggestion], conso
         console.print(f"\n[bold green]🎯 推奨修正案: {best_fix.title}[/bold green]")
 
         # 推奨理由を表示
-        reasons = []
+        reasons: list[str] = []
         if scored_fixes[0][1] >= 0.8:  # 効果が高い
             reasons.append("高い効果が期待できます")
         if scored_fixes[0][2] >= 0.8:  # 安全性が高い
@@ -1254,7 +1258,7 @@ def _calculate_risk_score(fix_suggestion: FixSuggestion) -> float:
     priority_risks = {"urgent": 0.8, "high": 0.6, "medium": 0.3, "low": 0.1}
     priority = getattr(fix_suggestion, "priority", "medium")
     if hasattr(priority, "value"):
-        priority = priority.value
+        priority = cast("Any", priority).value
     risk_score += priority_risks.get(str(priority).lower(), 0.3) * 0.3  # 重み付けを調整
 
     # ファイル変更数によるリスク
@@ -1532,7 +1536,7 @@ def _handle_provider_error_enhanced(error: ProviderError, console: Console, verb
     console.print("  4️⃣  別のプロバイダーを試す")
 
     # 代替プロバイダーの提案
-    alternatives = []
+    alternatives: list[str] = []
     if error.provider != "openai":
         alternatives.append("openai")
     if error.provider != "anthropic":
@@ -1695,7 +1699,7 @@ def _suggest_fallback_options(console: Console, log_file: Path | None) -> None:
 async def _save_partial_analysis_state(
     ai_integration: AIIntegration,
     log_content: str,
-    options: AnalyzeOptions,
+    options: AnalyzeOptions | None,
     error: Exception,
 ) -> None:
     """部分的な分析状態を保存
@@ -1714,19 +1718,23 @@ async def _save_partial_analysis_state(
 
         # フォールバックハンドラーを使用して部分的な結果を保存
         if ai_integration.fallback_handler:
-            await ai_integration.fallback_handler._save_partial_result(
+            partial_data: dict[str, Any] = {
+                "error_type": type(error).__name__,
+                "error_message": str(error),
+                "log_content": log_content[:1000],  # 最初の1000文字のみ保存
+                "retry_available": True,
+            }
+
+            if options:
+                partial_data["options"] = {
+                    "provider": options.provider,
+                    "model": options.model,
+                    "output_format": options.output_format,
+                }
+
+            await ai_integration.fallback_handler.save_partial_result(
                 operation_id,
-                {
-                    "error_type": type(error).__name__,
-                    "error_message": str(error),
-                    "log_content": log_content[:1000],  # 最初の1000文字のみ保存
-                    "options": {
-                        "provider": options.provider,
-                        "model": options.model,
-                        "output_format": options.output_format,
-                    },
-                    "retry_available": True,
-                },
+                partial_data,
             )
     except Exception:
         # 部分保存の失敗は無視
@@ -1772,8 +1780,8 @@ def _validate_analysis_environment(config: Config, console: Console) -> bool:
         環境が有効かどうか
 
     """
-    issues = []
-    warnings = []
+    issues: list[str] = []
+    warnings: list[str] = []
 
     # AI設定の存在確認
     try:

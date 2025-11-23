@@ -1,5 +1,4 @@
-"""
-CI実行エンジン
+"""CI実行エンジン
 
 actコマンドを使用してGitHub Actionsワークフローをローカルで実行します。
 """
@@ -34,6 +33,7 @@ class CIRunner:
 
         Args:
             config: 設定オブジェクト
+
         """
         self.config = config
         self.project_root = config.project_root
@@ -60,11 +60,12 @@ class CIRunner:
 
         Raises:
             ExecutionError: 実行に失敗した場合
+
         """
         start_time = time.time()
 
         if not dry_run:
-            self._check_lock_file()
+            self.check_lock_file()
 
         # ワークフローファイルを検出
         workflow_files = self._discover_workflows(workflows)
@@ -130,6 +131,7 @@ class CIRunner:
 
         Returns:
             ワークフローファイルのパスリスト
+
         """
         workflows_dir = self.project_root / ".github" / "workflows"
         if not workflows_dir.exists():
@@ -165,6 +167,7 @@ class CIRunner:
 
         Returns:
             ワークフロー実行結果と出力のタプル
+
         """
         start_time = time.time()
 
@@ -185,7 +188,7 @@ class CIRunner:
                         success=success,
                         duration=duration,
                         output=output,
-                    )
+                    ),
                 ],
                 duration=duration,
             )
@@ -224,6 +227,7 @@ class CIRunner:
 
         Raises:
             ExecutionError: actコマンドの実行に失敗した場合
+
         """
         # 実行前のファイル所有権を記録
         original_ownership = self._record_file_ownership()
@@ -290,6 +294,7 @@ class CIRunner:
 
         Returns:
             ファイルパスと(uid, gid)のマッピング
+
         """
         ownership_map = {}
 
@@ -324,6 +329,7 @@ class CIRunner:
 
         Args:
             cmd: actコマンドのリスト
+
         """
         import os
 
@@ -341,6 +347,7 @@ class CIRunner:
 
         Args:
             original_ownership: 元の所有権情報
+
         """
         import os
 
@@ -364,7 +371,7 @@ class CIRunner:
                         # 所有権を復元
                         os.chown(path, original_uid, original_gid)
                         logger.debug(
-                            f"所有権を復元しました: {path} ({current_uid}:{current_gid} -> {original_uid}:{original_gid})"
+                            f"所有権を復元しました: {path} ({current_uid}:{current_gid} -> {original_uid}:{original_gid})",
                         )
                     except (OSError, PermissionError) as e:
                         logger.warning(f"所有権の復元に失敗しました: {path} - {e}")
@@ -402,6 +409,7 @@ class CIRunner:
 
         Raises:
             SecurityError: セキュリティ検証に失敗した場合
+
         """
         try:
             # 追加の環境変数を設定から取得
@@ -423,6 +431,7 @@ class CIRunner:
 
         Returns:
             依存関係のチェック結果
+
         """
         checks = {}
 
@@ -454,6 +463,7 @@ class CIRunner:
 
         Returns:
             セキュリティ検証結果
+
         """
         return self.secret_manager.validate_secrets(required_secrets)
 
@@ -462,14 +472,16 @@ class CIRunner:
 
         Returns:
             シークレット設定状況の辞書
+
         """
         return self.secret_manager.get_secret_summary()
 
-    def _check_lock_file(self) -> None:
+    def check_lock_file(self) -> None:
         """ロックファイルをチェックして同時実行を防ぐ
 
         Raises:
             ExecutionError: 他のインスタンスが実行中の場合
+
         """
         lock_file = self.config.project_root / ".ci-helper" / "ci-helper.lock"
         if lock_file.exists():

@@ -1,5 +1,4 @@
-"""
-プロンプトテンプレート管理
+"""プロンプトテンプレート管理
 
 AI分析用のプロンプトテンプレートを管理し、エラータイプや分析目的に応じて
 適切なプロンプトを生成します。
@@ -24,15 +23,16 @@ class PromptManager:
         Args:
             config_path: カスタムテンプレートファイルのパス
             custom_templates: カスタムテンプレートの辞書
+
         """
-        self.templates = self._load_default_templates()
+        self.templates: dict[str, str | dict[str, str]] = self._load_default_templates()
         self.custom_templates = custom_templates or {}
 
         # カスタムテンプレートファイルがある場合は読み込み
         if config_path and config_path.exists():
             self._load_templates_from_file(config_path)
 
-    def _load_default_templates(self) -> dict[str, str]:
+    def _load_default_templates(self) -> dict[str, str | dict[str, str]]:
         """デフォルトプロンプトテンプレートを読み込み"""
         return {
             "analysis": self._get_default_analysis_template(),
@@ -242,6 +242,7 @@ class PromptManager:
 
         Args:
             config_path: テンプレートファイルのパス
+
         """
         try:
             # 簡単な実装 - 実際にはTOMLやYAMLパーサーを使用
@@ -249,7 +250,6 @@ class PromptManager:
                 f.read()
                 # 基本的なテンプレート抽出（実装を簡略化）
                 # 実際にはより堅牢なパーサーが必要
-                pass
         except Exception as e:
             raise ConfigurationError(f"テンプレートファイルの読み込みに失敗しました: {e}")
 
@@ -262,16 +262,22 @@ class PromptManager:
 
         Returns:
             生成されたプロンプト
+
         """
         # エラータイプ別の専用テンプレートがある場合は使用
-        if error_type and error_type.value in self.templates.get("error_specific", {}):
-            template = self.templates["error_specific"][error_type.value]
-        else:
-            template = self.templates["analysis"]
+        template: str | dict[str, str] = self.templates["analysis"]
+        error_specific = self.templates.get("error_specific")
+
+        if error_type and isinstance(error_specific, dict) and error_type.value in error_specific:
+            template = error_specific[error_type.value]
 
         # カスタムテンプレートがある場合は優先
         if "analysis" in self.custom_templates:
             template = self.custom_templates["analysis"]
+
+        if not isinstance(template, str):
+            # Should not happen given the structure, but for type safety
+            template = str(template)
 
         return self._substitute_variables(template, {"context": context})
 
@@ -284,8 +290,11 @@ class PromptManager:
 
         Returns:
             修正提案用プロンプト
+
         """
         template = self.custom_templates.get("fix_suggestion", self.templates["fix_suggestion"])
+        if not isinstance(template, str):
+            template = str(template)
 
         return self._substitute_variables(template, {"analysis_result": analysis_result.summary, "context": context})
 
@@ -298,8 +307,11 @@ class PromptManager:
 
         Returns:
             対話用プロンプト
+
         """
         template = self.custom_templates.get("interactive", self.templates["interactive"])
+        if not isinstance(template, str):
+            template = str(template)
 
         history_text = "\n".join(conversation_history) if conversation_history else "（まだ会話はありません）"
 
@@ -311,6 +323,7 @@ class PromptManager:
         Args:
             name: プロンプト名
             template: プロンプトテンプレート
+
         """
         self.custom_templates[name] = template
 
@@ -326,6 +339,7 @@ class PromptManager:
 
         Raises:
             ConfigurationError: プロンプトが見つからない場合
+
         """
         if name not in self.custom_templates:
             raise ConfigurationError(f"カスタムプロンプト '{name}' が見つかりません")
@@ -338,6 +352,7 @@ class PromptManager:
 
         Returns:
             テンプレート名のリスト
+
         """
         templates = list(self.templates.keys())
         templates.extend(self.custom_templates.keys())
@@ -352,6 +367,7 @@ class PromptManager:
 
         Returns:
             変数が置換されたテンプレート
+
         """
         result = template
         for key, value in variables.items():
@@ -368,8 +384,9 @@ class PromptManager:
 
         Returns:
             検証エラーのリスト（空の場合は問題なし）
+
         """
-        errors = []
+        errors: list[str] = []
 
         # 基本的な検証
         if not template.strip():
@@ -391,6 +408,7 @@ class PromptManager:
 
         Returns:
             変数名のリスト
+
         """
         return re.findall(r"\{(\w+)\}", template)
 
@@ -413,8 +431,9 @@ class PromptManager:
 
         Returns:
             生成されたプロンプト
+
         """
-        context_parts = [f"エラーメッセージ: {error_message}"]
+        context_parts: list[str] = [f"エラーメッセージ: {error_message}"]
 
         if file_path:
             location = f"ファイル: {file_path}"

@@ -1,5 +1,4 @@
-"""
-AI統合フォールバック機能のテスト
+"""AI統合フォールバック機能のテスト
 
 AI分析失敗時の代替手段をテストします。
 """
@@ -65,7 +64,10 @@ AssertionError: Expected 200, got 404
             }
 
             result = await fallback_handler.handle_analysis_failure(
-                error, sample_log_content, sample_analyze_options, operation_id
+                error,
+                sample_log_content,
+                sample_analyze_options,
+                operation_id,
             )
 
             assert isinstance(result, AnalysisResult)
@@ -89,7 +91,10 @@ AssertionError: Expected 200, got 404
                 }
 
                 result = await fallback_handler.handle_analysis_failure(
-                    error, sample_log_content, sample_analyze_options, operation_id
+                    error,
+                    sample_log_content,
+                    sample_analyze_options,
+                    operation_id,
                 )
 
                 assert isinstance(result, AnalysisResult)
@@ -113,7 +118,10 @@ AssertionError: Expected 200, got 404
                 }
 
                 result = await fallback_handler.handle_analysis_failure(
-                    error, sample_log_content, sample_analyze_options, operation_id
+                    error,
+                    sample_log_content,
+                    sample_analyze_options,
+                    operation_id,
                 )
 
                 assert isinstance(result, AnalysisResult)
@@ -131,7 +139,10 @@ AssertionError: Expected 200, got 404
             mock_traditional.return_value = {"summary": "Generic fallback result", "errors": ["Generic error detected"]}
 
             result = await fallback_handler.handle_analysis_failure(
-                error, sample_log_content, sample_analyze_options, operation_id
+                error,
+                sample_log_content,
+                sample_analyze_options,
+                operation_id,
             )
 
             assert isinstance(result, AnalysisResult)
@@ -153,7 +164,10 @@ AssertionError: Expected 200, got 404
                 mock_traditional.return_value = {"summary": "Retry successful", "errors": []}
 
                 await fallback_handler._attempt_auto_retry(
-                    error, sample_log_content, sample_analyze_options, operation_id
+                    error,
+                    sample_log_content,
+                    sample_analyze_options,
+                    operation_id,
                 )
 
                 # リトライが実行されることを確認
@@ -169,7 +183,10 @@ AssertionError: Expected 200, got 404
         fallback_handler.retry_attempts[operation_id] = 3
 
         result = await fallback_handler._attempt_auto_retry(
-            error, sample_log_content, sample_analyze_options, operation_id
+            error,
+            sample_log_content,
+            sample_analyze_options,
+            operation_id,
         )
 
         # リトライが実行されないことを確認
@@ -198,7 +215,7 @@ AssertionError: Expected 200, got 404
         test_data = {"partial_analysis": "Test analysis", "timestamp": datetime.now().isoformat(), "progress": 0.5}
 
         # 保存
-        await fallback_handler._save_partial_result(operation_id, test_data)
+        await fallback_handler.save_partial_result(operation_id, test_data)
 
         # 読み込み
         loaded_data = await fallback_handler.load_partial_result(operation_id)
@@ -220,9 +237,9 @@ AssertionError: Expected 200, got 404
 
         # 部分的な結果を保存
         partial_data = {
-            "retry_info": {"last_attempt": datetime.now().isoformat(), "attempt_count": 2, "next_retry_delay": 30}
+            "retry_info": {"last_attempt": datetime.now().isoformat(), "attempt_count": 2, "next_retry_delay": 30},
         }
-        await fallback_handler._save_partial_result(operation_id, partial_data)
+        await fallback_handler.save_partial_result(operation_id, partial_data)
 
         # リトライ情報を取得
         retry_info = await fallback_handler.retry_from_partial_result(operation_id)
