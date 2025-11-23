@@ -9,11 +9,31 @@ import json
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict, cast
 
 from ..utils.config import Config
 from .exceptions import ConfigurationError, ValidationError
 from .models import Pattern
+
+
+class RawPatternData(TypedDict):
+    id: str
+    name: str
+    category: str
+    regex_patterns: list[str]
+    keywords: list[str]
+    context_requirements: list[str]
+    confidence_base: float
+    success_rate: float
+    created_at: str
+    updated_at: str
+    user_defined: bool
+
+
+class ExportData(TypedDict):
+    version: str
+    exported_at: str
+    patterns: list[RawPatternData]
 
 
 class CustomPatternManager:
@@ -94,24 +114,34 @@ class CustomPatternManager:
 
         try:
             with open(self.custom_patterns_file, encoding="utf-8") as f:
-                patterns_data = json.load(f)
+                patterns_json = json.load(f)
 
-            patterns = []
-            for pattern_data in patterns_data.get("patterns", []):
-                pattern = Pattern(
-                    id=pattern_data["id"],
-                    name=pattern_data["name"],
-                    category=pattern_data["category"],
-                    regex_patterns=pattern_data["regex_patterns"],
-                    keywords=pattern_data["keywords"],
-                    context_requirements=pattern_data.get("context_requirements", []),
-                    confidence_base=pattern_data.get("confidence_base", 0.7),
-                    success_rate=pattern_data.get("success_rate", 0.0),
-                    created_at=datetime.fromisoformat(pattern_data["created_at"]),
-                    updated_at=datetime.fromisoformat(pattern_data["updated_at"]),
-                    user_defined=pattern_data.get("user_defined", True),
-                )
-                patterns.append(pattern)
+            raw_patterns = patterns_json.get("patterns", [])
+            patterns: list[Pattern] = []
+
+            if isinstance(raw_patterns, list):
+                raw_patterns_list = cast(list[Any], raw_patterns)
+                for raw_pattern_any in raw_patterns_list:
+                    if not isinstance(raw_pattern_any, dict):
+                        continue
+                    pattern_data = cast(RawPatternData, raw_pattern_any)
+                    try:
+                        pattern = Pattern(
+                            id=pattern_data["id"],
+                            name=pattern_data["name"],
+                            category=pattern_data["category"],
+                            regex_patterns=pattern_data["regex_patterns"],
+                            keywords=pattern_data["keywords"],
+                            context_requirements=pattern_data.get("context_requirements", []),
+                            confidence_base=pattern_data.get("confidence_base", 0.7),
+                            success_rate=pattern_data.get("success_rate", 0.0),
+                            created_at=datetime.fromisoformat(pattern_data["created_at"]),
+                            updated_at=datetime.fromisoformat(pattern_data["updated_at"]),
+                            user_defined=pattern_data.get("user_defined", True),
+                        )
+                        patterns.append(pattern)
+                    except KeyError:
+                        continue
 
             return patterns
 
@@ -178,16 +208,13 @@ class CustomPatternManager:
 
         """
         patterns = self.load_custom_patterns()
-        original_count = len(patterns)
+        filtered_patterns = [p for p in patterns if p.id != pattern_id]
 
-        # 指定されたIDのパターンを除外
-        patterns = [p for p in patterns if p.id != pattern_id]
-
-        if len(patterns) == original_count:
+        if len(filtered_patterns) == len(patterns):
             return False  # パターンが見つからなかった
 
         # 更新されたパターンリストを保存
-        self._save_all_custom_patterns(patterns)
+        self._save_all_custom_patterns(filtered_patterns)
         return True
 
     def export_patterns(self, output_file: Path, pattern_ids: list[str] | None = None) -> None:
@@ -208,7 +235,7 @@ class CustomPatternManager:
             patterns = [p for p in patterns if p.id in pattern_ids]
 
         # エクスポート用データを作成
-        export_data = {
+        export_data: ExportData = {
             "version": "1.0",
             "exported_at": datetime.now().isoformat(),
             "patterns": [
@@ -281,8 +308,17 @@ class CustomPatternManager:
         existing_patterns = self.load_custom_patterns()
         existing_ids = {p.id for p in existing_patterns}
 
-        imported_patterns = []
-        for pattern_data in import_data["patterns"]:
+        imported_patterns: list[Pattern] = []
+
+        raw_patterns = import_data["patterns"]
+        if not isinstance(raw_patterns, list):
+            raise ConfigurationError("パターンデータの形式が不正です", "patterns は配列である必要があります")
+
+        raw_patterns_list = cast(list[Any], raw_patterns)
+        for raw_pattern in raw_patterns_list:
+            if not isinstance(raw_pattern, dict):
+                continue
+            pattern_data = cast(RawPatternData, raw_pattern)
             try:
                 # パターンIDの重複チェック
                 pattern_id = pattern_data["id"]
@@ -315,7 +351,7 @@ class CustomPatternManager:
         # インポートされたパターンを既存パターンに追加
         if overwrite:
             # 上書きモードの場合、同じIDのパターンを置換
-            updated_patterns = []
+            updated_patterns: list[Pattern] = []
             imported_ids = {p.id for p in imported_patterns}
 
             for existing_pattern in existing_patterns:
@@ -353,16 +389,15 @@ class CustomPatternManager:
         }
 
         # カテゴリ分布を計算
+        category_distribution: dict[str, int] = {}
         for pattern in patterns:
             category = pattern.category
-            validation_result["category_distribution"][category] = (
-                validation_result["category_distribution"].get(category, 0) + 1
-            )
+            category_distribution[category] = category_distribution.get(category, 0) + 1
+        validation_result["category_distribution"] = category_distribution
 
         # 重複名をチェック
-        names = [p.name for p in patterns]
-        seen_names = set()
-        for name in names:
+        seen_names: set[str] = set()
+        for name in [p.name for p in patterns]:
             if name in seen_names:
                 validation_result["duplicate_names"].append(name)
             seen_names.add(name)
@@ -416,19 +451,19 @@ class CustomPatternManager:
             ValidationError: データが無効な場合
 
         """
-        if not name or not isinstance(name, str):
+        if not name:
             raise ValidationError("パターン名は空でない文字列である必要があります")
 
-        if not category or not isinstance(category, str):
+        if not category:
             raise ValidationError("カテゴリは空でない文字列である必要があります")
 
-        if not isinstance(regex_patterns, list) or not regex_patterns:
+        if not regex_patterns:
             raise ValidationError("正規表現パターンは空でないリストである必要があります")
 
-        if not isinstance(keywords, list) or not keywords:
+        if not keywords:
             raise ValidationError("キーワードは空でないリストである必要があります")
 
-        if not isinstance(confidence_base, int | float) or not (0.0 <= confidence_base <= 1.0):
+        if not (0.0 <= confidence_base <= 1.0):
             raise ValidationError("基本信頼度は0.0から1.0の間の数値である必要があります")
 
         # 正規表現の妥当性をチェック

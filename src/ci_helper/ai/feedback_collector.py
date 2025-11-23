@@ -12,11 +12,22 @@ import uuid
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict, cast
 
 from .models import FixSuggestion, PatternMatch, UserFeedback
 
 logger = logging.getLogger(__name__)
+
+
+class FeedbackSessionData(TypedDict, total=False):
+    session_id: str
+    pattern_id: str
+    fix_suggestion_id: str
+    started_at: str
+    completed_at: str
+    pattern_confidence: float
+    fix_confidence: float
+    feedback_provided: bool
 
 
 class FeedbackCollector:
@@ -45,7 +56,7 @@ class FeedbackCollector:
 
         # フィードバックデータ
         self.feedback_history: list[UserFeedback] = []
-        self.feedback_sessions: dict[str, dict[str, Any]] = {}
+        self.feedback_sessions: dict[str, FeedbackSessionData] = {}
         self.pending_feedback: dict[str, dict[str, Any]] = {}
 
         self._initialized = False
@@ -89,7 +100,16 @@ class FeedbackCollector:
             # フィードバックセッションを読み込み
             if self.feedback_sessions_file.exists():
                 with open(self.feedback_sessions_file, encoding="utf-8") as f:
-                    self.feedback_sessions = json.load(f)
+                    sessions_data = json.load(f)
+                    if isinstance(sessions_data, dict):
+                        raw_sessions = cast(dict[Any, Any], sessions_data)
+                        typed_sessions: dict[str, FeedbackSessionData] = {}
+                        for session_id_raw, session_info_raw in raw_sessions.items():
+                            if not isinstance(session_info_raw, dict):
+                                continue
+                            session_id = str(session_id_raw)
+                            typed_sessions[session_id] = cast(FeedbackSessionData, session_info_raw)
+                        self.feedback_sessions = typed_sessions
                 logger.info("フィードバックセッションを %d 件読み込みました", len(self.feedback_sessions))
 
         except Exception as e:
@@ -121,7 +141,7 @@ class FeedbackCollector:
         try:
             # フィードバックセッションを開始
             session_id = str(uuid.uuid4())
-            session_data = {
+            session_data: FeedbackSessionData = {
                 "session_id": session_id,
                 "pattern_id": pattern_match.pattern.id,
                 "fix_suggestion_id": getattr(fix_suggestion, "id", str(uuid.uuid4())),
@@ -297,7 +317,7 @@ class FeedbackCollector:
         Returns:
             解析されたフィードバックデータ
         """
-        feedback_data = {
+        feedback_data: dict[str, Any] = {
             "rating": 3,  # デフォルト
             "success": True,  # デフォルト
             "comments": "",
@@ -361,7 +381,7 @@ class FeedbackCollector:
 
         logger.info("バッチフィードバック収集開始: %d 件の提案", len(fix_suggestions))
 
-        collected_feedback = []
+        collected_feedback: list[UserFeedback] = []
 
         try:
             for i, (pattern_match, fix_suggestion) in enumerate(zip(pattern_matches, fix_suggestions, strict=False)):
@@ -461,7 +481,7 @@ class FeedbackCollector:
         total_rating = sum(fb.rating for fb in feedback_list)
 
         # 評価分布
-        rating_distribution = {}
+        rating_distribution: dict[str, int] = {}
         for rating in range(1, 6):
             count = sum(1 for fb in feedback_list if fb.rating == rating)
             rating_distribution[str(rating)] = count

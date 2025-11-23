@@ -23,15 +23,13 @@ TLineResult = TypeVar("TLineResult", covariant=True)
 class ChunkProcessor(Protocol[TChunkResult]):
     """ログチャンク処理関数のプロトコル"""
 
-    def __call__(self, chunk: str, **processor_options: Any) -> TChunkResult | None:
-        ...
+    def __call__(self, chunk: str, **processor_options: Any) -> TChunkResult | None: ...
 
 
 class LineProcessor(Protocol[TLineResult]):
     """ログ行処理関数のプロトコル"""
 
-    def __call__(self, lines: list[str], **processor_options: Any) -> TLineResult | None:
-        ...
+    def __call__(self, lines: list[str], **processor_options: Any) -> TLineResult | None: ...
 
 
 class StreamingFormatterMixin(BaseLogFormatter):

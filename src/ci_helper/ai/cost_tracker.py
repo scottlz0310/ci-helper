@@ -11,12 +11,26 @@ import json
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict, cast
 
 import aiofiles  # type: ignore[import-untyped]
 
 from .exceptions import ConfigurationError
 from .models import LimitStatus, UsageStats
+
+
+class UsageRecord(TypedDict):
+    """単一の使用レコード"""
+
+    timestamp: str
+    provider: str
+    model: str
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
+    cost: float
+    analysis_type: str
+    success: bool
 
 
 class CostTracker:
@@ -41,6 +55,7 @@ class CostTracker:
 
         # 使用データを読み込み
         self.usage_data = self._load_usage_data()
+        self._ensure_records_list()
 
         # 保存パスのディレクトリを作成
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
@@ -66,6 +81,49 @@ class CostTracker:
                 "last_updated": time.time(),
                 "version": "1.0",
             }
+
+    def _normalize_record(self, record_data: dict[str, Any]) -> UsageRecord:
+        """辞書データから UsageRecord を生成"""
+        timestamp = str(record_data.get("timestamp", datetime.now().isoformat()))
+        provider = str(record_data.get("provider", "unknown"))
+        model = str(record_data.get("model", "unknown"))
+        input_tokens = int(record_data.get("input_tokens", 0))
+        output_tokens = int(record_data.get("output_tokens", 0))
+        total_tokens = int(record_data.get("total_tokens", input_tokens + output_tokens))
+        cost = float(record_data.get("cost", 0.0))
+        analysis_type = str(record_data.get("analysis_type", "analysis"))
+        success = bool(record_data.get("success", True))
+        return UsageRecord(
+            timestamp=timestamp,
+            provider=provider,
+            model=model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            total_tokens=total_tokens,
+            cost=cost,
+            analysis_type=analysis_type,
+            success=success,
+        )
+
+    def _ensure_records_list(self) -> list[UsageRecord]:
+        """usage_data に型付きの records リストを確保"""
+        records_raw = self.usage_data.get("records", [])
+        normalized_records: list[UsageRecord] = []
+        if isinstance(records_raw, list):
+            records_list = cast(list[Any], records_raw)
+            for record_any in records_list:
+                if isinstance(record_any, dict):
+                    record_dict = cast(dict[str, Any], record_any)
+                    normalized_records.append(self._normalize_record(record_dict))
+        self.usage_data["records"] = normalized_records
+        return normalized_records
+
+    def _get_records(self) -> list[UsageRecord]:
+        """現在のレコード一覧を取得"""
+        records = self.usage_data.get("records")
+        if not isinstance(records, list):
+            return self._ensure_records_list()
+        return cast(list[UsageRecord], records)
 
     async def _save_usage_data(self) -> None:
         """使用データを保存"""
@@ -136,7 +194,7 @@ class CostTracker:
         if "records" not in self.usage_data:
             self.usage_data["records"] = []
 
-        record = {
+        record_entry: UsageRecord = {
             "timestamp": timestamp.isoformat(),
             "provider": provider,
             "model": model,
@@ -147,7 +205,7 @@ class CostTracker:
             "analysis_type": analysis_type,
             "success": success,
         }
-        self.usage_data["records"].append(record)
+        self._get_records().append(record_entry)
 
         # 自動保存
         if self.auto_save:
@@ -178,15 +236,14 @@ class CostTracker:
             月間使用統計
         """
         # 対象月の記録を抽出（レコード形式から）
-        monthly_records = []
-        record_dates = set()
+        monthly_records: list[UsageRecord] = []
+        record_dates: set[str] = set()
 
-        if "records" in self.usage_data:
-            for record in self.usage_data["records"]:
-                record_date = datetime.fromisoformat(record["timestamp"])
-                if record_date.year == year and record_date.month == month:
-                    monthly_records.append(record)
-                    record_dates.add(record_date.strftime("%Y-%m-%d"))
+        for record in self._get_records():
+            record_date = datetime.fromisoformat(record["timestamp"])
+            if record_date.year == year and record_date.month == month:
+                monthly_records.append(record)
+                record_dates.add(record_date.strftime("%Y-%m-%d"))
 
         # 階層構造からも抽出（レコードにない日付のみ）
         for date_str, date_data in self.usage_data.items():
@@ -197,23 +254,35 @@ class CostTracker:
                 date_obj = datetime.strptime(date_str, "%Y-%m-%d")
                 if date_obj.year == year and date_obj.month == month and date_str not in record_dates:
                     # 階層データをレコード形式に変換
-                    for provider, provider_data in date_data.items():
-                        for model, model_data in provider_data.items():
+                    provider_map = cast(dict[str, Any], date_data)
+                    for provider, provider_data in provider_map.items():
+                        if not isinstance(provider_data, dict):
+                            continue
+                        provider_data_dict = cast(dict[str, Any], provider_data)
+                        for model, model_data in provider_data_dict.items():
+                            if not isinstance(model_data, dict):
+                                continue
+                            model_data_dict = cast(dict[str, Any], model_data)
                             # 複数リクエストがある場合は分割
-                            requests = model_data.get("requests", 1)
+                            requests = max(1, int(model_data_dict.get("requests", 1)))
+                            input_tokens_val = int(model_data_dict.get("input_tokens", 0))
+                            output_tokens_val = int(model_data_dict.get("output_tokens", 0))
+                            total_tokens_val = input_tokens_val + output_tokens_val
+                            cost_val = float(model_data_dict.get("cost", 0.0))
                             for _ in range(requests):
-                                record = {
-                                    "timestamp": f"{date_str}T12:00:00",
-                                    "provider": provider,
-                                    "model": model,
-                                    "input_tokens": model_data["input_tokens"] // requests,
-                                    "output_tokens": model_data["output_tokens"] // requests,
-                                    "total_tokens": (model_data["input_tokens"] + model_data["output_tokens"])
-                                    // requests,
-                                    "cost": model_data["cost"] / requests,
-                                    "analysis_type": model_data.get("analysis_type", "analysis"),
-                                    "success": model_data.get("success", True),
-                                }
+                                record = self._normalize_record(
+                                    {
+                                        "timestamp": f"{date_str}T12:00:00",
+                                        "provider": provider,
+                                        "model": model,
+                                        "input_tokens": input_tokens_val // requests,
+                                        "output_tokens": output_tokens_val // requests,
+                                        "total_tokens": total_tokens_val // requests,
+                                        "cost": cost_val / requests,
+                                        "analysis_type": model_data_dict.get("analysis_type", "analysis"),
+                                        "success": model_data_dict.get("success", True),
+                                    },
+                                )
                                 monthly_records.append(record)
             except ValueError:
                 # 日付形式でない場合はスキップ
@@ -232,16 +301,16 @@ class CostTracker:
         """
         # 対象期間の記録を抽出
         cutoff_date = datetime.now() - timedelta(days=days)
-        recent_records = []
+        recent_records: list[UsageRecord] = []
 
-        for record in self.usage_data["records"]:
+        for record in self._get_records():
             record_date = datetime.fromisoformat(record["timestamp"])
             if record_date >= cutoff_date:
                 recent_records.append(record)
 
         return self._calculate_stats(recent_records)
 
-    def _calculate_stats(self, records: list[dict[str, Any]]) -> UsageStats:
+    def _calculate_stats(self, records: list[UsageRecord]) -> UsageStats:
         """記録から統計を計算"""
         if not records:
             return UsageStats()
@@ -256,19 +325,19 @@ class CostTracker:
         total_cost = sum(r["cost"] for r in records)
 
         # プロバイダー別統計
-        provider_breakdown = {}
+        provider_breakdown: dict[str, int] = {}
         for record in records:
             provider = record["provider"]
             provider_breakdown[provider] = provider_breakdown.get(provider, 0) + 1
 
         # モデル別統計
-        model_breakdown = {}
+        model_breakdown: dict[str, int] = {}
         for record in records:
             model = record["model"]
             model_breakdown[model] = model_breakdown.get(model, 0) + 1
 
         # 日別使用量
-        daily_usage = {}
+        daily_usage: dict[str, float] = {}
         for record in records:
             date_str = record["timestamp"][:10]  # YYYY-MM-DD
             daily_usage[date_str] = daily_usage.get(date_str, 0.0) + record["cost"]
@@ -306,7 +375,7 @@ class CostTracker:
 
         # プロバイダー別の使用量を取得
         provider_cost = 0.0
-        for record in self.usage_data["records"]:
+        for record in self._get_records():
             record_date = datetime.fromisoformat(record["timestamp"])
             if (
                 record_date.year == current_date.year
@@ -413,27 +482,27 @@ class CostTracker:
             コスト内訳
         """
         cutoff_date = datetime.now() - timedelta(days=days)
-        recent_records = []
+        recent_records: list[UsageRecord] = []
 
-        for record in self.usage_data["records"]:
+        for record in self._get_records():
             record_date = datetime.fromisoformat(record["timestamp"])
             if record_date >= cutoff_date:
                 recent_records.append(record)
 
         # プロバイダー別コスト
-        provider_costs = {}
+        provider_costs: dict[str, float] = {}
         for record in recent_records:
             provider = record["provider"]
             provider_costs[provider] = provider_costs.get(provider, 0.0) + record["cost"]
 
         # モデル別コスト
-        model_costs = {}
+        model_costs: dict[str, float] = {}
         for record in recent_records:
             model = record["model"]
             model_costs[model] = model_costs.get(model, 0.0) + record["cost"]
 
         # 分析タイプ別コスト
-        type_costs = {}
+        type_costs: dict[str, float] = {}
         for record in recent_records:
             analysis_type = record["analysis_type"]
             type_costs[analysis_type] = type_costs.get(analysis_type, 0.0) + record["cost"]
@@ -454,15 +523,15 @@ class CostTracker:
 
         Args:
             export_path: エクスポート先パス
-            format: エクスポート形式（json, csv）
+            export_format: エクスポート形式（json, csv）
         """
-        if format.lower() == "json":
+        if export_format.lower() == "json":
             async with aiofiles.open(export_path, "w", encoding="utf-8") as f:
                 await f.write(json.dumps(self.usage_data, indent=2, ensure_ascii=False))
-        elif format.lower() == "csv":
+        elif export_format.lower() == "csv":
             await self._export_csv(export_path)
         else:
-            raise ConfigurationError(f"サポートされていないエクスポート形式: {format}")
+            raise ConfigurationError(f"サポートされていないエクスポート形式: {export_format}")
 
     async def _export_csv(self, export_path: Path) -> None:
         """CSV形式でエクスポート"""
@@ -489,7 +558,7 @@ class CostTracker:
         )
 
         # データ行
-        for record in self.usage_data["records"]:
+        for record in self._get_records():
             writer.writerow(
                 [
                     record["timestamp"],
@@ -518,9 +587,9 @@ class CostTracker:
             使用傾向の分析結果
         """
         cutoff_date = datetime.now() - timedelta(days=days)
-        recent_records = []
+        recent_records: list[UsageRecord] = []
 
-        for record in self.usage_data["records"]:
+        for record in self._get_records():
             record_date = datetime.fromisoformat(record["timestamp"])
             if record_date >= cutoff_date:
                 recent_records.append(record)
@@ -529,8 +598,8 @@ class CostTracker:
             return {"message": "分析対象のデータがありません"}
 
         # 日別使用量の傾向
-        daily_costs = {}
-        daily_requests = {}
+        daily_costs: dict[str, float] = {}
+        daily_requests: dict[str, int] = {}
 
         for record in recent_records:
             date_str = record["timestamp"][:10]
@@ -538,11 +607,13 @@ class CostTracker:
             daily_requests[date_str] = daily_requests.get(date_str, 0) + 1
 
         # 傾向分析
-        dates = sorted(daily_costs.keys())
+        dates: list[str] = sorted(daily_costs.keys())
         if len(dates) >= 7:
             # 最初の週と最後の週を比較
-            first_week_avg = sum(daily_costs.get(date, 0) for date in dates[:7]) / 7
-            last_week_avg = sum(daily_costs.get(date, 0) for date in dates[-7:]) / 7
+            first_week_total = sum(daily_costs.get(date, 0.0) for date in dates[:7])
+            last_week_total = sum(daily_costs.get(date, 0.0) for date in dates[-7:])
+            first_week_avg = first_week_total / 7
+            last_week_avg = last_week_total / 7
 
             cost_trend = "増加" if last_week_avg > first_week_avg else "減少"
             cost_change = abs(last_week_avg - first_week_avg)
@@ -550,15 +621,22 @@ class CostTracker:
             cost_trend = "不明"
             cost_change = 0.0
 
+        peak_usage_date: str | None = None
+        peak_usage_cost = 0.0
+        if daily_costs:
+            peak_date, peak_cost = max(daily_costs.items(), key=lambda item: item[1])
+            peak_usage_date = peak_date
+            peak_usage_cost = peak_cost
+
         return {
             "period_days": days,
             "total_days_with_usage": len(dates),
             "cost_trend": cost_trend,
             "cost_change_per_day": cost_change,
-            "average_daily_cost": sum(daily_costs.values()) / len(dates) if dates else 0,
-            "average_daily_requests": sum(daily_requests.values()) / len(dates) if dates else 0,
-            "peak_usage_date": max(daily_costs.keys(), key=lambda d: daily_costs[d]) if daily_costs else None,
-            "peak_usage_cost": max(daily_costs.values()) if daily_costs else 0,
+            "average_daily_cost": (sum(daily_costs.values()) / len(dates)) if dates else 0.0,
+            "average_daily_requests": (sum(daily_requests.values()) / len(dates)) if dates else 0.0,
+            "peak_usage_date": peak_usage_date,
+            "peak_usage_cost": peak_usage_cost,
         }
 
     def save_usage_data(self) -> None:
@@ -583,18 +661,17 @@ class CostTracker:
         cleaned_count = 0
 
         # レコード形式のデータをクリーンアップ
-        if "records" in self.usage_data:
-            original_count = len(self.usage_data["records"])
-            self.usage_data["records"] = [
-                record
-                for record in self.usage_data["records"]
-                if datetime.fromisoformat(record["timestamp"]) > cutoff_date
-            ]
-            cleaned_count += original_count - len(self.usage_data["records"])
+        records = self._get_records()
+        original_count = len(records)
+        filtered_records: list[UsageRecord] = [
+            record for record in records if datetime.fromisoformat(record["timestamp"]) > cutoff_date
+        ]
+        self.usage_data["records"] = filtered_records
+        cleaned_count += original_count - len(filtered_records)
 
         # 階層構造のデータもクリーンアップ
-        dates_to_remove = []
-        for date_str in self.usage_data.keys():
+        dates_to_remove: list[str] = []
+        for date_str in list(self.usage_data.keys()):
             if date_str in ["records", "created", "last_updated", "version"]:
                 continue
 
@@ -629,9 +706,9 @@ class CostTracker:
             日次使用統計
         """
         target_date = datetime(year, month, day)
-        daily_records = []
+        daily_records: list[UsageRecord] = []
 
-        for record in self.usage_data["records"]:
+        for record in self._get_records():
             record_date = datetime.fromisoformat(record["timestamp"])
             if record_date.date() == target_date.date():
                 daily_records.append(record)
@@ -647,6 +724,8 @@ class CostTracker:
         Returns:
             プロバイダー別使用統計
         """
-        provider_records = [record for record in self.usage_data["records"] if record["provider"] == provider]
+        provider_records: list[UsageRecord] = [
+            record for record in self._get_records() if record["provider"] == provider
+        ]
 
         return self._calculate_stats(provider_records)

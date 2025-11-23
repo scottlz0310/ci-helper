@@ -10,12 +10,29 @@ import asyncio
 import json
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, TypedDict, cast
 
 from ..core.models import ExecutionResult
 from ..utils.config import Config
 from .exceptions import NetworkError, ProviderError, RateLimitError
 from .models import AnalysisResult, AnalysisStatus, AnalyzeOptions
+
+
+class PartialResultData(TypedDict, total=False):
+    operation_id: str
+    timestamp: str
+    error_type: str
+    error_class: str
+    error_message: str
+    provider: str
+    failed_provider: str
+    log_content: str
+    options: dict[str, Any]
+    retry_after: int | None
+    reset_time: str | None
+    retry_count: int
+    alternative_providers: list[str]
+
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +54,7 @@ class FallbackHandler:
         self.fallback_dir = config.get_path("cache_dir") / "ai" / "fallback"
         self.fallback_dir.mkdir(parents=True, exist_ok=True)
         self.retry_attempts: dict[str, int] = {}
-        self.partial_results: dict[str, dict[str, Any]] = {}
+        self.partial_results: dict[str, PartialResultData] = {}
 
     async def handle_analysis_failure(
         self,
@@ -405,11 +422,11 @@ class FallbackHandler:
 
             # 失敗抽出を実行
             extractor = LogExtractor(context_lines=3)
-            failures = extractor.extract_failures(log_content)
+            failures: list[Failure] = extractor.extract_failures(log_content)
 
             # 根本原因を特定
-            root_causes = []
-            related_errors = []
+            root_causes: list[dict[str, Any]] = []
+            related_errors: list[str] = []
 
             for failure in failures:
                 root_causes.append(
@@ -462,7 +479,7 @@ class FallbackHandler:
                 "analysis_method": "error",
             }
 
-    async def save_partial_result(self, operation_id: str, data: dict[str, Any]) -> None:
+    async def save_partial_result(self, operation_id: str, data: PartialResultData) -> None:
         """部分的な結果を保存
 
         Args:
@@ -512,7 +529,7 @@ class FallbackHandler:
         alternatives.sort(key=lambda x: priority_order.get(x, 99))
         return alternatives
 
-    async def load_partial_result(self, operation_id: str) -> dict[str, Any] | None:
+    async def load_partial_result(self, operation_id: str) -> PartialResultData | None:
         """部分的な結果を読み込み
 
         Args:
@@ -531,7 +548,7 @@ class FallbackHandler:
             result_file = self.fallback_dir / f"{operation_id}.json"
             if result_file.exists():
                 with result_file.open("r", encoding="utf-8") as f:
-                    data = json.load(f)
+                    data = cast(PartialResultData, json.load(f))
                     self.partial_results[operation_id] = data
                     return data
         except Exception as e:
@@ -612,7 +629,7 @@ class FallbackHandler:
             average_retries = total_retries / total_operations if total_operations > 0 else 0.0
 
             # エラータイプ別の統計
-            error_types = {}
+            error_types: dict[str, int] = {}
             for data in self.partial_results.values():
                 error_type = data.get("error_type", "unknown")
                 error_types[error_type] = error_types.get(error_type, 0) + 1
