@@ -1,0 +1,199 @@
+STEP: Run comprehensive test suite
+npm run test:all
+
+> test-project@1.0.0 test:all
+> npm run lint && npm run type-check && npm run test:unit && npm run test:integration && npm run build
+
+> test-project@1.0.0 lint
+> eslint src/ tests/
+
+/github/workspace/src/auth/validator.js
+  15:1   error    'console' is not defined                     no-undef
+  23:15  error    Missing semicolon                           semi
+  34:1   warning  Unexpected console statement                no-console
+  45:20  error    'userName' is defined but never used       no-unused-vars
+
+/github/workspace/src/utils/helper.js
+  8:1    error    Expected indentation of 2 spaces but found 4  indent
+  12:25  error    Strings must use singlequote                   quotes
+  18:1   error    More than 1 blank line not allowed            no-multiple-empty-lines
+
+✖ 6 problems (5 errors, 1 warning)
+  3 errors and 0 warnings potentially fixable with the --fix option.
+
+> test-project@1.0.0 type-check
+> tsc --noEmit
+
+src/auth/types.ts:15:7 - error TS2322: Type 'string' is not assignable to type 'number'.
+
+15   let userId: number = "invalid_user_id";
+         ~~~~~~
+
+src/utils/api.ts:23:16 - error TS2339: Property 'nonExistentMethod' does not exist on type 'ApiClient'.
+
+23   return client.nonExistentMethod();
+                  ~~~~~~~~~~~~~~~~~
+
+src/models/user.ts:45:3 - error TS2345: Argument of type 'undefined' is not assignable to parameter of type 'string'.
+
+45   validateUser(undefined);
+     ~~~~~~~~~~~~~~~~~~~
+
+Found 3 errors in 3 files.
+
+> test-project@1.0.0 test:unit
+> jest tests/unit/
+
+FAIL tests/unit/auth.test.js
+  ✕ should authenticate valid user (250ms)
+  ✕ should reject invalid credentials (180ms)
+  ✕ should handle missing credentials (120ms)
+
+● should authenticate valid user
+
+  TypeError: Cannot read properties of null (reading 'token')
+
+    at authenticate (src/auth/service.js:23:15)
+    at Object.<anonymous> (tests/unit/auth.test.js:15:23)
+
+● should reject invalid credentials
+
+  AssertionError: Expected authentication to fail
+
+  Expected: false
+  Received: true
+
+    at Object.<anonymous> (tests/unit/auth.test.js:28:33)
+
+● should handle missing credentials
+
+  ReferenceError: credentials is not defined
+
+    at authenticate (src/auth/service.js:45:12)
+    at Object.<anonymous> (tests/unit/auth.test.js:41:18)
+
+FAIL tests/unit/utils.test.js
+  ✕ should format date correctly (95ms)
+  ✕ should validate email format (75ms)
+
+● should format date correctly
+
+  Error: Invalid date format
+
+  Input: "2024-13-45"
+  Expected format: YYYY-MM-DD
+  
+    at formatDate (src/utils/date.js:12:11)
+    at Object.<anonymous> (tests/unit/utils.test.js:18:25)
+
+● should validate email format
+
+  AssertionError: Expected email validation to pass
+
+  Email: "invalid.email@"
+  Expected: true
+  Received: false
+
+    at Object.<anonymous> (tests/unit/utils.test.js:32:28)
+
+Test Suites: 2 failed, 0 passed, 2 total
+Tests:       5 failed, 0 passed, 5 total
+
+> test-project@1.0.0 test:integration
+> jest tests/integration/
+
+FAIL tests/integration/api.test.js
+  ✕ should handle API requests (30000ms)
+  ✕ should retry failed requests (25000ms)
+
+● should handle API requests
+
+  TimeoutError: Request timed out after 30 seconds
+
+  URL: https://api.example.com/users
+  Method: GET
+  Headers: {"Authorization": "Bearer test-token"}
+  
+    at ApiClient.request (src/api/client.js:45:15)
+    at Object.<anonymous> (tests/integration/api.test.js:25:18)
+
+● should retry failed requests
+
+  Error: Maximum retry attempts exceeded
+
+  Attempts: 3
+  Last error: ECONNREFUSED 127.0.0.1:3000
+  
+    at RetryHandler.execute (src/api/retry.js:67:12)
+    at Object.<anonymous> (tests/integration/api.test.js:45:20)
+
+FAIL tests/integration/database.test.js
+  ✕ should connect to database (15000ms)
+  ✕ should perform CRUD operations (8000ms)
+
+● should connect to database
+
+  Error: Connection failed
+
+  Database: postgresql://localhost:5432/testdb
+  Error: password authentication failed for user "testuser"
+  
+    at Database.connect (src/database/connection.js:34:15)
+    at Object.<anonymous> (tests/integration/database.test.js:18:12)
+
+● should perform CRUD operations
+
+  Error: Table 'users' doesn't exist
+
+  Query: SELECT * FROM users WHERE id = $1
+  Parameters: [1]
+  
+    at Database.query (src/database/query.js:56:11)
+    at Object.<anonymous> (tests/integration/database.test.js:35:18)
+
+Test Suites: 2 failed, 0 passed, 2 total
+Tests:       4 failed, 0 passed, 4 total
+
+> test-project@1.0.0 build
+> webpack --mode production
+
+Hash: abcdef1234567890
+Version: webpack 5.88.0
+Time: 3456ms
+Built at: 2024-01-15 14:30:45
+
+ERROR in ./src/main.js 25:0-35
+Module not found: Error: Can't resolve './missing-component' in '/github/workspace/src'
+ @ ./src/main.js 25:0-35
+
+ERROR in ./src/utils/config.js 12:0-40
+Module not found: Error: Can't resolve 'missing-dependency' in '/github/workspace/src/utils'
+ @ ./src/utils/config.js 12:0-40
+
+ERROR in ./src/api/endpoints.js 8:0-28
+Module not found: Error: Can't resolve './routes' in '/github/workspace/src/api'
+ @ ./src/api/endpoints.js 8:0-28
+
+webpack 5.88.0 compiled with 3 errors in 3456 ms
+
+npm ERR! code ELIFECYCLE
+npm ERR! errno 1
+npm ERR! test-project@1.0.0 test:all: `npm run lint && npm run type-check && npm run test:unit && npm run test:integration && npm run build`
+npm ERR! Exit status 1
+npm ERR! 
+npm ERR! Failed at the test-project@1.0.0 test:all script.
+npm ERR! This is probably not a problem with npm. There is likely additional logging output above.
+
+npm ERR! A complete log of this run can be found in:
+npm ERR!     /home/runner/.npm/_logs/2024-01-15T14_30_45_789Z-debug.log
+
+SUMMARY:
+- Lint errors: 6 problems (5 errors, 1 warning)
+- Type check errors: 3 TypeScript errors
+- Unit test failures: 5 failed tests
+- Integration test failures: 4 failed tests  
+- Build errors: 3 webpack module resolution errors
+
+Total failures: 21 issues across multiple categories
+Estimated fix time: 2-3 hours
+Priority: High - Multiple critical systems affected

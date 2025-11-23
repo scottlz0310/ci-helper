@@ -1,0 +1,69 @@
+STEP: Run AI analysis test suite
+npm run test:ai
+
+> test-project@1.0.0 test:ai
+> jest tests/ai/
+
+FAIL tests/ai/analysis.test.js
+  ✕ should analyze log patterns correctly (2500ms)
+  ✕ should generate fix suggestions (1800ms)
+  ✕ should handle malformed logs gracefully (1200ms)
+
+● should analyze log patterns correctly
+
+  TypeError: Cannot read properties of undefined (reading 'patterns')
+
+    at LogAnalyzer.analyzePatterns (src/ai/analyzer.js:45:23)
+    at Object.<anonymous> (tests/ai/analysis.test.js:28:15)
+
+● should generate fix suggestions
+
+  AssertionError: Expected fix suggestions to be generated
+
+  Expected: array with length > 0
+  Received: []
+
+    at Object.<anonymous> (tests/ai/analysis.test.js:45:33)
+
+● should handle malformed logs gracefully
+
+  Error: Failed to parse malformed log content
+  
+  Malformed content detected at line 15:
+  Invalid JSON structure: {"error": "missing closing brace"
+  
+    at LogParser.parse (src/ai/parser.js:78:11)
+    at Object.<anonymous> (tests/ai/analysis.test.js:62:20)
+
+FAIL tests/ai/integration.test.js
+  ✕ should integrate with AI providers (5000ms)
+  ✕ should cache analysis results (3000ms)
+
+● should integrate with AI providers
+
+  TimeoutError: AI provider request timed out after 5 seconds
+
+  Provider: openai
+  Model: gpt-4
+  Request: log analysis for test data
+  
+    at AIProvider.request (src/ai/providers/openai.js:123:15)
+    at Object.<anonymous> (tests/ai/integration.test.js:35:18)
+
+● should cache analysis results
+
+  Error: Cache storage failed
+  
+  Cache key: analysis_12345
+  Error: ENOSPC: no space left on device
+  
+    at CacheManager.store (src/ai/cache.js:67:12)
+    at Object.<anonymous> (tests/ai/integration.test.js:58:25)
+
+Test Suites: 2 failed, 0 passed, 2 total
+Tests:       5 failed, 0 passed, 5 total
+Snapshots:   0 total
+Time:        12.456 s
+Ran all test suites matching /ai/.
+
+npm ERR! Test failed. See above for more details.

@@ -42,6 +42,7 @@ $RECYCLE.BIN/
 *.exe~
 *.lcov
 *.log
+!tests/fixtures/**/*.log
 *.manifest
 *.orig
 *.out

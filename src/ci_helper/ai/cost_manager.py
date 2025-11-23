@@ -309,6 +309,27 @@ class CostManager:
 
         return recommendations
 
+    def _calculate_warning_level(self, current_usage: float, limit: float) -> WarningLevel:
+        """警告レベルを計算
+
+        Args:
+            current_usage: 現在の使用量
+            limit: 制限値
+
+        Returns:
+            警告レベル
+        """
+        if limit == float("inf") or limit == 0:
+            return WarningLevel.NONE
+
+        usage_ratio = current_usage / limit
+
+        if usage_ratio >= 0.95:
+            return WarningLevel.CRITICAL
+        if usage_ratio >= 0.8:
+            return WarningLevel.WARNING
+        return WarningLevel.NONE
+
     def _get_warning_level(self, current_usage: float, limit: float) -> WarningLevel:
         """警告レベルを取得"""
         if limit == float("inf"):
