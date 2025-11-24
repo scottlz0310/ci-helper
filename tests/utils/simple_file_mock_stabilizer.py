@@ -5,6 +5,8 @@
 pytestの内部動作に干渉しないよう、最小限の機能に絞っています。
 """
 
+from __future__ import annotations
+
 import threading
 from collections.abc import Generator
 from contextlib import contextmanager

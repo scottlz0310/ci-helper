@@ -5,6 +5,8 @@
 並行テスト実行時の競合状態を防ぎ、テストの再現性を確保します。
 """
 
+from __future__ import annotations
+
 import shutil
 import tempfile
 import threading
