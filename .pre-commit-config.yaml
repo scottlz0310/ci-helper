@@ -56,6 +56,7 @@ repos:
       - id: check-yaml
       # Check JSON syntax
       - id: check-json
+        exclude: ^\.vscode/extensions\.json$
       # Check TOML syntax
       - id: check-toml
 
