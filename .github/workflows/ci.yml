@@ -155,6 +155,6 @@ jobs:
 
       - name: Test ci-helper commands
         run: |
-          ci-run init
+          ci-run init --force
           ci-run doctor || true  # May fail due to Docker not running
           ci-run --help
