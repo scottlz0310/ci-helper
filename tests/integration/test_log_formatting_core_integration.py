@@ -10,12 +10,11 @@ import json
 from unittest.mock import Mock
 
 import pytest
-from rich.console import Console
-
 from ci_helper.core.models import ExecutionResult, Failure, FailureType, JobResult, WorkflowResult
 from ci_helper.formatters import get_formatter_manager
 from ci_helper.ui.command_menus import CommandMenuBuilder
 from ci_helper.ui.menu_system import MenuSystem
+from rich.console import Console
 
 
 class TestLogFormattingCoreIntegration:

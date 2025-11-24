@@ -11,7 +11,6 @@ from tempfile import TemporaryDirectory
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-
 from ci_helper.utils.config import Config
 
 
@@ -406,32 +405,46 @@ def mock_cache_manager():
 @pytest.fixture
 def mock_config(temp_dir):
     """analyzeコマンド用のモック設定"""
-    from ci_helper.ai.models import AIConfig, ProviderConfig
+    # get_ai_config() should return a dictionary, not an AIConfig object
+    ai_config_dict = {
+        "default_provider": "openai",
+        "providers": {
+            "openai": {
+                "base_url": None,
+                "default_model": "gpt-4o",
+                "available_models": ["gpt-4o", "gpt-4o-mini"],
+                "timeout_seconds": 30,
+                "max_retries": 3,
+                "rate_limit_per_minute": None,
+                "cost_per_input_token": 0.0,
+                "cost_per_output_token": 0.0,
+            }
+        },
+        "cache_enabled": True,
+        "cost_limits": {"monthly_usd": 50.0},
+        "cache_dir": str(temp_dir / "cache"),
+    }
 
-    # Create a proper AIConfig object
-    provider_config = ProviderConfig(
-        name="openai",
-        api_key="sk-test-key-123",
-        default_model="gpt-4o",
-        available_models=["gpt-4o", "gpt-4o-mini"],
-    )
-
-    ai_config = AIConfig(
-        default_provider="openai",
-        providers={"openai": provider_config},
-        cache_enabled=True,
-        cost_limits={"monthly_usd": 50.0},
-        cache_dir=str(temp_dir / "cache"),
-    )
+    # get_ai_provider_config() should also return a dictionary
+    provider_config_dict = {
+        "base_url": None,
+        "default_model": "gpt-4o",
+        "available_models": ["gpt-4o", "gpt-4o-mini"],
+        "timeout_seconds": 30,
+        "max_retries": 3,
+        "rate_limit_per_minute": None,
+        "cost_per_input_token": 0.0,
+        "cost_per_output_token": 0.0,
+    }
 
     config = Mock(spec=Config)
     config.project_root = temp_dir
     config.get = Mock(return_value=None)
-    config.get_ai_config = Mock(return_value=ai_config)
+    config.get_ai_config = Mock(return_value=ai_config_dict)
     config.get_available_ai_providers = Mock(return_value=["openai"])
     config.get_ai_provider_api_key = Mock(return_value="sk-test-key-123")
     config.get_default_ai_provider = Mock(return_value="openai")
-    config.get_ai_provider_config = Mock(return_value=provider_config)
+    config.get_ai_provider_config = Mock(return_value=provider_config_dict)
     config.get_path = Mock(return_value=temp_dir / "cache")
     config.__getitem__ = Mock(return_value=None)
     config.__contains__ = Mock(return_value=False)

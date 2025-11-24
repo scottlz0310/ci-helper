@@ -9,7 +9,6 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-
 from ci_helper.core.ci_runner import CIRunner
 from ci_helper.core.exceptions import ExecutionError, SecurityError
 from ci_helper.core.models import ExecutionResult, WorkflowResult

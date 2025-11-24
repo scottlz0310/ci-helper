@@ -28,10 +28,10 @@ FAIL tests/ai/analysis.test.js
 ● should handle malformed logs gracefully
 
   Error: Failed to parse malformed log content
-  
+
   Malformed content detected at line 15:
   Invalid JSON structure: {"error": "missing closing brace"
-  
+
     at LogParser.parse (src/ai/parser.js:78:11)
     at Object.<anonymous> (tests/ai/analysis.test.js:62:20)
 
@@ -46,17 +46,17 @@ FAIL tests/ai/integration.test.js
   Provider: openai
   Model: gpt-4
   Request: log analysis for test data
-  
+
     at AIProvider.request (src/ai/providers/openai.js:123:15)
     at Object.<anonymous> (tests/ai/integration.test.js:35:18)
 
 ● should cache analysis results
 
   Error: Cache storage failed
-  
+
   Cache key: analysis_12345
   Error: ENOSPC: no space left on device
-  
+
     at CacheManager.store (src/ai/cache.js:67:12)
     at Object.<anonymous> (tests/ai/integration.test.js:58:25)
 

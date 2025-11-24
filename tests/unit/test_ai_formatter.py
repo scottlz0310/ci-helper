@@ -10,7 +10,6 @@ from datetime import datetime
 from unittest.mock import Mock, patch
 
 import pytest
-
 from ci_helper.core.ai_formatter import AIFormatter
 from ci_helper.core.models import (
     AnalysisMetrics,

@@ -1020,9 +1020,19 @@ class AIIntegration:
         elif isinstance(error, ProviderError):
             current_provider_name = error.provider
             alternatives: list[str] = []
-            for name in self.providers.keys():  # Ensure type-safe iteration
-                if name != current_provider_name:
-                    alternatives.append(name)
+
+            # fallback_handlerが利用可能な場合は使用
+            if (
+                hasattr(self, "fallback_handler")
+                and self.fallback_handler is not None
+                and hasattr(self.fallback_handler, "_suggest_alternative_providers")
+            ):
+                alternatives = self.fallback_handler._suggest_alternative_providers(current_provider_name)  # type: ignore[attr-defined]
+            else:
+                # フォールバックとしてself.providersから取得
+                for name in self.providers.keys():  # Ensure type-safe iteration
+                    if name != current_provider_name:
+                        alternatives.append(name)
 
             if alternatives:
                 suggestion_lines.append(f"代替プロバイダーを試してください: {', '.join(alternatives)}")

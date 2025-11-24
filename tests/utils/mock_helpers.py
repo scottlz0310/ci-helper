@@ -701,7 +701,7 @@ def stabilize_test_mocks(test_instance, mock_attributes: list | None = None):
         for attr_name in dir(test_instance):
             if not attr_name.startswith("_"):
                 attr = getattr(test_instance, attr_name, None)
-                if isinstance(attr, (Mock, AsyncMock)):
+                if isinstance(attr, Mock | AsyncMock):
                     mock_attributes.append(attr_name)
 
     # 各モック属性を安定化

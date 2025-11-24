@@ -11,7 +11,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 from ci_helper.ai.auto_fixer import AutoFixer
 from ci_helper.ai.models import AnalysisStatus, FixSuggestion, Priority
 from ci_helper.ai.pattern_engine import PatternRecognitionEngine

@@ -5,7 +5,6 @@ risk_calculator.py のテスト
 """
 
 import pytest
-
 from ci_helper.ai.models import CodeChange, FixStep, FixSuggestion, FixTemplate, Priority
 from ci_helper.ai.risk_calculator import RiskCalculator, TimeEstimator
 

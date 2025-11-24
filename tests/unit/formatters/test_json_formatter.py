@@ -6,7 +6,6 @@ import json
 from datetime import datetime
 
 import pytest
-
 from ci_helper.core.models import ExecutionResult, Failure, FailureType, JobResult, StepResult, WorkflowResult
 from ci_helper.formatters.json_formatter import JSONFormatter
 

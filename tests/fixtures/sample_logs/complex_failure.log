@@ -82,7 +82,7 @@ FAIL tests/unit/utils.test.js
 
   Input: "2024-13-45"
   Expected format: YYYY-MM-DD
-  
+
     at formatDate (src/utils/date.js:12:11)
     at Object.<anonymous> (tests/unit/utils.test.js:18:25)
 
@@ -113,7 +113,7 @@ FAIL tests/integration/api.test.js
   URL: https://api.example.com/users
   Method: GET
   Headers: {"Authorization": "Bearer test-token"}
-  
+
     at ApiClient.request (src/api/client.js:45:15)
     at Object.<anonymous> (tests/integration/api.test.js:25:18)
 
@@ -123,7 +123,7 @@ FAIL tests/integration/api.test.js
 
   Attempts: 3
   Last error: ECONNREFUSED 127.0.0.1:3000
-  
+
     at RetryHandler.execute (src/api/retry.js:67:12)
     at Object.<anonymous> (tests/integration/api.test.js:45:20)
 
@@ -137,7 +137,7 @@ FAIL tests/integration/database.test.js
 
   Database: postgresql://localhost:5432/testdb
   Error: password authentication failed for user "testuser"
-  
+
     at Database.connect (src/database/connection.js:34:15)
     at Object.<anonymous> (tests/integration/database.test.js:18:12)
 
@@ -147,7 +147,7 @@ FAIL tests/integration/database.test.js
 
   Query: SELECT * FROM users WHERE id = $1
   Parameters: [1]
-  
+
     at Database.query (src/database/query.js:56:11)
     at Object.<anonymous> (tests/integration/database.test.js:35:18)
 
@@ -180,7 +180,7 @@ npm ERR! code ELIFECYCLE
 npm ERR! errno 1
 npm ERR! test-project@1.0.0 test:all: `npm run lint && npm run type-check && npm run test:unit && npm run test:integration && npm run build`
 npm ERR! Exit status 1
-npm ERR! 
+npm ERR!
 npm ERR! Failed at the test-project@1.0.0 test:all script.
 npm ERR! This is probably not a problem with npm. There is likely additional logging output above.
 
@@ -191,7 +191,7 @@ SUMMARY:
 - Lint errors: 6 problems (5 errors, 1 warning)
 - Type check errors: 3 TypeScript errors
 - Unit test failures: 5 failed tests
-- Integration test failures: 4 failed tests  
+- Integration test failures: 4 failed tests
 - Build errors: 3 webpack module resolution errors
 
 Total failures: 21 issues across multiple categories

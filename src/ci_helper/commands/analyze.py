@@ -1309,6 +1309,36 @@ def _display_fallback_info(result: AnalysisResult, console: Console) -> None:
     console.print("[dim]リトライするには: ci-run analyze --retry {operation_id}[/dim]")
 
 
+def _handle_ci_helper_error(error: CIHelperError, console: Console, verbose: bool) -> None:  # type: ignore[reportUnusedFunction]
+    """CIHelperエラーの処理
+
+    Args:
+        error: 発生したCIHelperエラー
+        console: Richコンソール
+        verbose: 詳細表示フラグ
+
+    """
+    # エラーの重要度を判定
+    error_severity = _determine_error_severity(error)
+    severity_color = _get_severity_color(error_severity)
+
+    # エラーヘッダーを表示
+    console.print(f"\n[{severity_color}]{'=' * 60}[/{severity_color}]")
+    console.print(f"[{severity_color}]🚨 CI Helperエラーが発生しました[/{severity_color}]")
+    console.print(f"[{severity_color}]{'=' * 60}[/{severity_color}]")
+
+    # エラーメッセージを表示
+    console.print(f"\n[bold {severity_color}]エラー:[/bold {severity_color}] {error}")
+
+    if verbose:
+        # 詳細情報を表示
+        console.print("\n[dim]詳細情報:[/dim]")
+        console.print(f"[dim]エラータイプ: {type(error).__name__}[/dim]")
+
+    # 共通のフッター情報を表示
+    _display_error_footer(error, console, verbose)
+
+
 def _handle_analysis_error(error: Exception, console: Console, verbose: bool) -> None:
     """分析エラーの処理
 

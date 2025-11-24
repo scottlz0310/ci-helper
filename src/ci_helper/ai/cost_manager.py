@@ -276,7 +276,7 @@ class CostManager:
         if isinstance(model_breakdown_data, dict):
             breakdown_items = cast(dict[Any, Any], model_breakdown_data)
             for key, value in breakdown_items.items():
-                if isinstance(key, str) and isinstance(value, (int, float)):
+                if isinstance(key, str) and isinstance(value, int | float):
                     key_str: str = key
                     value_float: float = float(value)
                     model_costs[key_str] = value_float

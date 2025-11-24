@@ -14,12 +14,11 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from click.testing import CliRunner
-from rich.console import Console
-
 from ci_helper.cli import cli
 from ci_helper.core.models import ExecutionResult, Failure, FailureType, JobResult, WorkflowResult
 from ci_helper.formatters import get_formatter_manager
+from click.testing import CliRunner
+from rich.console import Console
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from tests.utils.mock_helpers import setup_stable_prompt_mock

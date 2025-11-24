@@ -161,11 +161,12 @@ class PatternMatcher:
 
         return context_before, context_after
 
-    def calculate_match_strength(self, match: Match) -> float:
+    def calculate_match_strength(self, match: Match, pattern: Pattern | None = None) -> float:
         """マッチ強度を計算.
 
         Args:
             match: マッチ結果
+            pattern: パターン（オプション、後方互換性のため）
 
         Returns:
             マッチ強度(0.0-1.0)

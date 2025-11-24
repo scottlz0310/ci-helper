@@ -9,9 +9,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from click.testing import CliRunner
-
-from src.ci_helper.ai.models import (
+from ci_helper.ai.models import (
     AnalysisResult,
     AnalysisStatus,
     FixSuggestion,
@@ -20,7 +18,8 @@ from src.ci_helper.ai.models import (
     Severity,
     TokenUsage,
 )
-from src.ci_helper.commands.analyze import analyze
+from ci_helper.commands.analyze import analyze
+from click.testing import CliRunner
 
 
 class TestAnalyzeCommand:
@@ -109,10 +108,10 @@ class TestAnalyzeCommand:
         assert "--provider" in result.output, "プロバイダー指定オプションが表示されること"
         assert "--interactive" in result.output, "対話モードオプションが表示されること"
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_analyze_basic(
         self,
         mock_validate,
@@ -161,7 +160,7 @@ class TestAnalyzeCommand:
         mock_ai_integration.initialize.assert_called_once()
         mock_ai_integration.analyze_log.assert_called_once()
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze.AIIntegration")
     def test_analyze_stats_only(self, mock_ai_class, runner, mock_config):
         """統計表示のみのテスト"""
         # コンテキストオブジェクトの設定
@@ -173,9 +172,9 @@ class TestAnalyzeCommand:
         # AI統合が初期化されないことを確認
         mock_ai_class.assert_not_called()
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_analyze_no_log_file(
         self,
         mock_validate,
@@ -203,10 +202,10 @@ class TestAnalyzeCommand:
         assert result.exit_code == 0
         mock_ai_integration.analyze_log.assert_not_called()
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_analyze_with_options(
         self,
         mock_validate,
@@ -276,8 +275,8 @@ class TestAnalyzeCommand:
         ctx_obj = {"config": mock_config, "console": mock_console}
 
         with (
-            patch("src.ci_helper.commands.analyze.AIIntegration") as mock_ai_class,
-            patch("src.ci_helper.commands.analyze._validate_analysis_environment") as mock_validate,
+            patch("ci_helper.commands.analyze.AIIntegration") as mock_ai_class,
+            patch("ci_helper.commands.analyze._validate_analysis_environment") as mock_validate,
         ):
             # 環境検証を成功させる
             mock_validate.return_value = True
@@ -303,8 +302,8 @@ class TestAnalyzeCommand:
             log_content = call_args[0][0]  # 1番目の引数がログ内容
             assert log_content == "test log content"
 
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
-    @patch("src.ci_helper.commands.analyze._suggest_fallback_options")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze._suggest_fallback_options")
     def test_analyze_validation_failure(self, mock_suggest_fallback, mock_validate, runner, mock_config, mock_console):
         """環境検証失敗時のテスト"""
         # 環境検証を失敗させる
@@ -327,7 +326,7 @@ class TestAnalyzeHelperFunctions:
 
     def test_read_log_file(self, temp_dir):
         """ログファイル読み込みのテスト"""
-        from src.ci_helper.commands.analyze import _read_log_file
+        from ci_helper.commands.analyze import _read_log_file
 
         # テスト用ログファイルを作成
         log_file = temp_dir / "test.log"
@@ -342,8 +341,8 @@ class TestAnalyzeHelperFunctions:
 
     def test_read_log_file_not_found(self):
         """存在しないログファイルの読み込みテスト"""
-        from src.ci_helper.commands.analyze import _read_log_file
-        from src.ci_helper.core.exceptions import CIHelperError
+        from ci_helper.commands.analyze import _read_log_file
+        from ci_helper.core.exceptions import CIHelperError
 
         non_existent_file = Path("non_existent.log")
 
@@ -351,10 +350,10 @@ class TestAnalyzeHelperFunctions:
         with pytest.raises(CIHelperError):
             _read_log_file(non_existent_file)
 
-    @patch("src.ci_helper.commands.analyze.LogManager")
+    @patch("ci_helper.commands.analyze.LogManager")
     def test_get_latest_log_file(self, mock_log_manager_class, mock_config):
         """最新ログファイル取得のテスト"""
-        from src.ci_helper.commands.analyze import _get_latest_log_file
+        from ci_helper.commands.analyze import _get_latest_log_file
 
         # モックログマネージャーの設定
         mock_log_manager = Mock()
@@ -382,10 +381,10 @@ class TestAnalyzeHelperFunctions:
         mock_log_manager_class.assert_called_once_with(mock_config)
         mock_log_manager.list_logs.assert_called_once()
 
-    @patch("src.ci_helper.commands.analyze.LogManager")
+    @patch("ci_helper.commands.analyze.LogManager")
     def test_get_latest_log_file_no_logs(self, mock_log_manager_class, mock_config):
         """ログが存在しない場合のテスト"""
-        from src.ci_helper.commands.analyze import _get_latest_log_file
+        from ci_helper.commands.analyze import _get_latest_log_file
 
         # モックログマネージャーの設定
         mock_log_manager = Mock()
@@ -398,10 +397,10 @@ class TestAnalyzeHelperFunctions:
         # 検証
         assert result is None
 
-    @patch("src.ci_helper.commands.analyze.LogManager")
+    @patch("ci_helper.commands.analyze.LogManager")
     def test_get_latest_log_file_exception(self, mock_log_manager_class, mock_config):
         """ログマネージャーで例外が発生した場合のテスト"""
-        from src.ci_helper.commands.analyze import _get_latest_log_file
+        from ci_helper.commands.analyze import _get_latest_log_file
 
         # モックログマネージャーの設定
         mock_log_manager_class.side_effect = Exception("テストエラー")
@@ -418,8 +417,8 @@ class TestAnalyzeDisplayFunctions:
 
     def test_display_analysis_result_markdown(self, mock_console):
         """Markdown形式での分析結果表示テスト"""
-        from src.ci_helper.ai.models import AnalysisResult
-        from src.ci_helper.commands.analyze import _display_analysis_result
+        from ci_helper.ai.models import AnalysisResult
+        from ci_helper.commands.analyze import _display_analysis_result
 
         # テスト用分析結果を作成
         result = AnalysisResult(
@@ -437,8 +436,8 @@ class TestAnalyzeDisplayFunctions:
 
     def test_display_analysis_result_table(self, mock_console):
         """テーブル形式での分析結果表示テスト"""
-        from src.ci_helper.ai.models import AnalysisResult
-        from src.ci_helper.commands.analyze import _display_analysis_result
+        from ci_helper.ai.models import AnalysisResult
+        from ci_helper.commands.analyze import _display_analysis_result
 
         result = AnalysisResult(
             summary="テスト分析結果",
@@ -453,8 +452,8 @@ class TestAnalyzeDisplayFunctions:
 
     def test_display_analysis_result_json(self, mock_console):
         """JSON形式での分析結果表示テスト"""
-        from src.ci_helper.ai.models import AnalysisResult
-        from src.ci_helper.commands.analyze import _display_analysis_result
+        from ci_helper.ai.models import AnalysisResult
+        from ci_helper.commands.analyze import _display_analysis_result
 
         result = AnalysisResult(
             summary="テスト分析結果",
@@ -467,10 +466,10 @@ class TestAnalyzeDisplayFunctions:
         # 関数実行（例外が発生しないことを確認）
         _display_analysis_result(result, "json", mock_console)
 
-    @patch("src.ci_helper.ai.cost_manager.CostManager")
+    @patch("ci_helper.ai.cost_manager.CostManager")
     def test_display_stats(self, mock_cost_manager_class, mock_config, mock_console):
         """統計表示のテスト"""
-        from src.ci_helper.commands.analyze import _display_stats
+        from ci_helper.commands.analyze import _display_stats
 
         # モックコストマネージャーの設定
         mock_cost_manager = Mock()
@@ -502,8 +501,8 @@ class TestAnalyzeErrorHandling:
 
     def test_handle_ci_helper_error(self, mock_console):
         """CIHelperエラーハンドリングのテスト"""
-        from src.ci_helper.commands.analyze import _handle_ci_helper_error
-        from src.ci_helper.core.exceptions import CIHelperError
+        from ci_helper.commands.analyze import _handle_ci_helper_error
+        from ci_helper.core.exceptions import CIHelperError
 
         error = CIHelperError("テストエラー")
 
@@ -512,7 +511,7 @@ class TestAnalyzeErrorHandling:
 
     def test_handle_analysis_error(self, mock_console):
         """分析エラーハンドリングのテスト"""
-        from src.ci_helper.commands.analyze import _handle_analysis_error
+        from ci_helper.commands.analyze import _handle_analysis_error
 
         error = Exception("テスト例外")
 
@@ -521,8 +520,8 @@ class TestAnalyzeErrorHandling:
 
     def test_determine_error_severity(self):
         """エラー重要度判定のテスト"""
-        from src.ci_helper.ai.exceptions import APIKeyError, NetworkError, RateLimitError
-        from src.ci_helper.commands.analyze import _determine_error_severity
+        from ci_helper.ai.exceptions import APIKeyError, NetworkError, RateLimitError
+        from ci_helper.commands.analyze import _determine_error_severity
 
         # 各エラータイプの重要度をテスト
         assert _determine_error_severity(APIKeyError("test", "message")) == "critical"
@@ -532,7 +531,7 @@ class TestAnalyzeErrorHandling:
 
     def test_get_severity_color(self):
         """重要度色取得のテスト"""
-        from src.ci_helper.commands.analyze import _get_severity_color
+        from ci_helper.commands.analyze import _get_severity_color
 
         assert _get_severity_color("CRITICAL") == "white"
         assert _get_severity_color("HIGH") == "white"
@@ -542,8 +541,8 @@ class TestAnalyzeErrorHandling:
 
     def test_handle_api_key_error_enhanced(self, mock_console):
         """拡張APIキーエラーハンドリングのテスト"""
-        from src.ci_helper.ai.exceptions import APIKeyError
-        from src.ci_helper.commands.analyze import _handle_api_key_error_enhanced
+        from ci_helper.ai.exceptions import APIKeyError
+        from ci_helper.commands.analyze import _handle_api_key_error_enhanced
 
         error = APIKeyError("openai", "Invalid API key")
 
@@ -552,8 +551,8 @@ class TestAnalyzeErrorHandling:
 
     def test_handle_rate_limit_error_enhanced(self, mock_console):
         """拡張レート制限エラーハンドリングのテスト"""
-        from src.ci_helper.ai.exceptions import RateLimitError
-        from src.ci_helper.commands.analyze import _handle_rate_limit_error_enhanced
+        from ci_helper.ai.exceptions import RateLimitError
+        from ci_helper.commands.analyze import _handle_rate_limit_error_enhanced
 
         error = RateLimitError("openai", retry_after=60)
 
@@ -562,8 +561,8 @@ class TestAnalyzeErrorHandling:
 
     def test_handle_token_limit_error_enhanced(self, mock_console):
         """拡張トークン制限エラーハンドリングのテスト"""
-        from src.ci_helper.ai.exceptions import TokenLimitError
-        from src.ci_helper.commands.analyze import _handle_token_limit_error_enhanced
+        from ci_helper.ai.exceptions import TokenLimitError
+        from ci_helper.commands.analyze import _handle_token_limit_error_enhanced
 
         error = TokenLimitError(5000, 4000, "gpt-4o")
 
@@ -572,8 +571,8 @@ class TestAnalyzeErrorHandling:
 
     def test_handle_network_error_enhanced(self, mock_console):
         """拡張ネットワークエラーハンドリングのテスト"""
-        from src.ci_helper.ai.exceptions import NetworkError
-        from src.ci_helper.commands.analyze import _handle_network_error_enhanced
+        from ci_helper.ai.exceptions import NetworkError
+        from ci_helper.commands.analyze import _handle_network_error_enhanced
 
         error = NetworkError("Connection timeout")
 
@@ -582,8 +581,8 @@ class TestAnalyzeErrorHandling:
 
     def test_handle_configuration_error_enhanced(self, mock_console):
         """拡張設定エラーハンドリングのテスト"""
-        from src.ci_helper.ai.exceptions import ConfigurationError
-        from src.ci_helper.commands.analyze import _handle_configuration_error_enhanced
+        from ci_helper.ai.exceptions import ConfigurationError
+        from ci_helper.commands.analyze import _handle_configuration_error_enhanced
 
         error = ConfigurationError("Invalid configuration")
 
@@ -592,8 +591,8 @@ class TestAnalyzeErrorHandling:
 
     def test_handle_provider_error_enhanced(self, mock_console):
         """拡張プロバイダーエラーハンドリングのテスト"""
-        from src.ci_helper.ai.exceptions import ProviderError
-        from src.ci_helper.commands.analyze import _handle_provider_error_enhanced
+        from ci_helper.ai.exceptions import ProviderError
+        from ci_helper.commands.analyze import _handle_provider_error_enhanced
 
         error = ProviderError("openai", "Provider error")
 
@@ -602,7 +601,7 @@ class TestAnalyzeErrorHandling:
 
     def test_handle_generic_error_enhanced(self, mock_console):
         """拡張汎用エラーハンドリングのテスト"""
-        from src.ci_helper.commands.analyze import _handle_generic_error_enhanced
+        from ci_helper.commands.analyze import _handle_generic_error_enhanced
 
         error = ValueError("Test value error")
 
@@ -611,7 +610,7 @@ class TestAnalyzeErrorHandling:
 
     def test_display_error_footer(self, mock_console):
         """エラーフッター表示のテスト"""
-        from src.ci_helper.commands.analyze import _display_error_footer
+        from ci_helper.commands.analyze import _display_error_footer
 
         error = Exception("Test error")
 
@@ -624,7 +623,7 @@ class TestAnalyzeFallbackAndRecovery:
 
     def test_suggest_fallback_options(self, mock_console):
         """フォールバックオプション提案のテスト"""
-        from src.ci_helper.commands.analyze import _suggest_fallback_options
+        from ci_helper.commands.analyze import _suggest_fallback_options
 
         log_file = Path("test.log")
 
@@ -633,7 +632,7 @@ class TestAnalyzeFallbackAndRecovery:
 
     def test_suggest_fallback_options_no_log(self, mock_console):
         """ログファイルなしでのフォールバックオプション提案のテスト"""
-        from src.ci_helper.commands.analyze import _suggest_fallback_options
+        from ci_helper.commands.analyze import _suggest_fallback_options
 
         # 関数実行（例外が発生しないことを確認）
         _suggest_fallback_options(mock_console, None)
@@ -641,7 +640,7 @@ class TestAnalyzeFallbackAndRecovery:
     @patch("rich.prompt.Prompt.ask", return_value="A")
     def test_offer_interactive_recovery(self, mock_prompt, mock_console):
         """対話的復旧オプション提供のテスト"""
-        from src.ci_helper.commands.analyze import _offer_interactive_recovery
+        from ci_helper.commands.analyze import _offer_interactive_recovery
 
         result = _offer_interactive_recovery(mock_console)
 
@@ -651,7 +650,7 @@ class TestAnalyzeFallbackAndRecovery:
     @patch("rich.prompt.Prompt.ask", return_value="X")
     def test_offer_interactive_recovery_invalid_input(self, mock_prompt, mock_console):
         """無効な入力での対話的復旧オプションテスト"""
-        from src.ci_helper.commands.analyze import _offer_interactive_recovery
+        from ci_helper.commands.analyze import _offer_interactive_recovery
 
         # 無効な入力の場合はデフォルト値（auto）が返される
         result = _offer_interactive_recovery(mock_console)
@@ -659,7 +658,7 @@ class TestAnalyzeFallbackAndRecovery:
 
     def test_validate_analysis_environment_success(self, mock_config, mock_console):
         """分析環境検証成功のテスト"""
-        from src.ci_helper.commands.analyze import _validate_analysis_environment
+        from ci_helper.commands.analyze import _validate_analysis_environment
 
         # モック設定 - configオブジェクトのメソッドを適切に設定
         mock_config.get_ai_config.return_value = {"default_provider": "openai"}
@@ -674,7 +673,7 @@ class TestAnalyzeFallbackAndRecovery:
 
     def test_validate_analysis_environment_failure(self, mock_config, mock_console):
         """分析環境検証失敗のテスト"""
-        from src.ci_helper.commands.analyze import _validate_analysis_environment
+        from ci_helper.commands.analyze import _validate_analysis_environment
 
         # モック設定 - AI設定が存在しない場合
         mock_config.get_ai_config.return_value = None
@@ -686,8 +685,8 @@ class TestAnalyzeFallbackAndRecovery:
 
     def test_display_fallback_info(self, mock_console):
         """フォールバック情報表示のテスト"""
-        from src.ci_helper.ai.models import AnalysisResult
-        from src.ci_helper.commands.analyze import _display_fallback_info
+        from ci_helper.ai.models import AnalysisResult
+        from ci_helper.commands.analyze import _display_fallback_info
 
         result = AnalysisResult(
             summary="フォールバック結果",
@@ -706,7 +705,7 @@ class TestAnalysisErrorContext:
 
     def test_analysis_error_context_success(self, mock_console):
         """正常終了時のAnalysisErrorContextテスト"""
-        from src.ci_helper.commands.analyze import AnalysisErrorContext
+        from ci_helper.commands.analyze import AnalysisErrorContext
 
         with AnalysisErrorContext(mock_console, "test_operation", verbose=True) as ctx:
             ctx.log_progress("テスト進捗")
@@ -717,7 +716,7 @@ class TestAnalysisErrorContext:
 
     def test_analysis_error_context_with_error(self, mock_console):
         """エラー発生時のAnalysisErrorContextテスト"""
-        from src.ci_helper.commands.analyze import AnalysisErrorContext
+        from ci_helper.commands.analyze import AnalysisErrorContext
 
         with pytest.raises(ValueError):
             with AnalysisErrorContext(mock_console, "test_operation", verbose=True) as ctx:
@@ -763,10 +762,10 @@ class TestAnalyzeInteractiveMode:
         integration.close_interactive_session = AsyncMock()
         return integration
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_interactive_session_start(
         self,
         mock_validate,
@@ -803,10 +802,10 @@ class TestAnalyzeInteractiveMode:
         mock_ai_integration_interactive.initialize.assert_called_once()
         mock_ai_integration_interactive.start_interactive_session.assert_called_once()
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     @patch("builtins.input", side_effect=["/help", "/exit"])
     def test_interactive_command_processing(
         self,
@@ -853,10 +852,10 @@ class TestAnalyzeInteractiveMode:
         assert result.exit_code == 0
         mock_ai_integration_interactive.start_interactive_session.assert_called_once()
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_interactive_session_timeout(
         self,
         mock_validate,
@@ -895,10 +894,10 @@ class TestAnalyzeInteractiveMode:
         assert result.exit_code == 0
         mock_ai_integration_interactive.close_interactive_session.assert_called_once()
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_interactive_context_preservation(
         self,
         mock_validate,
@@ -946,10 +945,10 @@ class TestAnalyzeInteractiveMode:
         assert call_args[0][0] == "test log content"  # ログ内容
         assert call_args[0][1] is not None  # オプション
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_interactive_session_error_handling(
         self,
         mock_validate,
@@ -973,7 +972,7 @@ class TestAnalyzeInteractiveMode:
         mock_ai_integration_interactive.start_interactive_session.return_value = mock_interactive_session
 
         # エラーをシミュレート
-        from src.ci_helper.ai.exceptions import NetworkError
+        from ci_helper.ai.exceptions import NetworkError
 
         mock_ai_integration_interactive.process_interactive_input.side_effect = NetworkError("Connection failed")
 
@@ -990,10 +989,10 @@ class TestAnalyzeInteractiveMode:
         assert result.exit_code == 0
         mock_ai_integration_interactive.close_interactive_session.assert_called_once()
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_interactive_session_cleanup(
         self,
         mock_validate,
@@ -1052,7 +1051,7 @@ class TestAnalyzeFixApplication:
     @pytest.fixture
     def mock_fix_suggestion(self):
         """モック修正提案"""
-        from src.ci_helper.ai.models import Priority
+        from ci_helper.ai.models import Priority
 
         return FixSuggestion(
             title="テスト修正提案",
@@ -1067,7 +1066,7 @@ class TestAnalyzeFixApplication:
         """修正提案付きの分析結果"""
         from datetime import datetime
 
-        from src.ci_helper.ai.models import AnalysisResult
+        from ci_helper.ai.models import AnalysisResult
 
         tokens_used = TokenUsage(input_tokens=100, output_tokens=50, total_tokens=150, estimated_cost=0.002)
 
@@ -1086,10 +1085,10 @@ class TestAnalyzeFixApplication:
             cache_hit=False,
         )
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_fix_suggestion_generation(
         self,
         mock_validate,
@@ -1130,10 +1129,10 @@ class TestAnalyzeFixApplication:
         options = call_args[0][1]  # 2番目の引数がAnalyzeOptions
         assert options.generate_fixes is True
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     @patch("click.confirm", return_value=True)
     def test_automatic_fix_application(
         self,
@@ -1173,10 +1172,10 @@ class TestAnalyzeFixApplication:
         mock_ai_integration.apply_fix.assert_called_once()
         mock_confirm.assert_called_once()
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     @patch("click.confirm", return_value=False)
     def test_fix_application_rejection(
         self,
@@ -1216,10 +1215,10 @@ class TestAnalyzeFixApplication:
         mock_ai_integration.apply_fix.assert_not_called()  # 拒否されたので適用されない
         mock_confirm.assert_called_once()
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     @patch("click.confirm", return_value=True)
     def test_backup_creation_and_restoration(
         self,
@@ -1285,10 +1284,10 @@ class TestAnalyzeFixApplication:
         assert backup_file.exists()
         assert backup_file.read_text() == original_content
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_multiple_file_fix_approval(
         self,
         mock_validate,
@@ -1304,7 +1303,7 @@ class TestAnalyzeFixApplication:
         mock_validate.return_value = True
 
         # 複数の修正提案を作成
-        from src.ci_helper.ai.models import AnalysisResult, Priority
+        from ci_helper.ai.models import AnalysisResult, Priority
 
         fix1 = FixSuggestion(
             title="修正提案1",
@@ -1363,10 +1362,10 @@ class TestAnalyzeFixApplication:
         assert mock_ai_integration.apply_fix.call_count == 1
         mock_ai_integration.apply_fix.assert_called_with(fix1)
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     @patch("click.confirm", return_value=True)
     def test_fix_application_error_handling(
         self,
@@ -1459,10 +1458,10 @@ class TestAnalyzeStreamingFeatures:
         for chunk in chunks:
             yield chunk
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_streaming_response_display(
         self,
         mock_validate,
@@ -1488,7 +1487,7 @@ class TestAnalyzeStreamingFeatures:
         # 分析結果のモック
         from datetime import datetime
 
-        from src.ci_helper.ai.models import AnalysisResult
+        from ci_helper.ai.models import AnalysisResult
 
         tokens_used = TokenUsage(input_tokens=100, output_tokens=50, total_tokens=150, estimated_cost=0.002)
 
@@ -1524,10 +1523,10 @@ class TestAnalyzeStreamingFeatures:
         options = call_args[0][1]  # 2番目の引数がAnalyzeOptions
         assert options.streaming is True
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_streaming_interruption_handling(
         self,
         mock_validate,
@@ -1561,10 +1560,10 @@ class TestAnalyzeStreamingFeatures:
         assert result.exit_code == 130
         mock_streaming_ai_integration.analyze_log.assert_called_once()
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_progress_indicator_updates(
         self,
         mock_validate,
@@ -1588,7 +1587,7 @@ class TestAnalyzeStreamingFeatures:
         # プログレス付きの分析結果のモック
         from datetime import datetime
 
-        from src.ci_helper.ai.models import AnalysisResult
+        from ci_helper.ai.models import AnalysisResult
 
         tokens_used = TokenUsage(input_tokens=100, output_tokens=50, total_tokens=150, estimated_cost=0.002)
 
@@ -1619,10 +1618,10 @@ class TestAnalyzeStreamingFeatures:
         assert result.exit_code == 0
         mock_streaming_ai_integration.analyze_log.assert_called_once()
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_streaming_error_recovery(
         self,
         mock_validate,
@@ -1644,7 +1643,7 @@ class TestAnalyzeStreamingFeatures:
         mock_read_log.return_value = "test log content"
 
         # ストリーミングエラーをシミュレート
-        from src.ci_helper.ai.exceptions import NetworkError
+        from ci_helper.ai.exceptions import NetworkError
 
         mock_streaming_ai_integration.analyze_log.side_effect = NetworkError("Streaming connection lost")
 
@@ -1658,10 +1657,10 @@ class TestAnalyzeStreamingFeatures:
         assert result.exit_code == 1
         mock_streaming_ai_integration.analyze_log.assert_called_once()
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_streaming_disabled_fallback(
         self,
         mock_validate,
@@ -1685,7 +1684,7 @@ class TestAnalyzeStreamingFeatures:
         # 分析結果のモック
         from datetime import datetime
 
-        from src.ci_helper.ai.models import AnalysisResult
+        from ci_helper.ai.models import AnalysisResult
 
         tokens_used = TokenUsage(input_tokens=100, output_tokens=50, total_tokens=150, estimated_cost=0.002)
 
@@ -1721,10 +1720,10 @@ class TestAnalyzeStreamingFeatures:
         options = call_args[0][1]  # 2番目の引数がAnalyzeOptions
         assert options.streaming is False
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_streaming_with_interactive_mode(
         self,
         mock_validate,
@@ -1827,10 +1826,10 @@ class TestAnalyzeEdgeCases:
         """不正形式のログコンテンツ"""
         return "Invalid log format\x00\x01\x02\nCorrupted data\xff\xfe"
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_empty_log_file_handling(
         self,
         mock_validate,
@@ -1862,7 +1861,7 @@ class TestAnalyzeEdgeCases:
         # 空ログに対する分析結果のモック
         from datetime import datetime
 
-        from src.ci_helper.ai.models import AnalysisResult
+        from ci_helper.ai.models import AnalysisResult
 
         tokens_used = TokenUsage(input_tokens=10, output_tokens=20, total_tokens=30, estimated_cost=0.001)
 
@@ -1898,10 +1897,10 @@ class TestAnalyzeEdgeCases:
         log_content = call_args[0][0]
         assert log_content == ""
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_large_log_file_processing(
         self,
         mock_validate,
@@ -1929,7 +1928,7 @@ class TestAnalyzeEdgeCases:
         # 大きなログに対する分析結果のモック
         from datetime import datetime
 
-        from src.ci_helper.ai.models import AnalysisResult
+        from ci_helper.ai.models import AnalysisResult
 
         tokens_used = TokenUsage(input_tokens=5000, output_tokens=500, total_tokens=5500, estimated_cost=0.1)
 
@@ -1965,10 +1964,10 @@ class TestAnalyzeEdgeCases:
         log_content = call_args[0][0]
         assert len(log_content) > 40000  # 大きなログファイル
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_malformed_log_content_processing(
         self,
         mock_validate,
@@ -1996,7 +1995,7 @@ class TestAnalyzeEdgeCases:
         # 不正形式ログに対する分析結果のモック
         from datetime import datetime
 
-        from src.ci_helper.ai.models import AnalysisResult
+        from ci_helper.ai.models import AnalysisResult
 
         tokens_used = TokenUsage(input_tokens=50, output_tokens=100, total_tokens=150, estimated_cost=0.005)
 
@@ -2032,10 +2031,10 @@ class TestAnalyzeEdgeCases:
         log_content = call_args[0][0]
         assert "\x00" in log_content or "\x01" in log_content
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_concurrent_analysis_requests(
         self,
         mock_validate,
@@ -2060,7 +2059,7 @@ class TestAnalyzeEdgeCases:
         mock_read_log.return_value = "concurrent test log"
 
         # 同時実行エラーをシミュレート
-        from src.ci_helper.ai.exceptions import ProviderError
+        from ci_helper.ai.exceptions import ProviderError
 
         mock_ai_integration.analyze_log.side_effect = ProviderError("openai", "同時実行制限に達しました")
 
@@ -2074,10 +2073,10 @@ class TestAnalyzeEdgeCases:
         assert result.exit_code == 1
         mock_ai_integration.analyze_log.assert_called_once()
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_memory_limit_handling(
         self,
         mock_validate,
@@ -2114,10 +2113,10 @@ class TestAnalyzeEdgeCases:
         assert result.exit_code == 1
         mock_ai_integration.analyze_log.assert_called_once()
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_disk_capacity_limit(
         self,
         mock_validate,
@@ -2164,8 +2163,8 @@ class TestAnalyzeEdgeCases:
         log_file.write_bytes(content.encode("shift_jis"))
 
         # ファイル読み込みのテスト
-        from src.ci_helper.commands.analyze import _read_log_file
-        from src.ci_helper.core.exceptions import CIHelperError
+        from ci_helper.commands.analyze import _read_log_file
+        from ci_helper.core.exceptions import CIHelperError
 
         # エンコーディングエラーが発生することを確認
         with pytest.raises(CIHelperError):
@@ -2178,17 +2177,17 @@ class TestAnalyzeEdgeCases:
         corrupted_log.write_bytes(b"\xff\xfe\x00\x01corrupted data")
 
         # ファイル読み込みのテスト
-        from src.ci_helper.commands.analyze import _read_log_file
-        from src.ci_helper.core.exceptions import CIHelperError
+        from ci_helper.commands.analyze import _read_log_file
+        from ci_helper.core.exceptions import CIHelperError
 
         # 破損ファイルの読み込みでエラーが発生することを確認
         with pytest.raises(CIHelperError):
             _read_log_file(corrupted_log)
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_network_timeout_handling(
         self,
         mock_validate,
@@ -2213,7 +2212,7 @@ class TestAnalyzeEdgeCases:
         mock_read_log.return_value = "timeout test log"
 
         # タイムアウトエラーをシミュレート
-        from src.ci_helper.ai.exceptions import NetworkError
+        from ci_helper.ai.exceptions import NetworkError
 
         mock_ai_integration.analyze_log.side_effect = NetworkError("ネットワークタイムアウト")
 
@@ -2288,10 +2287,10 @@ class TestAnalyzePerformance:
             )
         return "\n".join(lines)
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_large_log_file_processing_time(
         self,
         mock_validate,
@@ -2321,7 +2320,7 @@ class TestAnalyzePerformance:
         # パフォーマンス分析結果のモック
         from datetime import datetime
 
-        from src.ci_helper.ai.models import AnalysisResult
+        from ci_helper.ai.models import AnalysisResult
 
         tokens_used = TokenUsage(input_tokens=10000, output_tokens=1000, total_tokens=11000, estimated_cost=0.2)
 
@@ -2394,10 +2393,10 @@ class TestAnalyzePerformance:
         final_objects = len(gc.get_objects())
         assert final_objects <= current_objects
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_parallel_processing_efficiency(
         self,
         mock_validate,
@@ -2449,10 +2448,10 @@ class TestAnalyzePerformance:
         # 並列処理により処理時間が短縮されていることを確認
         assert processing_time < 5.0  # 5秒未満で完了
 
-    @patch("src.ci_helper.commands.analyze.AIIntegration")
-    @patch("src.ci_helper.commands.analyze._get_latest_log_file")
-    @patch("src.ci_helper.commands.analyze._read_log_file")
-    @patch("src.ci_helper.commands.analyze._validate_analysis_environment")
+    @patch("ci_helper.commands.analyze.AIIntegration")
+    @patch("ci_helper.commands.analyze._get_latest_log_file")
+    @patch("ci_helper.commands.analyze._read_log_file")
+    @patch("ci_helper.commands.analyze._validate_analysis_environment")
     def test_response_time_regression(
         self,
         mock_validate,
@@ -2587,7 +2586,7 @@ class TestAnalyzePerformance:
         """パフォーマンステスト用の分析結果モックを作成"""
         from datetime import datetime
 
-        from src.ci_helper.ai.models import AnalysisResult
+        from ci_helper.ai.models import AnalysisResult
 
         tokens_used = TokenUsage(input_tokens=100, output_tokens=50, total_tokens=150, estimated_cost=0.002)
 

@@ -144,7 +144,9 @@ class TestCacheHelperFunctions:
         result = _check_docker_available()
 
         assert result is True
-        mock_subprocess_run.assert_called_once_with(["docker", "info"], check=False, capture_output=True, text=True, timeout=10)
+        mock_subprocess_run.assert_called_once_with(
+            ["docker", "info"], check=False, capture_output=True, text=True, timeout=10
+        )
 
     @patch("subprocess.run")
     def test_check_docker_available_failure(self, mock_subprocess_run):

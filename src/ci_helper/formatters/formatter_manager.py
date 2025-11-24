@@ -52,10 +52,14 @@ class FormatterManager:
             formatter: フォーマッターインスタンス
 
         Raises:
-            ValueError: 無効なフォーマッター名または既に登録済みの場合
+            ValueError: 無効なフォーマッター名、無効なフォーマッター、または既に登録済みの場合
         """
         if not name:
             raise ValueError("フォーマッター名は空にできません")
+
+        # 型アノテーションで保証されているが、実行時検証のため残す
+        if not isinstance(formatter, BaseLogFormatter):  # type: ignore[reportUnnecessaryIsInstance]
+            raise ValueError(f"フォーマッターは BaseLogFormatter のインスタンスである必要があります: {type(formatter)}")
 
         if name in self._formatters:
             raise ValueError(f"フォーマッター '{name}' は既に登録されています")

@@ -8,7 +8,6 @@ from datetime import datetime
 from unittest.mock import Mock, patch
 
 import pytest
-
 from ci_helper.ai.interactive_commands import (
     ContextCommand,
     ExitCommand,
