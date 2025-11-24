@@ -5,8 +5,9 @@
 from pathlib import Path
 
 import pytest
-from ci_helper.cli import cli
 from click.testing import CliRunner
+
+from ci_helper.cli import cli
 
 
 class TestSimpleE2E:

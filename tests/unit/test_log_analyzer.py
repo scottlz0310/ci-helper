@@ -6,6 +6,7 @@ LogAnalyzerクラスのワークフロー解析、ジョブ解析、
 """
 
 import pytest
+
 from ci_helper.core.exceptions import LogParsingError
 from ci_helper.core.log_analyzer import LogAnalyzer
 from ci_helper.core.log_extractor import LogExtractor

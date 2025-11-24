@@ -9,6 +9,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from click.testing import CliRunner
+
 from ci_helper.ai.models import (
     AnalysisResult,
     AnalysisStatus,
@@ -19,7 +21,6 @@ from ci_helper.ai.models import (
     TokenUsage,
 )
 from ci_helper.commands.analyze import analyze
-from click.testing import CliRunner
 
 
 class TestAnalyzeCommand:

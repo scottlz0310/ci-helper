@@ -11,11 +11,11 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+
 from ci_helper.core.exceptions import ExecutionError
 from ci_helper.core.log_manager import LogManager
 from ci_helper.core.models import ExecutionResult, Failure, JobResult, WorkflowResult
 from ci_helper.utils.config import Config
-
 from tests.utils.file_operation_mock_stabilizer import stable_file_mocks, with_stable_file_operations
 from tests.utils.mock_helpers import ensure_file_operation_consistency
 

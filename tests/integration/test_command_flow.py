@@ -6,8 +6,9 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from ci_helper.cli import cli
 from click.testing import CliRunner
+
+from ci_helper.cli import cli
 
 
 class TestCommandFlow:

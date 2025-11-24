@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+
 from ci_helper.core.exceptions import ExecutionError
 from ci_helper.utils.graceful_shutdown import (
     GracefulShutdownHandler,

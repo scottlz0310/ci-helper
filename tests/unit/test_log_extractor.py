@@ -6,6 +6,7 @@ LogExtractorクラスの各種エラーパターン抽出、コンテキスト�
 """
 
 import pytest
+
 from ci_helper.core.exceptions import LogParsingError
 from ci_helper.core.log_extractor import LogExtractor
 from ci_helper.core.models import FailureType

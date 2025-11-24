@@ -9,6 +9,8 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+from click.testing import CliRunner
+
 from ci_helper.cli import cli
 from ci_helper.commands.test import (
     _analyze_existing_log,
@@ -18,7 +20,6 @@ from ci_helper.commands.test import (
     _display_table_results,
     _show_diff_with_previous,
 )
-from click.testing import CliRunner
 
 
 def create_mock_execution_result() -> Any:

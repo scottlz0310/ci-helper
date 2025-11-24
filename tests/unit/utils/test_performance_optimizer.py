@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+
 from ci_helper.core.models import ExecutionResult, FailureType, JobResult, WorkflowResult
 from ci_helper.utils.performance_optimizer import (
     DuplicateProcessingPreventer,

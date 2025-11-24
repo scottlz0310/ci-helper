@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
+
 from ci_helper.ai.models import Pattern, UserFeedback
 from ci_helper.ai.pattern_database import PatternDatabase
 from ci_helper.ai.pattern_improvement import PatternImprovement, PatternImprovementSystem

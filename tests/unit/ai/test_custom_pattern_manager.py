@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
+
 from ci_helper.ai.custom_pattern_manager import CustomPatternManager
 from ci_helper.ai.exceptions import ConfigurationError, ValidationError
 from ci_helper.ai.models import Pattern

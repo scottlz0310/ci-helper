@@ -7,9 +7,10 @@ CommandMenuBuilder クラスの機能をテストします。
 from io import StringIO
 from unittest.mock import Mock, patch
 
+from rich.console import Console
+
 from ci_helper.ui.command_menus import CommandMenuBuilder
 from ci_helper.ui.menu_system import Menu
-from rich.console import Console
 
 
 class TestCommandMenuBuilder:

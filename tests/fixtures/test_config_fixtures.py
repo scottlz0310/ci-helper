@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
 from ci_helper.ai.models import AIConfig, ProviderConfig
 from ci_helper.utils.config import Config
 

@@ -10,9 +10,10 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+from rich.console import Console
+
 from ci_helper.formatters.base_formatter import BaseLogFormatter
 from ci_helper.utils.file_save_utils import FileSaveManager
-from rich.console import Console
 
 
 class MockFormatter(BaseLogFormatter):

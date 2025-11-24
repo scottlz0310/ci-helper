@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+
 from ci_helper.core.exceptions import ExecutionError
 from ci_helper.core.log_manager import LogManager
 from ci_helper.core.models import ExecutionResult, Failure, FailureType, JobResult, WorkflowResult

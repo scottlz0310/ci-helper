@@ -224,9 +224,9 @@ class TestConfidenceCalculator:
 
         # 成功率が高いほど信頼度も高くなることを確認
         for i in range(1, len(confidences)):
-            assert (
-                confidences[i] >= confidences[i - 1]
-            ), f"成功率による信頼度が期待通りに増加していません: {confidences}"
+            assert confidences[i] >= confidences[i - 1], (
+                f"成功率による信頼度が期待通りに増加していません: {confidences}"
+            )
 
     def test_confidence_with_different_evidence_counts(self, confidence_calculator, sample_pattern):
         """異なる証拠数での信頼度テスト"""

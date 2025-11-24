@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+
 from ci_helper.core.models import ExecutionResult
 from ci_helper.formatters.base_formatter import BaseLogFormatter
 from ci_helper.formatters.streaming_formatter import (
