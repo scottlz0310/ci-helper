@@ -150,13 +150,13 @@ exclude = [
 [tool.coverage.run]
 source = ["src"]
 omit = ["tests/*", "*/migrations/*", "*/__pycache__/*"]
-parallel = false
+parallel = true
 data_file = ".coverage"
 branch = false
-concurrency = []
+concurrency = ["thread", "multiprocessing"]
 
 [tool.coverage.report]
-fail_under = 60
+fail_under = 70
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
@@ -182,7 +182,7 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = [
-    "--cov=ci_helper",
+    "--cov=src",
     "--cov-report=term-missing",
     "--cov-config=pyproject.toml",
     "-n",
