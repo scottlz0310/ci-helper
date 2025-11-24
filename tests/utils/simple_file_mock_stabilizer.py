@@ -221,7 +221,7 @@ class SimpleFileMockStabilizer:
         self.fs_state.clear()
 
     @contextmanager
-    def stable_file_operations(self) -> Generator["SimpleFileMockStabilizer", None, None]:
+    def stable_file_operations(self) -> Generator[SimpleFileMockStabilizer]:
         """安定したファイル操作環境を提供"""
         try:
             self.setup_all_mocks()
@@ -234,7 +234,7 @@ class SimpleFileMockStabilizer:
 
 
 @contextmanager
-def simple_stable_file_mocks() -> Generator[SimpleFileMockStabilizer, None, None]:
+def simple_stable_file_mocks() -> Generator[SimpleFileMockStabilizer]:
     """シンプルな安定したファイル操作モックを提供"""
     stabilizer = SimpleFileMockStabilizer()
     with stabilizer.stable_file_operations() as stab:

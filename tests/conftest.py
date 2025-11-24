@@ -90,7 +90,7 @@ def isolated_test_resources(monkeypatch):
 
 
 @pytest.fixture
-def temp_dir() -> Generator[Path, None, None]:
+def temp_dir() -> Generator[Path]:
     """
     一時ディレクトリを提供するフィクスチャ
 

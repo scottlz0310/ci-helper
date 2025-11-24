@@ -166,7 +166,7 @@ class FileOperationMockStabilizer:
         self._active_patches: list[Any] = []
 
     @contextmanager
-    def isolated_filesystem(self, use_real_temp_dir: bool = True) -> Generator[Path, None, None]:
+    def isolated_filesystem(self, use_real_temp_dir: bool = True) -> Generator[Path]:
         """分離されたファイルシステム環境を提供
 
         Args:
@@ -485,7 +485,7 @@ class FileOperationMockStabilizer:
         self.fs_state.cleanup_all()
 
     @contextmanager
-    def stable_file_operations(self, use_mock_fs: bool = True) -> Generator["FileOperationMockStabilizer", None, None]:
+    def stable_file_operations(self, use_mock_fs: bool = True) -> Generator[FileOperationMockStabilizer]:
         """安定したファイル操作環境を提供
 
         Args:
@@ -506,7 +506,7 @@ class FileOperationMockStabilizer:
 
 
 @contextmanager
-def isolated_file_system(use_real_temp_dir: bool = True) -> Generator[Path, None, None]:
+def isolated_file_system(use_real_temp_dir: bool = True) -> Generator[Path]:
     """分離されたファイルシステム環境を提供する便利関数
 
     Args:
@@ -521,7 +521,7 @@ def isolated_file_system(use_real_temp_dir: bool = True) -> Generator[Path, None
 
 
 @contextmanager
-def stable_file_mocks() -> Generator[FileOperationMockStabilizer, None, None]:
+def stable_file_mocks() -> Generator[FileOperationMockStabilizer]:
     """安定したファイル操作モックを提供する便利関数
 
     Yields:

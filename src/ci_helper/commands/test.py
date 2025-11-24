@@ -185,7 +185,7 @@ def _display_failure_summary(execution_result: ExecutionResult) -> None:
 
 
 @contextmanager
-def _temporary_cwd(path: Path) -> Generator[None, None, None]:
+def _temporary_cwd(path: Path) -> Generator[None]:
     """一時的にカレントディレクトリを変更"""
     original_cwd = Path.cwd()
     try:

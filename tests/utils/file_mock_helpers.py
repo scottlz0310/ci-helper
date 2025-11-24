@@ -82,7 +82,7 @@ def create_mock_file_system(files: dict[str, str] | None = None) -> dict[str, An
 
 
 @contextmanager
-def mock_file_operations(files: dict[str, str] | None = None) -> Generator[dict[str, Any], None, None]:
+def mock_file_operations(files: dict[str, str] | None = None) -> Generator[dict[str, Any]]:
     """
     ファイル操作をモック化するコンテキストマネージャー
 
@@ -104,7 +104,7 @@ def mock_file_operations(files: dict[str, str] | None = None) -> Generator[dict[
 
 
 @contextmanager
-def stable_file_environment() -> Generator[FileOperationMockStabilizer, None, None]:
+def stable_file_environment() -> Generator[FileOperationMockStabilizer]:
     """
     安定したファイル操作環境を提供するコンテキストマネージャー
 
