@@ -946,8 +946,8 @@
     "created_at": "2025-11-23T17:02:16.194168",
     "auto_generated": true,
     "source": "unknown_error_learning",
-    "occurrence_count": 231,
-    "last_updated": "2025-11-24T23:58:17.173450"
+    "occurrence_count": 251,
+    "last_updated": "2025-11-25T00:09:23.766788"
   },
   {
     "id": "auto_generated_test_error_20251115_195222",
@@ -967,8 +967,8 @@
     "created_at": "2025-11-23T17:02:16.208757",
     "auto_generated": true,
     "source": "unknown_error_learning",
-    "occurrence_count": 73,
-    "last_updated": "2025-11-24T23:58:17.176977"
+    "occurrence_count": 79,
+    "last_updated": "2025-11-25T00:09:23.771226"
   },
   {
     "id": "auto_generated_unknown_error_20251115_195222",
@@ -985,8 +985,8 @@
     "created_at": "2025-11-23T17:02:16.217919",
     "auto_generated": true,
     "source": "unknown_error_learning",
-    "occurrence_count": 25,
-    "last_updated": "2025-11-24T23:58:17.180410"
+    "occurrence_count": 27,
+    "last_updated": "2025-11-25T00:09:23.782876"
   },
   {
     "id": "auto_generated_build_error_20251115_195222",
@@ -1004,7 +1004,7 @@
     "created_at": "2025-11-23T17:02:16.226463",
     "auto_generated": true,
     "source": "unknown_error_learning",
-    "occurrence_count": 25,
-    "last_updated": "2025-11-24T23:58:17.184514"
+    "occurrence_count": 27,
+    "last_updated": "2025-11-25T00:09:23.787207"
   }
 ]

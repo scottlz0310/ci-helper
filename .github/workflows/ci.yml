@@ -28,8 +28,9 @@ jobs:
         run: uv sync --all-extras
 
       - name: Install act
-        run: |
-          curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+        uses: actionsflow/setup-act@v1
+        with:
+          version: latest
 
       - name: Install ci-helper for testing
         run: uv tool install .
@@ -121,8 +122,9 @@ jobs:
         run: uv tool install dist/*.whl
 
       - name: Install act
-        run: |
-          curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
+        uses: actionsflow/setup-act@v1
+        with:
+          version: latest
 
       - name: Create test workflow
         run: |
