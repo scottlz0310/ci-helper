@@ -84,6 +84,7 @@ $RECYCLE.BIN/
 .env.local
 .env.production.local
 .env.test
+!tests/fixtures/config_examples/.env.test
 .env.test.local
 .eslintcache
 .grunt

@@ -45,7 +45,7 @@ jobs:
         run: uv run basedpyright src/ci_helper
 
       - name: Run tests
-        run: uv run pytest --cov=ci_helper --cov-report=xml --cov-report=term-missing
+        run: PYTEST_XDIST_WORKER_COUNT=0 uv run pytest -n0 --cov=ci_helper --cov-report=xml --cov-report=term-missing
 
       - name: Run CI/CD integration verification
         run: uv run python scripts/verify_ci_integration.py

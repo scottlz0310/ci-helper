@@ -77,9 +77,20 @@ class SimpleFileMockStabilizer:
 
     def setup_open_mock(self) -> None:
         """builtins.openのモックを設定"""
+        # 元のopen関数を保存
+        original_open = open
 
         def mock_open_func(file_path, mode="r", *args, **kwargs):
             path_str = str(file_path)
+
+            # カバレッジファイルとsite-packagesのファイルは元のopen関数を使用
+            if (
+                path_str.startswith(".coverage")
+                or "/.coverage" in path_str
+                or "/site-packages/" in path_str
+                or path_str.startswith("/.venv/")
+            ):
+                return original_open(file_path, mode, *args, **kwargs)
 
             if "r" in mode:
                 if not self.fs_state.file_exists(path_str):
