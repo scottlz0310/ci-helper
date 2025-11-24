@@ -110,12 +110,6 @@ $RECYCLE.BIN/
 .storybook-out
 .tox/
 .venv/
-.vscode/
-.vscode/*.code-snippets
-.vscode/extensions.json
-.vscode/launch.json
-.vscode/settings.json
-.vscode/tasks.json
 .yarn-integrity
 /target/
 Cargo.lock
@@ -179,7 +173,7 @@ yarn-error.log*
 .gitmodules.bak
 .gitmodules.local
 .pnpm-store/
-.vscode/*
+.vscode/
 PATCHES/
 out/
 
