@@ -205,3 +205,10 @@ packages/
 project.fragment.lock.json
 project.lock.json
 publish/
+
+# Auto-generated entries from templates
+.vscode/*.code-snippets
+.vscode/extensions.json
+.vscode/launch.json
+.vscode/settings.json
+.vscode/tasks.json
