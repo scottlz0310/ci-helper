@@ -144,7 +144,7 @@ class TestCacheHelperFunctions:
         result = _check_docker_available()
 
         assert result is True
-        mock_subprocess_run.assert_called_once_with(["docker", "info"], capture_output=True, text=True, timeout=10)
+        mock_subprocess_run.assert_called_once_with(["docker", "info"], check=False, capture_output=True, text=True, timeout=10)
 
     @patch("subprocess.run")
     def test_check_docker_available_failure(self, mock_subprocess_run):
@@ -234,6 +234,7 @@ alpine                        latest    abcdef123456   3 weeks ago    5.61MB"""
 
         mock_subprocess_run.assert_called_once_with(
             ["docker", "images", "--format", "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"],
+            check=False,
             capture_output=True,
             text=True,
             timeout=30,
@@ -264,7 +265,7 @@ alpine                        latest    abcdef123456   3 weeks ago    5.61MB"""
         _clean_unused_images()
 
         mock_subprocess_run.assert_called_once_with(
-            ["docker", "image", "prune", "-f"], capture_output=True, text=True, timeout=60
+            ["docker", "image", "prune", "-f"], check=False, capture_output=True, text=True, timeout=60
         )
 
     @patch("subprocess.run")
@@ -296,6 +297,7 @@ alpine:latest	5.61MB"""
 
         mock_subprocess_run.assert_called_once_with(
             ["docker", "images", "--format", "{{.Repository}}:{{.Tag}}\t{{.Size}}"],
+            check=False,
             capture_output=True,
             text=True,
             timeout=30,

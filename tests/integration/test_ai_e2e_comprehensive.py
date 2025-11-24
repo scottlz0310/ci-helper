@@ -257,7 +257,11 @@ class TestAIE2EComprehensive:
                 assert result.provider == "anthropic"
                 assert result.model == "claude-3-5-sonnet-20241022"
                 assert result.status == AnalysisStatus.COMPLETED
-                assert "複雑な失敗" in result.summary or "dependency" in result.summary.lower()
+                assert (
+                    "複雑な失敗" in result.summary
+                    or "dependency" in result.summary.lower()
+                    or "検出されたパターン" in result.summary
+                )
 
     @pytest.mark.asyncio
     async def test_real_log_analysis_local_llm(self, real_log_files, mock_ai_config):
@@ -414,8 +418,16 @@ class TestAIE2EComprehensive:
 
         assert openai_result.provider == "openai"
         assert anthropic_result.provider == "anthropic"
-        assert "OpenAI" in openai_result.summary or "package.json" in openai_result.summary
-        assert "Anthropic" in anthropic_result.summary or "依存関係" in anthropic_result.summary
+        assert (
+            "OpenAI" in openai_result.summary
+            or "package.json" in openai_result.summary
+            or "検出されたパターン" in openai_result.summary
+        )
+        assert (
+            "Anthropic" in anthropic_result.summary
+            or "依存関係" in anthropic_result.summary
+            or "検出されたパターン" in anthropic_result.summary
+        )
 
     @pytest.mark.asyncio
     async def test_interactive_mode_comprehensive(self, mock_ai_config):

@@ -222,11 +222,11 @@ class TestLogCompressor:
         info_line = "INFO: Process started"
         debug_line = "DEBUG: Variable value"
 
-        critical_score = compressor._calculate_line_importance(critical_line)
-        error_score = compressor._calculate_line_importance(error_line)
-        warning_score = compressor._calculate_line_importance(warning_line)
-        info_score = compressor._calculate_line_importance(info_line)
-        debug_score = compressor._calculate_line_importance(debug_line)
+        critical_score = compressor.calculate_line_importance(critical_line)
+        error_score = compressor.calculate_line_importance(error_line)
+        warning_score = compressor.calculate_line_importance(warning_line)
+        info_score = compressor.calculate_line_importance(info_line)
+        debug_score = compressor.calculate_line_importance(debug_line)
 
         # CRITICALとERRORは両方とも重要パターン(0.8) + レベル別スコアで1.0にキャップされる
         assert critical_score == 1.0
@@ -251,8 +251,8 @@ class TestLogCompressor:
         traceback_line = "  at module.py:42 in function_name"
         normal_line = "Normal log message"
 
-        traceback_score = compressor._calculate_line_importance(traceback_line)
-        normal_score = compressor._calculate_line_importance(normal_line)
+        traceback_score = compressor.calculate_line_importance(traceback_line)
+        normal_score = compressor.calculate_line_importance(normal_line)
 
         # トレースバック行は"at\s+\w+\.\w+"パターン(0.6) + .py:数字パターン(0.4) = 1.0
         assert traceback_score > normal_score

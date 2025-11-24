@@ -192,7 +192,7 @@ level = "INVALID_LEVEL"
             lock_file.parent.mkdir(parents=True)
             lock_file.write_text("locked")
 
-            with patch("ci_helper.core.ci_runner.CIRunner._check_lock_file") as mock_check:
+            with patch("ci_helper.core.ci_runner.CIRunner.check_lock_file") as mock_check:
                 mock_check.side_effect = CIHelperError("Another instance is running")
 
                 test_result = runner.invoke(cli, ["test"])
