@@ -1,13 +1,18 @@
 {
     "recommendations": [
+        // Python Core
         "ms-python.python",
-        "ms-python.mypy-type-checker",
-        "charliermarsh.ruff",
+        "detachhead.basedpyright",
+        "astral-sh.ruff",
+        // Configuration & Data Formats
         "tamasfe.even-better-toml",
         "redhat.vscode-yaml",
-        "ms-vscode.vscode-json",
-        "github.copilot",
-        "github.copilot-chat",
-        "ms-vscode.test-adapter-converter"
+        // CI/CD & Git
+        "github.vscode-github-actions",
+        "eamodio.gitlens",
+        // Documentation & Quality
+        "yzhang.markdown-all-in-one",
+        "usernamehw.errorlens",
+        "streetsidesoftware.code-spell-checker"
     ]
 }
