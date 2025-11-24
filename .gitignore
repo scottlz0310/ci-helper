@@ -155,7 +155,6 @@ yarn-debug.log*
 yarn-error.log*
 
 # Auto-generated entries from templates
-!.vscode/extensions.json
 *-output.txt
 *.diff
 *.patch
@@ -173,7 +172,8 @@ yarn-error.log*
 .gitmodules.bak
 .gitmodules.local
 .pnpm-store/
-.vscode/
+.vscode/*
+!.vscode/extensions.json
 PATCHES/
 out/
 
