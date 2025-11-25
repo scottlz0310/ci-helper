@@ -74,3 +74,9 @@ exclude: |
     htmlcov/.*|
     \.coverage.*
   )$
+
+# Configuration for pre-commit.ci
+ci:
+  # Skip basedpyright on pre-commit.ci due to build size limit (302.4MiB > 250MiB)
+  # It will still run locally and in GitHub Actions
+  skip: [basedpyright]
