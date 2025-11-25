@@ -412,16 +412,32 @@ uv run pytest tests/integration/
 ### コード品質チェック
 
 ```bash
+# 🚀 推奨: 全チェックを一括実行（コミット前に実行）
+./lint.sh
+
+# または個別に実行:
+
 # リントとフォーマット
-uv run ruff check
-uv run ruff format
+uv run ruff check . --fix
+uv run ruff format .
 
 # 型チェック
-uv run basedpyright src/ci_helper
+uv run basedpyright src/
 
-# 全チェックを実行
+# テスト実行
+uv run pytest
+
+# pre-commitフックを手動実行
 uv run pre-commit run --all-files
 ```
+
+**lint.sh の内容:**
+- ✅ ruff check（自動修正付き）
+- ✅ ruff format（コードフォーマット）
+- ✅ basedpyright（型チェック）
+- ✅ pytest（テスト実行）
+
+失敗時は即座に停止し、色付き出力で進捗を表示します。
 
 ### ビルドとパッケージング
 
