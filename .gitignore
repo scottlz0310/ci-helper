@@ -213,3 +213,6 @@ publish/
 .vscode/launch.json
 .vscode/settings.json
 .vscode/tasks.json
+
+# Auto-generated entries from templates
+.vscode/extensions.json
