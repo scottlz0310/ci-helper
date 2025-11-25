@@ -1,0 +1,12 @@
+# Configuration for pre-commit.ci
+# See https://pre-commit.ci/#configuration for more options
+
+# Skip basedpyright on pre-commit.ci due to heavy dependencies
+# It will still run locally and in GitHub Actions
+skip: [basedpyright]
+
+# Auto-fix pull requests
+autofix_prs: true
+
+# Commit message for auto-fixes
+autoupdate_commit_msg: 'chore(deps): update pre-commit hooks'
