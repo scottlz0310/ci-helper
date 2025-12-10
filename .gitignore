@@ -216,3 +216,6 @@ publish/
 
 # Auto-generated entries from templates
 .vscode/extensions.json
+
+# Auto-generated entries from templates
+.pyrightcache/
