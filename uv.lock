@@ -250,7 +250,7 @@ requires-dist = [
     { name = "aiohttp", specifier = ">=3.10.11" },
     { name = "anthropic", specifier = ">=0.75.0" },
     { name = "click", specifier = ">=8.1.8" },
-    { name = "openai", specifier = ">=1.50.2" },
+    { name = "openai", specifier = ">=2.11.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "rich", specifier = ">=14.2.0" },
     { name = "tiktoken", specifier = ">=0.12.0" },
