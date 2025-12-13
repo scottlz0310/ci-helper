@@ -107,7 +107,7 @@ jobs:
           ci-run --help
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: dist
           path: dist/
@@ -125,7 +125,7 @@ jobs:
         run: uv python install 3.14
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: dist
           path: dist/
