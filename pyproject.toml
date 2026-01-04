@@ -20,7 +20,7 @@ dependencies = [
     # AI統合用の依存関係
     "openai>=2.13.0",
     "anthropic>=0.75.0",
-    "aiohttp>=3.13.2",
+    "aiohttp>=3.13.3",
     "aiofiles>=25.1.0",
 ]
 keywords = [
