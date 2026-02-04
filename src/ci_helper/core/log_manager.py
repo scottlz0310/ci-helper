@@ -151,7 +151,7 @@ class LogManager:
             with open(self.index_file, encoding="utf-8") as f:
                 loaded = json.load(f)
                 return cast("dict[str, Any]", loaded)
-        except (json.JSONDecodeError, OSError):
+        except json.JSONDecodeError, OSError:
             # 破損したインデックスファイルの場合は新規作成
             return {
                 "version": "1.0",
