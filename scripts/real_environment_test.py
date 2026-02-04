@@ -839,7 +839,7 @@ def main():
                 tester.cleanup()
             else:
                 pass
-        except (KeyboardInterrupt, EOFError):
+        except KeyboardInterrupt, EOFError:
             pass
 
 
