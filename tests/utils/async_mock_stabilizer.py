@@ -56,7 +56,7 @@ class AsyncMockContextManager:
             if asyncio.iscoroutine(return_value):
                 try:
                     return_value.close()
-                except RuntimeError, StopIteration:
+                except (RuntimeError, StopIteration):
                     pass
 
     def register_mock(self, name: str, mock_obj: AsyncMock):

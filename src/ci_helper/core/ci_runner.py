@@ -439,14 +439,14 @@ class CIRunner:
         try:
             subprocess.run(["act", "--version"], capture_output=True, check=True, timeout=10)
             checks["act"] = True
-        except FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired:
+        except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
             checks["act"] = False
 
         # Dockerデーモンの確認
         try:
             subprocess.run(["docker", "info"], capture_output=True, check=True, timeout=10)
             checks["docker"] = True
-        except FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired:
+        except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
             checks["docker"] = False
 
         # .github/workflowsディレクトリの確認

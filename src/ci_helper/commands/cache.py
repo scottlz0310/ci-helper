@@ -96,7 +96,7 @@ def _check_docker_available() -> bool:
     try:
         result = subprocess.run(["docker", "info"], check=False, capture_output=True, text=True, timeout=10)
         return result.returncode == 0
-    except subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError:
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
         return False
 
 

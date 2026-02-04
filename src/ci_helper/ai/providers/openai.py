@@ -78,7 +78,7 @@ class OpenAIProvider(AIProvider):
             # 接続テスト
             await self.validate_connection()
 
-        except APIKeyError, RateLimitError, ConfigurationError, ProviderError:
+        except (APIKeyError, RateLimitError, ConfigurationError, ProviderError):
             # 既知のエラータイプはそのまま再発生
             raise
         except Exception as e:

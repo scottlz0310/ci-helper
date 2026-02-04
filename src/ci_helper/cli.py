@@ -288,7 +288,7 @@ def _analyze_interactive_handler(ctx: click.Context) -> object:
             verbose=False,
             retry_operation_id=None,
         )
-    except ImportError, NameError:
+    except (ImportError, NameError):
         console.print("[red]AI分析機能は利用できません。[/red]")
         return False
 
@@ -383,7 +383,7 @@ def _create_command_handlers(ctx: click.Context) -> dict[str, Callable[..., obje
             verbose=False,
             retry_operation_id=None,
         )
-    except ImportError, NameError:
+    except (ImportError, NameError):
 
         def analyze_unavailable() -> bool:
             console.print("[red]AI分析機能は利用できません。必要な依存関係を確認してください。[/red]")

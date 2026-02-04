@@ -1255,7 +1255,7 @@ class LearningEngine:
                             unknown_errors = [
                                 self._normalize_unknown_error_payload(error) for error in stored_errors_raw
                             ]
-                except json.JSONDecodeError, FileNotFoundError:
+                except (json.JSONDecodeError, FileNotFoundError):
                     logger.warning("未知エラーファイルが破損しています。空のリストで初期化します。")
 
             similar_error = self._find_similar_unknown_error(
@@ -1640,7 +1640,7 @@ class LearningEngine:
                             unknown_errors = cast(list[UnknownErrorPayload], json.loads(content))
                         else:
                             unknown_errors = []
-                except json.JSONDecodeError, FileNotFoundError:
+                except (json.JSONDecodeError, FileNotFoundError):
                     logger.warning("未知エラーファイルが破損しています。統計をスキップします。")
                     unknown_errors = []
 
@@ -1692,7 +1692,7 @@ class LearningEngine:
                         unknown_errors = cast(list[dict[str, Any]], json.loads(content))
                     else:
                         unknown_errors = []
-            except json.JSONDecodeError, FileNotFoundError:
+            except (json.JSONDecodeError, FileNotFoundError):
                 logger.warning("未知エラーファイルが破損しています。クリーンアップをスキップします。")
                 return 0
 

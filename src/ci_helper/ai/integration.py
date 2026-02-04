@@ -409,7 +409,7 @@ class AIIntegration:
             )
             return result
 
-        except TokenLimitError, CostLimitError, APIKeyError, RateLimitError, NetworkError, ProviderError:
+        except (TokenLimitError, CostLimitError, APIKeyError, RateLimitError, NetworkError, ProviderError):
             # 特定のAIエラーはそのまま再発生（テスト用）
             raise
         except Exception as e:

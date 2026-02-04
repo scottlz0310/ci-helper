@@ -334,7 +334,7 @@ class UnknownErrorDetector:
                         content = f.read().strip()
                         if content:
                             existing_errors = json.loads(content)
-                except json.JSONDecodeError, FileNotFoundError:
+                except (json.JSONDecodeError, FileNotFoundError):
                     logger.warning("既存の未知エラーファイルが破損しています。新しいファイルを作成します。")
                     existing_errors = []
 

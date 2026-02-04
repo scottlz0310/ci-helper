@@ -253,7 +253,7 @@ class AsyncMockStabilizer:
             if asyncio.iscoroutine(return_value):
                 try:
                     return_value.close()
-                except RuntimeError, StopIteration:
+                except (RuntimeError, StopIteration):
                     pass  # 既にクローズされている場合は無視
 
     @staticmethod

@@ -74,7 +74,7 @@ class ProgressDisplayManager:
                 else:
                     size_kb = file_size / 1024
                     self.console.print(f"[dim]サイズ: {size_kb:.1f}KB[/dim]")
-            except OSError, FileNotFoundError:
+            except (OSError, FileNotFoundError):
                 pass
         else:
             self.console.print("[dim]入力: 最新ログ[/dim]")
@@ -113,7 +113,7 @@ class ProgressDisplayManager:
         try:
             file_size = Path(file_path).stat().st_size
             return file_size > self._large_file_threshold
-        except OSError, FileNotFoundError:
+        except (OSError, FileNotFoundError):
             return False
 
     def create_progress_context(
@@ -297,7 +297,7 @@ class ProgressDisplayManager:
                     info_lines.append(f"[cyan]サイズ:[/cyan] {size_kb:.1f}KB")
                 else:
                     info_lines.append(f"[cyan]サイズ:[/cyan] {file_size}バイト")
-            except OSError, FileNotFoundError:
+            except (OSError, FileNotFoundError):
                 pass
         else:
             info_lines.append("[cyan]出力:[/cyan] コンソール")

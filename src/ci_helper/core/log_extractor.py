@@ -227,7 +227,7 @@ class LogExtractor:
                 try:
                     line_number = int(match.group(2))
                     return file_path, line_number
-                except ValueError, IndexError:
+                except (ValueError, IndexError):
                     return file_path, None
 
         return None, None

@@ -705,13 +705,13 @@ async def _handle_fix_application(
                                 console.print("[yellow]修正案の適用を中止しました。[/yellow]")
                                 user_rejected = True
                                 break
-                        except EOFError, KeyboardInterrupt, click.exceptions.Abort:
+                        except (EOFError, KeyboardInterrupt, click.exceptions.Abort):
                             console.print("[yellow]修正案の適用を中止しました。[/yellow]")
                             break
             else:
                 console.print(f"[yellow]修正案 {i} をスキップしました。[/yellow]")
                 user_rejected = True
-        except EOFError, KeyboardInterrupt, click.exceptions.Abort:
+        except (EOFError, KeyboardInterrupt, click.exceptions.Abort):
             # 入力が利用できない場合(テスト環境など)やユーザーがキャンセルした場合
             console.print("\n[dim]対話的入力が利用できません。修正提案のみ表示されました。[/dim]")
             # 入力が利用できない場合は拒否とは見なさない
