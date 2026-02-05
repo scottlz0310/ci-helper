@@ -352,7 +352,7 @@ class AIFormatter:
             return value
         try:
             return datetime.fromisoformat(value)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return None
 
     @classmethod

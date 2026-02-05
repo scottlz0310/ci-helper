@@ -178,7 +178,7 @@ def _check_act_command(verbose: bool) -> DoctorCheckResult:
                 check=True,
             )
             version = result.stdout.strip()
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        except subprocess.CalledProcessError, subprocess.TimeoutExpired:
             version = "不明"
 
         return {
