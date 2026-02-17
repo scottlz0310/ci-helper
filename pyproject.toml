@@ -87,7 +87,7 @@ url = "https://pkgs.safetycli.com/repository/public/pypi/simple/"
 default = true
 
 [build-system]
-requires = ["uv_build>=0.10.3,<0.10.4"]
+requires = ["uv_build>=0.10.4,<0.10.5"]
 build-backend = "uv_build"
 
 [tool.ruff]
